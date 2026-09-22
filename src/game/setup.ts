@@ -151,7 +151,7 @@ export function setupBattle(state: GameState, def: BattleDef, party: DeployChoic
   const grid = new MapGrid(mapDef(def.map));
   const diff = (opts as { difficulty?: string }).difficulty ?? loadOptions().difficulty ?? 'normal';
   const pl = Math.max(1, partyLevel(state) + (diff === 'easy' ? -3 : diff === 'hard' ? 1 : -1));
-  const hpScale = diff === 'easy' ? 0.8 : diff === 'hard' ? 1.1 : 0.9;
+  const hpScale: number = diff === 'easy' ? 0.8 : diff === 'hard' ? 1.1 : 0.9;
   const units: BattleUnit[] = [];
   const temp: RosterUnit[] = [];
   for (const p of party) {
