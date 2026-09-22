@@ -1,6 +1,6 @@
 // Simulate all story & side battles AI-vs-AI; prints one line per battle.
 // Run: npx vite-node tools/simcampaign.ts [filter]
-import { BATTLES, STORY, SIDE, mapDef } from '../src/data/db';
+import { BATTLES, STORY, SIDE, JOBS, mapDef } from '../src/data/db';
 import { newGame } from '../src/game/state';
 import { setupBattle, autoEquip, autoAbilities } from '../src/game/setup';
 import { planTurn } from '../src/battle/ai';
@@ -12,6 +12,8 @@ import type { Battle } from '../src/battle/battle';
 import { writeSync } from 'node:fs';
 
 const LEVEL_BY_CHAPTER = [3, 6, 15, 26, 38];
+// what a typical player fields by then
+const JOBS_BY_CHAPTER = [['squire', 'chemist'], ['knight', 'priest', 'archer', 'wizard'], ['knight', 'priest', 'monk', 'wizard', 'thief'], ['lancer', 'priest', 'monk', 'summoner', 'samurai'], ['ninja', 'priest', 'samurai', 'summoner', 'lancer']];
 const filter = process.argv[2];
 function run(b: Battle) {
   let turns = 0;
@@ -43,7 +45,12 @@ for (const st of steps) {
   for (const c of comp) joinCharacter(s, c);
   const lv = LEVEL_BY_CHAPTER[Math.min(4, chapter)];
   const rng = new Rng(7);
-  for (const u of s.roster) { setLevel(u, lv); autoEquip(u, s.tier, rng); if (!u.charId) autoAbilities(u, rng, {}); }
+  const jobsFor = JOBS_BY_CHAPTER[Math.min(4, chapter)];
+  let gi = 0;
+  for (const u of s.roster) {
+    if (!u.charId) { const j = jobsFor[gi++ % jobsFor.length]; const jd = JOBS.get(j); if (jd && (!jd.gender || jd.gender === u.gender)) u.job = j; }
+    setLevel(u, lv); autoEquip(u, s.tier, rng); if (!u.charId) autoAbilities(u, rng, {});
+  }
   const grid = new MapGrid(mapDef(def.map));
   const cells = (def.deploy ?? grid.def.deploy).filter(([x, z]) => grid.cell(x, z)?.standable && !def.units.some((u) => u.at[0] === x && u.at[1] === z));
   const pick = [s.roster[0], ...s.roster.filter((r) => r.charId && r.charId !== 'rhen'), ...s.roster.filter((r) => !r.charId)];

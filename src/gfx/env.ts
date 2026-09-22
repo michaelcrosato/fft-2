@@ -209,6 +209,25 @@ export class Environment {
         });
         break;
       }
+      case 'void': {
+        // shattered stone adrift in the abyss
+        ring(40, (a, i) => {
+          const r = R * 0.5 + hash2(i, 1, 17) * R * 0.7;
+          const s = 1 + hash2(i, 2, 17) * 3.5;
+          const y = baseY + 2 + hash2(i, 3, 17) * 30;
+          b.add(new THREE.IcosahedronGeometry(s, 0), mat(Math.cos(a) * r, y, Math.sin(a) * r, i, i * 2, 0, 1, 0.55 + hash2(i, 4, 17) * 0.9, 1), mix(i % 3 ? '#6a5470' : '#8a5a60', 0.15), 0.1);
+          if (i % 4 === 0) b.add(new THREE.ConeGeometry(s * 0.7, s * 2.2, 5), mat(Math.cos(a) * r, y - s * 1.2, Math.sin(a) * r, Math.PI, i, 0), mix('#2a1e30', 0.2), 0.1);
+        });
+        // the abyssal vortex far below the arena
+        const disc = new THREE.Mesh(new THREE.CircleGeometry(140, 64), new THREE.MeshBasicMaterial({ map: vortexTexture(), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, opacity: 0.6 }));
+        disc.rotation.x = -Math.PI / 2;
+        disc.position.y = baseY - 22;
+        disc.renderOrder = -8;
+        disc.userData.spin = 0.06;
+        this.backdrop.add(disc);
+        this.spinners.push(disc);
+        break;
+      }
       default: break;
     }
     if (b.count) {
@@ -259,3 +278,36 @@ export function defaultBackdrop(theme: MapTheme): NonNullable<MapDef['backdrop']
 
 export { HS };
 export type { Color };
+
+let vortexTex: import('three/webgpu').Texture | null = null;
+/** spiral-armed glow for the void backdrop */
+function vortexTexture() {
+  if (vortexTex) return vortexTex;
+  const S = 512, c = document.createElement('canvas');
+  c.width = c.height = S;
+  const g = c.getContext('2d')!;
+  const rg = g.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+  rg.addColorStop(0, 'rgba(255,170,110,0.9)');
+  rg.addColorStop(0.08, 'rgba(200,60,60,0.55)');
+  rg.addColorStop(0.3, 'rgba(90,14,70,0.28)');
+  rg.addColorStop(0.7, 'rgba(30,4,40,0.1)');
+  rg.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = rg;
+  g.fillRect(0, 0, S, S);
+  g.globalCompositeOperation = 'lighter';
+  for (let arm = 0; arm < 5; arm++) {
+    for (let k = 0; k < 260; k++) {
+      const t = k / 260;
+      const r = t * S * 0.48;
+      const a = arm * (Math.PI * 2 / 5) + t * 7.5;
+      const x = S / 2 + Math.cos(a) * r, y = S / 2 + Math.sin(a) * r;
+      const w = 2 + t * 9;
+      const alpha = (1 - t) * (1 - t) * 0.09;
+      g.fillStyle = `rgba(${255 - t * 90 | 0},${110 - t * 80 | 0},${120 + t * 60 | 0},${alpha})`;
+      g.beginPath(); g.arc(x, y, w, 0, Math.PI * 2); g.fill();
+    }
+  }
+  vortexTex = new THREE.CanvasTexture(c);
+  vortexTex.colorSpace = THREE.SRGBColorSpace;
+  return vortexTex;
+}

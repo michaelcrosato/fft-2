@@ -63,7 +63,7 @@ export const battles: BattleDef[] = [
     hint: 'The kwehbo must not fall. Goblins are slow over the brook; panthers are not.',
     units: [
       { char: 'garmond', level: '+2', at: [2, 12], facing: 'N', team: 0, ai: 'aggressive', equip: GARMOND_KIT },
-      { char: 'bocco', level: '+2', at: [6, 6], facing: 'S', team: 0, ai: 'defensive', vip: true },
+      { char: 'bocco', level: '+3', at: [6, 6], facing: 'S', team: 0, ai: 'defensive', vip: true },
       { id: 'gristlejaw', job: 'hobgoblin', name: 'Gristlejaw', level: '+0', at: [5, 3], facing: 'S' },
       { job: 'goblin', level: '-2', at: [3, 4], facing: 'E' },
       { job: 'goblin', level: '-2', at: [8, 3], facing: 'W' },
@@ -103,7 +103,7 @@ export const battles: BattleDef[] = [
     hint: 'Protect Princess Oriane. Delan holds the bridge; climb the terraces to reach them before the Northsky blades do.',
     units: [
       { char: 'delan', job: 'lionKnight', level: '+2', at: [9, 4], facing: 'W', team: 0, ai: 'aggressive', equip: DELAN_KIT },
-      { char: 'oriane', level: '+0', at: [10, 5], facing: 'W', team: 0, ai: 'support', vip: true },
+      { char: 'oriane', level: '+1', at: [10, 5], facing: 'W', team: 0, ai: 'support', vip: true },
       { char: 'garmond', level: '+2', at: [13, 7], facing: 'S', team: 1, boss: true, hpMult: 1.5, equip: GARMOND_KIT },
       { id: 'nsCaptain', job: 'knight', name: 'Northsky Captain', level: '+1', at: [3, 2], facing: 'E', secondary: 'squire', reaction: 'counterTackle' },
       { job: 'knight', name: 'Northsky Knight', level: '+0', at: [4, 5], facing: 'E' },
@@ -155,8 +155,8 @@ export const battles: BattleDef[] = [
       { job: 'knight', name: 'Baird Company Bravo', level: '+0', at: [8, 4], facing: 'S' },
       { job: 'archer', gender: 'f', name: 'Bought Watchwoman', level: '+0', at: [2, 0], facing: 'S' },
       { job: 'archer', gender: 'f', name: 'Bought Watchwoman', level: '+0', at: [11, 1], facing: 'S' },
-      { job: 'wizard', gender: 'm', name: 'Company Hedge-Mage', level: '+1', at: [6, 1], facing: 'S' },
-      { job: 'wizard', gender: 'm', name: 'Company Hedge-Mage', level: '+0', at: [9, 6], facing: 'W' },
+      { job: 'wizard', gender: 'm', name: 'Company Hedge-Mage', level: '+0', at: [6, 1], facing: 'S' },
+      { job: 'wizard', gender: 'm', name: 'Company Hedge-Mage', level: '+0', at: [11, 6], facing: 'W' },
     ],
     victory: { type: 'defeatAll' },
     events: [
@@ -283,9 +283,9 @@ export const battles: BattleDef[] = [
       { id: 'valeSergeant', job: 'knight', name: 'Cardinal\'s Sergeant', level: '+1', at: [3, 2], facing: 'S', secondary: 'chemist' },
       { job: 'knight', name: 'Cardinal\'s Man-at-Arms', level: '+0', at: [9, 6], facing: 'W' },
       { job: 'archer', gender: 'f', name: 'Crag Archer', level: '+1', at: [12, 0], facing: 'W', equip: { rhand: 'lightningBow' }, support: 'concentrate' },
-      { job: 'archer', gender: 'f', name: 'Cardinal\'s Archer', level: '+0', at: [9, 3], facing: 'W' },
-      { job: 'wizard', gender: 'm', name: 'Cardinal\'s Wizard', level: '+1', at: [10, 4], facing: 'W' },
-      { job: 'wizard', gender: 'm', name: 'Cardinal\'s Wizard', level: '+0', at: [2, 2], facing: 'S' },
+      { job: 'archer', gender: 'f', name: 'Cardinal\'s Archer', level: '-1', at: [9, 2], facing: 'W' },
+      { job: 'wizard', gender: 'm', name: 'Cardinal\'s Wizard', level: '+0', at: [11, 3], facing: 'W' },
+      { job: 'wizard', gender: 'm', name: 'Cardinal\'s Wizard', level: '-1', at: [2, 0], facing: 'S' },
     ],
     victory: { type: 'defeatAll' },
     events: [

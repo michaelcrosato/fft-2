@@ -228,7 +228,11 @@ function scoreAction(b: Battle, u: BattleUnit, a: AbilityDef, prev: TargetPrevie
           const v = Math.min(14, Math.abs(e.amount) * base) / (1 + stacked);
           s += (ally === e.amount > 0 ? 1 : -1) * v * hit;
         }
-        if (e.type === 'steal' || e.type === 'breakEquip') s += (ally ? -1 : 1) * 18 * hit;
+        if (e.type === 'breakEquip') { const slot = b.shieldSlot(t, e.slot); if (t.roster.equip[slot] && !t.hasSupport('maintenance')) s += (ally ? -1 : 1) * 18 * hit; }
+        if (e.type === 'steal') {
+          const has = e.slot === 'gil' || e.slot === 'exp' ? !t.isMonster : e.slot === 'any' ? Object.keys(t.roster.equip).length > 0 : !!t.roster.equip[b.shieldSlot(t, e.slot)];
+          if (has && !t.hasSupport('maintenance')) s += (ally ? -1 : 1) * 14 * hit;
+        }
         if (e.type === 'invite') s += (ally ? 0 : 30) * hit;
         if (e.type === 'ct' && e.set !== undefined) s += (ally === e.set > 50 ? 1 : -1) * 25 * hit;
       }

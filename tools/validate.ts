@@ -73,7 +73,7 @@ for (const b of BATTLES.values()) {
   }
   const v = b.victory;
   if (v.type === 'defeat' || v.type === 'defeatAny') for (const id of v.ids) if (!b.units.some((u) => (u.id ?? u.char) === id)) err(`battle ${b.id}: victory id ${id} not in units`);
-  for (const id of b.protect ?? []) if (!b.units.some((u) => (u.id ?? u.char) === id)) err(`battle ${b.id}: protect id ${id} not in units`);
+  for (const id of b.protect ?? []) if (!b.units.some((u) => (u.id ?? u.char) === id) && !CHARACTERS.has(id)) err(`battle ${b.id}: protect id ${id} not in units or cast`);
   for (const t of b.treasure ?? []) { if (!ITEMS.has(t[2])) err(`battle ${b.id}: unknown treasure ${t[2]}`); if (!ITEMS.has(t[3])) err(`battle ${b.id}: unknown treasure ${t[3]}`); }
   for (const e of b.events ?? []) checkCmds(e.script, `battle ${b.id} event`);
 }

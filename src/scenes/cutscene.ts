@@ -145,7 +145,7 @@ async function runCmd(c: SceneCmd, host: SceneHost): Promise<void> {
     case 'wait': await sleep(c[1] * 1000); return;
     case 'fade': await fade(c[1], skipAll ? 0.05 : c[2] ?? 0.8, c[3]); return;
     case 'music': if (c[1]) audio.playMusic(c[1], { fade: 1.2 }); else audio.stopMusic(1.2); return;
-    case 'sfx': audio.sfx(c[1]); return;
+    case 'sfx': audio.sfx(({ gunshot: 'gun', stone: 'hit', sword: 'swing', slash: 'swing', splash: 'water', fire: 'fire', scream: 'hitHeavy', knock: 'door', footsteps: 'step', crowd: 'bell', thunder: 'thunderclap', lightning: 'bolt', explosion: 'explosion', magic: 'magic', heal: 'heal' } as Record<string, string>)[c[1]] ?? c[1]); return;
     case 'vfx': {
       const [, id, at] = c;
       let p: import('three/webgpu').Vector3 | undefined;

@@ -253,7 +253,10 @@ export class Game {
           reveal: async (sid) => { const u = b.units.find((o) => o.sid === sid && o.hidden); if (!u) return; b.scriptReveal(sid); const v = stage.views.get(u.uid); if (v) { v.place(u.x, u.z, u.facing); v.root.visible = true; await stage.vfx.play('teleport', v.chest, v.root.position.clone(), '#ffffff'); } },
           retreat: async (sid) => { const u = b.bySid(sid); if (!u) return; b.scriptRetreat(sid); const v = stage.views.get(u.uid); if (v) { await stage.vfx.play('teleport', v.chest, v.root.position.clone(), '#c8c0ff'); v.root.visible = false; } },
           end: (r) => { b.forced = r; },
-          heal: (sid) => { const u = b.bySid(sid); if (u) { if (u.has('ko')) b.revive(u, 1); u.hp = u.maxHp; u.mp = u.maxMp; } },
+          heal: (sid) => {
+            const list = sid === '*' || sid === 'party' ? b.units.filter((o) => o.baseTeam === 0 && !o.gone && !o.has('crystal') && !o.has('treasure')) : [b.bySid(sid)].filter((o): o is NonNullable<typeof o> => !!o);
+            for (const u of list) { if (u.has('ko')) b.revive(u, 1); u.hp = u.maxHp; u.mp = u.maxMp; const v = stage.views.get(u.uid); if (v) { v.revive(); stage.vfx.play('healBig', v.chest, v.root.position.clone()); } }
+          },
           status: (sid, s, on) => { const u = b.bySid(sid); if (!u) return; if (on) b.addStatus(u, s); else u.statuses.delete(s); },
         };
         // map battle unit sids to their views for the script
