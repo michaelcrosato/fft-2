@@ -50,6 +50,3 @@ export const spellGun = (mult = 1) => (x: FormulaCtx) => {
   const tier = roll <= 7 ? 1 : roll <= 9 ? 1.4 : 2;
   return Math.floor(w * w * tier * mult);
 };
-
-/** Chance based on the caster's Speed (assassin arts, gun arts). */
-export const hitSpeed = (base: number) => (x: FormulaCtx) => x.c.speed + base;

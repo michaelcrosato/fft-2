@@ -132,7 +132,8 @@ async function nodePost(scene: Scene, camera: Camera): Promise<PostFX> {
       const d = screenUV.sub(0.5).mul(vec3(1.0, 0.85, 0).xy).length();
       col = col.mul(float(1).sub(smoothstep(0.35, 0.95, d).mul(u.vignette)));
       // film grain
-      const g = hash(screenUV.mul(1731.7).add(time.mul(37.13)).x.add(screenUV.y.mul(911.3))).sub(0.5).mul(u.grain);
+      const px = screenUV.mul(vec3(1920, 1080, 0).xy).floor();
+      const g = hash(px.x.add(px.y.mul(4096)).add(hash(time.mul(60).floor()).mul(1e6))).sub(0.5).mul(u.grain);
       col = col.add(g);
       // flash
       col = mix(col, u.flashColor, u.flashAmt);
@@ -187,6 +188,3 @@ async function nodePost(scene: Scene, camera: Camera): Promise<PostFX> {
   };
 }
 
-// silence unused helper warnings in some TS configs
-void max;
-function max() {}

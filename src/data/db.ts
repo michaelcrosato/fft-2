@@ -10,8 +10,8 @@ import type {
 
 type Mod = Record<string, unknown>;
 const all = import.meta.glob<Mod>(
-  ['./jobs/*.ts', './abilities/*.ts', './items/*.ts', './monsters/*.ts', './characters/*.ts',
-   './maps/*.ts', './battles/*.ts', './scenes/*.ts', './story/*.ts', './world/*.ts', './misc/*.ts'],
+  ['./jobs/**/*.ts', './abilities/**/*.ts', './items/**/*.ts', './monsters/**/*.ts', './characters/**/*.ts',
+   './maps/**/*.ts', './battles/**/*.ts', './scenes/**/*.ts', './story/**/*.ts', './world/**/*.ts', './misc/**/*.ts'],
   { eager: true },
 );
 

@@ -321,7 +321,7 @@ export class TerrainView {
     const b = new GeoBuilder();
     const g = this.grid;
     const ox = -g.w / 2, oz = -g.d / 2;
-    const base: C3 = hexRgb('#35561f'), tip: C3 = hexRgb('#9cc25a'), tipDry: C3 = hexRgb('#c8c070');
+    const base: C3 = hexRgb('#557f2f'), tip: C3 = hexRgb('#a9cf62'), tipDry: C3 = hexRgb('#cfc87a');
     for (const c of g.cells) {
       if (c.hole || (c.terrain !== 'g' && c.terrain !== 'm' && c.terrain !== 'k')) continue;
       const tall = c.flags.includes('G');
@@ -336,9 +336,12 @@ export class TerrainView {
         const ca = Math.cos(ang) * w, sa = Math.sin(ang) * w;
         const lean = (r1 - 0.5) * 0.08;
         const tc = r2 > 0.8 ? tipDry : tip;
-        // blade = one triangle; uv.y = height factor (used for wind)
+        // blade = two-sided triangle (both windings, normals up); uv.y = height factor (used for wind)
         b.vertex(px - ca, py, pz - sa, 0, 1, 0, 0, 0, base[0], base[1], base[2]);
         b.vertex(px + ca, py, pz + sa, 0, 1, 0, 1, 0, base[0], base[1], base[2]);
+        b.vertex(px + lean, py + h, pz + lean * 0.5, 0, 1, 0, 0.5, 1, tc[0], tc[1], tc[2]);
+        b.vertex(px + ca, py, pz + sa, 0, 1, 0, 1, 0, base[0], base[1], base[2]);
+        b.vertex(px - ca, py, pz - sa, 0, 1, 0, 0, 0, base[0], base[1], base[2]);
         b.vertex(px + lean, py + h, pz + lean * 0.5, 0, 1, 0, 0.5, 1, tc[0], tc[1], tc[2]);
       }
       if (c.flags.includes('F')) {

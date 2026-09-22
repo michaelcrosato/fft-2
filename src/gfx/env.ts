@@ -19,7 +19,7 @@ interface Mood {
 }
 
 export const MOODS: Record<EnvTime, Mood> = {
-  day: { sun: '#fff0d8', sunI: 3.3, elev: 52, azim: 140, hemiSky: '#c4dcf4', hemiGround: '#6a5a44', hemiI: 1.15, skyTop: '#4f86cc', skyHorizon: '#d4e6f2', skyBottom: '#9ab0c0', fog: '#c8d8e4', fogNear: 42, fogFar: 120, exposure: 1.0, warmth: 0.18, saturation: 1.08 },
+  day: { sun: '#fff0d8', sunI: 3.3, elev: 52, azim: 140, hemiSky: '#c4dcf4', hemiGround: '#6a5a44', hemiI: 1.15, skyTop: '#3f76c4', skyHorizon: '#a9c6de', skyBottom: '#6f8494', fog: '#9fb8cc', fogNear: 60, fogFar: 170, exposure: 1.0, warmth: 0.18, saturation: 1.08 },
   dawn: { sun: '#ffb484', sunI: 2.6, elev: 16, azim: 100, hemiSky: '#e0c0d0', hemiGround: '#5a4a44', hemiI: 1.0, skyTop: '#5a6aa8', skyHorizon: '#f4b890', skyBottom: '#8a7a8a', fog: '#e0b8a8', fogNear: 36, fogFar: 110, exposure: 1.02, warmth: 0.3, saturation: 1.05 },
   dusk: { sun: '#ff9458', sunI: 2.4, elev: 11, azim: 250, hemiSky: '#a88aa8', hemiGround: '#4a3a3a', hemiI: 0.95, skyTop: '#2e336e', skyHorizon: '#f08a58', skyBottom: '#5a4050', fog: '#c08070', fogNear: 34, fogFar: 105, exposure: 1.05, warmth: 0.35, saturation: 1.1, windows: true },
   night: { sun: '#8fb0ff', sunI: 1.1, elev: 42, azim: 210, hemiSky: '#34466e', hemiGround: '#1a1a24', hemiI: 0.62, skyTop: '#060a1a', skyHorizon: '#1c2848', skyBottom: '#0a0e18', fog: '#1a2440', fogNear: 30, fogFar: 95, exposure: 1.25, warmth: -0.25, saturation: 0.95, stars: true, windows: true },
@@ -131,16 +131,16 @@ export class Environment {
 
   private buildBackdrop(kind: string, terrain: TerrainView, theme: MapTheme) {
     const b = new GeoBuilder();
-    const R = Math.max(terrain.grid.w, terrain.grid.d) * 1.1 + 24;
-    const baseY = terrain.base - 4;
+    const R = Math.max(terrain.grid.w, terrain.grid.d) * 1.5 + 55;
+    const baseY = terrain.base - 10;
     const hazeCol = this.mood.fog;
     const mix = (a: string, t: number) => { const c = new THREE.Color(a).lerp(new THREE.Color(hazeCol), t); return '#' + c.getHexString(); };
     const ring = (n: number, fn: (a: number, i: number) => void) => { for (let i = 0; i < n; i++) fn((i / n) * Math.PI * 2 + hash2(i, 3, 7) * 0.2, i); };
     switch (kind) {
       case 'mountains': case 'snowpeaks': {
         ring(26, (a, i) => {
-          const r = R + hash2(i, 1, 1) * 18;
-          const h = 10 + hash2(i, 2, 2) * 16;
+          const r = R + hash2(i, 1, 1) * 25;
+          const h = 16 + hash2(i, 2, 2) * 22;
           const col = kind === 'snowpeaks' ? mix('#8a98a8', 0.35) : mix(theme === 'desert' ? '#a88a64' : '#5a6e62', 0.45);
           b.add(new THREE.ConeGeometry(8 + hash2(i, 4, 4) * 6, h, 5), mat(Math.cos(a) * r, baseY + h / 2, Math.sin(a) * r, 0, hash2(i, 5, 5) * 3, 0), col, 0.1);
           if (kind === 'snowpeaks' || h > 22) b.add(new THREE.ConeGeometry((8 + hash2(i, 4, 4) * 6) * 0.35, h * 0.35, 5), mat(Math.cos(a) * r, baseY + h - h * 0.175, Math.sin(a) * r, 0, hash2(i, 5, 5) * 3, 0), mix('#f0f4f8', 0.2), 0.05);

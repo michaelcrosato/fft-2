@@ -54,11 +54,12 @@ export function waterMaterial(kind: 'water' | 'poison' | 'lava' = 'water'): Mate
     const ripple = n1.mul(0.6).add(n2.mul(0.4));
     const shore = attribute('shore', 'float');
     const foamNoise = mx_noise_float(vec3(p.x.mul(9), p.y.mul(9), t.mul(1.5))).mul(0.5).add(0.5);
-    const foam = smoothstep(0.35, 0.9, shore.mul(foamNoise.add(0.35)));
-    const base = mix(color(deep), color(shallow), ripple.mul(0.5).add(0.5).mul(0.6).add(shore.mul(0.3)));
-    nm.colorNode = mix(base, color('#e8f6f8'), foam.mul(0.85));
-    nm.normalNode = normalize(vec3(ripple.mul(0.25), float(1), n2.mul(0.25)));
-    nm.opacityNode = float(0.72).add(foam.mul(0.25)).add(shore.mul(0.05));
+    const foam = smoothstep(0.78, 0.98, shore.mul(shore).mul(foamNoise.mul(0.6).add(0.5)));
+    const sparkle = smoothstep(0.62, 0.75, ripple.mul(0.5).add(0.5));
+    const base = mix(color(deep), color(shallow), ripple.mul(0.5).add(0.5).mul(0.55).add(shore.mul(0.15)));
+    nm.colorNode = mix(base.add(sparkle.mul(0.08)), color('#dff2f4'), foam.mul(0.7));
+    nm.normalNode = normalize(vec3(ripple.mul(0.22), float(1), n2.mul(0.22)));
+    nm.opacityNode = float(0.8).add(foam.mul(0.15));
     nm.emissiveNode = color(shallow).mul(0.05);
     m = nm;
   } else {
@@ -102,13 +103,13 @@ export function grassMaterial(): Material {
   let m: any;
   if (NODES && TSL) {
     const { positionLocal, positionWorld, time, sin, vec3, float, mx_noise_float, mix, color, vertexColor, uv } = TSL;
-    m = new (THREE as any).MeshStandardNodeMaterial({ vertexColors: true, side: THREE.DoubleSide, roughness: 0.9 });
+    m = new (THREE as any).MeshStandardNodeMaterial({ vertexColors: true, side: THREE.FrontSide, roughness: 0.9 });
     const h = uv().y;
     const gust = mx_noise_float(vec3(positionWorld.x.mul(0.35).add(time.mul(0.6)), positionWorld.z.mul(0.35), time.mul(0.2))).mul(0.5).add(0.5);
     const w = sin(time.mul(2.3).add(positionWorld.x.mul(1.3)).add(positionWorld.z)).mul(0.35).add(gust.mul(0.8));
     m.positionNode = positionLocal.add(vec3(w.mul(h).mul(0.35), float(0), w.mul(h).mul(0.18)));
   } else {
-    m = new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide, roughness: 0.9 });
+    m = new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.FrontSide, roughness: 0.9 });
   }
   matCache.set(key, m);
   return m;
