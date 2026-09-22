@@ -13,3 +13,15 @@ Open:
 - [ ] Iaido/Geomancy magic attack/defense modifiers
 - [x] player monsters' secret art requires a Beast Lore ally within 3 tiles
 - [x] Tame support: monsters brought to critical HP may join (60%)
+
+Done in pass 2: GeoBuilder attribute alignment (WebGPU validation), dialogue box cleanup after scripts, world HUD hidden
+during node scenes, random ambushes (Options toggle), Zodiac Stones in the Chronicle, companions keep their data while
+away, coward AI flees, AI prioritises raising the leader/wards, wards have doubled HP, bosses resist holy KO,
+Umbral HP compressed, portrait-aspect FOV, WebGL1 portrait render target, job list in job-tree order.
+
+Nice-to-have (not required by any content):
+- [ ] `defect` scene command (switch a unit's team mid-battle)
+- [ ] fixed hero deploy cell per battle
+- [ ] terrain-changing script commands (gates, sluices)
+- [ ] decor x/z offsets, held props, riding animations
+- [ ] Iaido/Geomancy magic attack/defense modifiers, invite-immunity accessories

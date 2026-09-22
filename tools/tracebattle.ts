@@ -1,6 +1,6 @@
-import type { SceneCmd } from '../src/data/types';
+// Trace one battle turn by turn (AI vs AI, party as in simcampaign). Run: npx vite-node tools/tracebattle.ts <battleId> [maxTurns]
 import type { Battle, BEvent } from '../src/battle/battle';
-// scratch: like simcampaign but prints every hit for one battle
+import type { SceneCmd } from '../src/data/types';
 import { BATTLES, STORY, SIDE, JOBS, mapDef } from '../src/data/db';
 import { newGame, joinCharacter } from '../src/game/state';
 import { setupBattle, autoEquip, autoAbilities } from '../src/game/setup';
