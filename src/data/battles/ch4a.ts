@@ -422,7 +422,7 @@ export const battles: BattleDef[] = [
   {
     id: 'b_zepar', name: 'Zepar, the Twin-Souled', map: 'limbourne_chapel', music: 'umbral', time: 'void',
     units: [
-      { job: 'zepar', id: 'zepar', boss: true, hpMult: 3.5, level: '+5', at: [6, 2], facing: 'S' },
+      { job: 'zepar', id: 'zepar', boss: true, hpMult: 2.4, level: '+5', at: [6, 2], facing: 'S' },
       { char: 'melisande', level: '+2', at: [12, 8], facing: 'W', team: 0, ai: 'aggressive', equip: { rhand: 'defender' } },
       { job: 'knight', name: 'Risen Knight', level: '+2', at: [4, 5], facing: 'S', statuses: ['undead'] },
       { job: 'knight', name: 'Risen Knight', level: '+2', at: [9, 5], facing: 'S', statuses: ['undead'] },

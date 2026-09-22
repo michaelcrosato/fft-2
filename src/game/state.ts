@@ -1,6 +1,7 @@
 // Persistent game state + save slots.
 import type { RosterUnit } from './roster';
-import { createCharacter, createGeneric, newUid, randomName } from './roster';
+import { createCharacter, createGeneric, newUid, randomName, setLevel } from './roster';
+import { autoEquip } from './setup';
 import { Rng } from '../core/rng';
 import { zodiacFromDate } from '../battle/zodiac';
 import { STORY, CHARACTERS } from '../data/db';
@@ -37,6 +38,8 @@ export interface GameState {
   storyIndex: number;
   flags: Record<string, boolean | number>;
   roster: RosterUnit[];
+  /** companions who left the party, kept so they return as they were */
+  away?: Record<string, RosterUnit>;
   inventory: Record<string, number>;
   gil: number;
   day: number;
@@ -130,8 +133,19 @@ export function flag(s: GameState, f: string): boolean { return !!s.flags[f]; }
 /** Add a named character to the party (idempotent) */
 export function joinCharacter(s: GameState, charId: string, rng = new Rng()) {
   if (s.roster.some((u) => u.charId === charId)) return;
-  if (!CHARACTERS.has(charId)) return;
-  const u = createCharacter(charId, partyLevel(s), rng);
+  const c = CHARACTERS.get(charId);
+  if (!c) return;
+  // a companion returning from time away keeps their JP, abilities and growth
+  const back = s.away?.[charId];
+  let u: RosterUnit;
+  if (back) {
+    u = back;
+    delete s.away![charId];
+    const pl = partyLevel(s) + (c.levelAbs ? 0 : (c.level ?? 0));
+    if (u.level < pl) setLevel(u, pl);
+  } else u = createCharacter(charId, partyLevel(s), rng);
+  // companions who arrive without a kit are outfitted from the current shops
+  if (!Object.values(u.equip).some(Boolean)) autoEquip(u, s.tier, rng);
   s.roster.push(u);
   if (!s.met.includes(charId)) s.met.push(charId);
 }
@@ -141,7 +155,9 @@ export function leaveCharacter(s: GameState, charId: string) {
   if (!u) return;
   // return equipment to inventory
   for (const id of Object.values(u.equip)) if (id) addItem(s, id, 1);
+  u.equip = {};
   s.roster = s.roster.filter((r) => r !== u);
+  (s.away ??= {})[charId] = u;
 }
 
 // ---------------------------------------------------------------------------

@@ -244,9 +244,11 @@ export class BattleUnit {
   }
 
   /** monster skills (fixed list) */
-  monsterActions(): AbilityDef[] {
+  monsterActions(secretOk = true): AbilityDef[] {
     const known = new Set(this.roster.learned);
-    for (const [a, lv] of this.job.monsterSkills ?? []) if (lv <= this.level) known.add(a);
+    const skills = this.job.monsterSkills ?? [];
+    skills.forEach(([a, lv], i) => { if (lv <= this.level && (secretOk || i < skills.length - 1 || skills.length < 4)) known.add(a); });
+    if (!secretOk && skills.length >= 4) known.delete(skills[skills.length - 1][0]);
     return [...known].map((a) => ABILITIES.get(a)).filter((a): a is AbilityDef => !!a && a.kind === 'action' && a.special !== 'passive');
   }
 

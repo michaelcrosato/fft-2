@@ -315,7 +315,9 @@ export interface ItemDef {
   twoHanded?: boolean;       // must be used with both hands
   twoHandOk?: boolean;       // can be two-handed with Two Hands support
   dualOk?: boolean;          // can be dual wielded
-  onHit?: { status?: StatusId[]; spell?: string; chance: number };
+  onHit?: { status?: StatusId[]; spell?: string; cure?: StatusId[]; chance: number };
+  /** weapon attacks heal the target instead of harming it */
+  healOnHit?: boolean;
   /** weapon attacks drain the damage dealt as HP */
   drain?: boolean;
   /** only these jobs may equip it (e.g. a legendary blade) */

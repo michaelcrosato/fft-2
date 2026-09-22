@@ -272,10 +272,10 @@ export const abilities: AbilityDef[] = [
   },
   {
     id: 'belethInfernalFlame', name: 'Infernal Flame', kind: 'action', jp: 1000, skillset: 'belethArts',
-    desc: 'Opens a door to the burning dark over a wide area; only the Ram\'s foes are caught. (Magic Q34 fire, radius 2)',
+    desc: 'Opens a door to the burning dark over a wide area; only the Ram\'s foes are caught. (Magic Q28 fire, radius 2)',
     range: 4, aoe: 3, aoeV: 2, ct: 9, mp: 50, target: 'enemy', enemiesOnly: true, element: 'fire', magic: true, noReflect: true,
     anim: 'summon', vfx: 'inferno', color: '#ff4a10',
-    effects: [{ type: 'damage', formula: F.magic(34), element: 'fire' }],
+    effects: [{ type: 'damage', formula: F.magic(28), element: 'fire' }],
   },
   {
     id: 'belethAbyssalRam', name: 'Abyssal Ram', kind: 'action', jp: 700, skillset: 'belethArts',

@@ -46,6 +46,8 @@ async function boot() {
   const test = q.get('test');
   if (q.get('auto')) (window as any).__autoBattle = true;
   if (q.get('autoplay')) { (window as any).__autoPlay = true; (window as any).__autoBattle = true; }
+  // integration runs: win every battle at once to exercise the whole story flow
+  if (q.get('quickwin')) (window as any).__quickWin = true;
   if (test === 'campaign') {
     // headless-ish full playthrough for integration testing
     game.state = newGame('Rhen', [4, 12]);

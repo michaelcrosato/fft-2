@@ -334,7 +334,7 @@ export const battles: BattleDef[] = [
     id: 'b_deep10', name: 'The Midnight Deep: End', map: 'deep10', music: 'umbral',
     hint: 'Destroy Ophion, the Coiled One — Umbral Lord of the thirteenth sign.',
     units: [
-      { id: 'ophion', job: 'ophion', name: 'Ophion, the Coiled One', level: '+8', at: [5, 2], facing: 'S', team: 1, boss: true, hpMult: 5 },
+      { id: 'ophion', job: 'ophion', name: 'Ophion, the Coiled One', level: '+8', at: [5, 2], facing: 'S', team: 1, boss: true, hpMult: 4 },
       { job: 'tiamat', name: 'Coil of the Thirteenth', level: '+5', at: [3, 2], facing: 'S', team: 1 },
       { job: 'tiamat', name: 'Coil of the Thirteenth', level: '+5', at: [8, 2], facing: 'S', team: 1 },
       { job: 'darkBehemoth', name: 'Hound of the Last Landing', level: '+5', at: [6, 4], facing: 'S', team: 1 },

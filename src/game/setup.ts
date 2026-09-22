@@ -172,7 +172,9 @@ export function setupBattle(state: GameState, def: BattleDef, party: DeployChoic
     bu.noLoot = !!sp.noLoot || !!sp.char;
     bu.hidden = !!sp.hidden;
     if (sp.boss) for (const s of BOSS_IMMUNE) bu.immune.add(s);
-    if (sp.hpMult || (hpScale !== 1 && team !== 0)) { bu.hpMult = (sp.hpMult ?? 1) * (team !== 0 ? hpScale : 1); bu.recompute(false); bu.hp = bu.maxHp; }
+    // wards the player must protect are hardier than they look, so one unlucky blow cannot end the battle
+    const wardMult = team === 0 && sp.vip && !sp.hpMult ? 2 : 1;
+    if (sp.hpMult || wardMult !== 1 || (hpScale !== 1 && team !== 0)) { bu.hpMult = (sp.hpMult ?? 1) * wardMult * (team !== 0 ? hpScale : 1); bu.recompute(false); bu.hp = bu.maxHp; }
     for (const s of sp.statuses ?? []) bu.statuses.set(s, STATUS[s]?.ticks ?? 0);
     units.push(bu);
   }

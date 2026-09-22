@@ -8,26 +8,44 @@ import { MapGrid } from '../src/battle/grid';
 import { Rng } from '../src/core/rng';
 import { setLevel } from '../src/game/roster';
 import { joinCharacter } from '../src/game/state';
-import type { Battle } from '../src/battle/battle';
+import type { Battle, BEvent } from '../src/battle/battle';
+import type { SceneCmd } from '../src/data/types';
 import { writeSync } from 'node:fs';
 
 const LEVEL_BY_CHAPTER = [3, 6, 15, 26, 38];
 // what a typical player fields by then
 const JOBS_BY_CHAPTER = [['squire', 'chemist'], ['knight', 'priest', 'archer', 'wizard'], ['knight', 'priest', 'monk', 'wizard', 'thief'], ['lancer', 'priest', 'monk', 'summoner', 'samurai'], ['ninja', 'priest', 'samurai', 'summoner', 'lancer']];
 const filter = process.argv[2];
+/** apply the rules-relevant parts of mid-battle scripts (reveals, retreats, forced endings) */
+function applyScript(b: Battle, cmds: SceneCmd[]) {
+  for (const c of cmds) {
+    switch (c[0]) {
+      case 'reveal': b.scriptReveal(c[1]); break;
+      case 'retreat': b.scriptRetreat(c[1]); break;
+      case 'battleEnd': b.forced = c[1]; break;
+      case 'heal': for (const u of c[1] === '*' || c[1] === 'party' ? b.units.filter((o) => o.baseTeam === 0 && !o.gone) : [b.bySid(c[1])]) if (u) { if (u.has('ko')) b.revive(u, 1); u.hp = u.maxHp; } break;
+      case 'status': { const u = b.bySid(c[1]); if (u) { if (c[3]) b.addStatus(u, c[2]); else u.statuses.delete(c[2]); } break; }
+      case 'if': applyScript(b, c[3] ?? []); break;
+      case 'choice': if (c[2][0]) applyScript(b, c[2][0][1]); break;
+    }
+  }
+}
+function pump(b: Battle, evs: BEvent[]) {
+  for (const ev of evs) if (ev.t === 'script') { applyScript(b, b.def.events![ev.index].script); b.checkEnd(); }
+}
 function run(b: Battle) {
   let turns = 0;
   const t0 = performance.now();
   for (let i = 0; i < 4000 && !b.result && turns < 400; i++) {
     if (performance.now() - t0 > 30000) { writeSync(1, '   (time budget exceeded)\n'); break; }
-    const { unit } = b.advance();
+    const adv = b.advance(); pump(b, adv.events); const unit = adv.unit;
     if (!unit) continue;
     turns++;
     if (process.env.TRACE) writeSync(1, `   turn ${turns} ${unit.name} ${unit.job.id}\n`);
     const plan = planTurn(b, unit);
-    if (plan.actFirst && plan.act) { b.doAction(unit, plan.act.ability, plan.act.x, plan.act.z, plan.act.opts); if (plan.move && !b.result) b.doMove(unit, plan.move[0], plan.move[1]); }
-    else { if (plan.move) b.doMove(unit, plan.move[0], plan.move[1]); if (plan.act && !b.result) b.doAction(unit, plan.act.ability, plan.act.x, plan.act.z, plan.act.opts); }
-    if (!b.result) b.endTurn(unit, plan.facing);
+    if (plan.actFirst && plan.act) { pump(b, b.doAction(unit, plan.act.ability, plan.act.x, plan.act.z, plan.act.opts)); if (plan.move && !b.result) pump(b, b.doMove(unit, plan.move[0], plan.move[1])); }
+    else { if (plan.move) pump(b, b.doMove(unit, plan.move[0], plan.move[1])); if (plan.act && !b.result) pump(b, b.doAction(unit, plan.act.ability, plan.act.x, plan.act.z, plan.act.opts)); }
+    if (!b.result) pump(b, b.endTurn(unit, plan.facing));
   }
   return { res: b.result ?? 'timeout', turns };
 }
@@ -49,6 +67,7 @@ for (const st of steps) {
   let gi = 0;
   for (const u of s.roster) {
     if (!u.charId) { const j = jobsFor[gi++ % jobsFor.length]; const jd = JOBS.get(j); if (jd && (!jd.gender || jd.gender === u.gender)) u.job = j; }
+    if (!u.charId || u.charId === 'rhen') u.equip = {};
     setLevel(u, lv); autoEquip(u, s.tier, rng); if (!u.charId) autoAbilities(u, rng, {});
   }
   const grid = new MapGrid(mapDef(def.map));

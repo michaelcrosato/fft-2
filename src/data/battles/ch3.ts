@@ -331,7 +331,7 @@ export const battles: BattleDef[] = [
         char: 'wolfram', level: '+2', at: [6, 3], facing: 'S', team: 1, boss: true, hpMult: 1.0,
         secondary: 'monk', learned: ['shockwave', 'earthRend'], reaction: 'counter', support: 'maintenance', movement: 'move1',
       },
-      { job: 'beleth', id: 'beleth', boss: true, hpMult: 3, level: '+4', at: [6, 2], facing: 'S', team: 1, hidden: true, noLoot: true },
+      { job: 'beleth', id: 'beleth', boss: true, hpMult: 2, level: '+4', at: [6, 2], facing: 'S', team: 1, hidden: true, noLoot: true },
     ],
     victory: { type: 'defeat', ids: ['beleth'] },
     events: [

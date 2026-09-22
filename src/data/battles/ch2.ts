@@ -104,7 +104,7 @@ export const battles: BattleDef[] = [
     units: [
       { char: 'delan', job: 'lionKnight', level: '+2', at: [9, 4], facing: 'W', team: 0, ai: 'aggressive', equip: DELAN_KIT },
       { char: 'oriane', level: '+1', at: [10, 5], facing: 'W', team: 0, ai: 'support', vip: true },
-      { char: 'garmond', level: '+2', at: [13, 7], facing: 'S', team: 1, boss: true, hpMult: 1.5, equip: GARMOND_KIT },
+      { char: 'garmond', level: '+2', at: [13, 9], facing: 'S', team: 1, boss: true, hpMult: 1.5, equip: GARMOND_KIT },
       { id: 'nsCaptain', job: 'knight', name: 'Northsky Captain', level: '+1', at: [3, 2], facing: 'E', secondary: 'squire', reaction: 'counterTackle' },
       { job: 'knight', name: 'Northsky Knight', level: '+0', at: [4, 5], facing: 'E' },
       { job: 'knight', name: 'Northsky Knight', level: '+0', at: [2, 6], facing: 'E' },
@@ -388,7 +388,7 @@ export const battles: BattleDef[] = [
     maxDeploy: 5, forced: ['rhen'],
     hint: 'Vepar\'s Nightmare brings sleep or doom; its Craven\'s Snare stops a warrior\'s arm. It is weak to holy light and cannot be held by ordinary curses — but it can be rooted in place.',
     units: [
-      { job: 'vepar', id: 'vepar', level: '+4', boss: true, hpMult: 3, at: [5, 2], facing: 'S' },
+      { job: 'vepar', id: 'vepar', level: '+4', boss: true, hpMult: 2, at: [5, 2], facing: 'S' },
       { id: 'crypt1', job: 'ghoul', name: 'Crypt-Risen', level: '+1', at: [1, 2], facing: 'S', hidden: true },
       { id: 'crypt2', job: 'ghoul', name: 'Crypt-Risen', level: '+1', at: [10, 2], facing: 'S', hidden: true },
     ],

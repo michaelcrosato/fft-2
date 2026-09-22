@@ -149,9 +149,9 @@ const rods = group('rod', [
 const staves = group('staff', [
   { id: 'oakStaff', name: 'Oak Staff', desc: 'A stout staff of oak, a pilgrim\'s prop and a cleric\'s first defence.', price: 120, shopTier: 1, wp: 3, wev: 15, look: { color: '#7a5a34' } },
   // source: 25% chance to cancel Doom on hit (not yet supported by onHit)
-  { id: 'whiteStaff', name: 'White Staff', desc: 'Carried by those in holy orders; its meaning outweighs its might in battle.', price: 800, shopTier: 2, wp: 3, wev: 15, look: { color: '#f0ece0', color2: '#d0b060' } },
+  { id: 'whiteStaff', name: 'White Staff', desc: 'Carried by those in holy orders; its touch may lift poison, blindness or silence.', price: 800, shopTier: 2, wp: 3, wev: 15, onHit: { cure: ['poison', 'blind', 'silence'], chance: 35 }, look: { color: '#f0ece0', color2: '#d0b060' } },
   // source: attacks heal the target instead of harming (engine gap)
-  { id: 'healingStaff', name: 'Healing Staff', desc: 'A spirit of mending dwells within; whomever it strikes is made whole.', price: 0, rare: true, wp: 4, wev: 15, look: { color: '#d0f0c0', color2: '#60c060', glow: '#a0ffa0' } },
+  { id: 'healingStaff', name: 'Healing Staff', desc: 'A spirit of mending dwells within; whomever it strikes is made whole.', price: 0, rare: true, wp: 4, wev: 15, healOnHit: true, look: { color: '#d0f0c0', color2: '#60c060', glow: '#a0ffa0' } },
   { id: 'rainbowStaff', name: 'Rainbow Staff', desc: 'Its head is set with serpent scales that shimmer in every hue.', price: 2200, shopTier: 4, wp: 5, wev: 15, look: { color: '#a080c0', color2: '#60e0c0' } },
   { id: 'wizardStaff', name: 'Wizard Staff', desc: 'A staff of cypress that sharpens the magick of the hand that holds it.', price: 4000, shopTier: 5, wp: 4, wev: 15, stats: { ma: 1 }, look: { color: '#5a4a30', color2: '#8060d0' } },
   { id: 'goldStaff', name: 'Gold Staff', desc: 'A glittering staff of gold, fit for a bishop\'s procession.', price: 7000, shopTier: 6, wp: 6, wev: 15, look: { color: '#e8c050' } },
@@ -259,7 +259,7 @@ const poles = group('pole', [
   { id: 'ironFan', name: 'Iron Fan', desc: 'A gigantic iron-framed fan, wielded folded like a cudgel.', price: 4000, shopTier: 5, wp: 9, wev: 20, look: { color: '#50545c', color2: '#c03030' } },
   { id: 'ruyiPole', name: 'Ruyi Pole', desc: 'The monkey king\'s staff of the old tales; a knock from it shakes the faith right out of one.', price: 7500, shopTier: 6, wp: 10, wev: 20, onHit: { status: ['atheist'], chance: 20 }, look: { color: '#c03030', color2: '#e0c040' } },
   // source: 25% chance to cancel Frog/Oil/Poison/Silence/Immobilize/Disable/Stop/Slow (engine gap)
-  { id: 'octagonPole', name: 'Octagon Pole', desc: 'An eight-sided pole shod in steel; its blow shakes ill humours from friend and foe.', price: 20000, shopTier: 8, wp: 12, wev: 20, look: { color: '#3a3a44', color2: '#c0c4cc' } },
+  { id: 'octagonPole', name: 'Octagon Pole', desc: 'An eight-sided pole shod in steel; its blow shakes ill humours from friend and foe.', price: 20000, shopTier: 8, wp: 12, wev: 20, onHit: { cure: ['poison', 'blind', 'silence', 'confuse', 'berserk', 'charm', 'sleep', 'slow', 'stop', 'immobilize', 'disable', 'oil', 'frog'], chance: 50 }, look: { color: '#3a3a44', color2: '#c0c4cc' } },
   { id: 'ivoryPole', name: 'Ivory Pole', desc: 'A pole of yellowed ivory, frail to the eye and surprisingly strong.', price: 0, rare: true, wp: 11, wev: 20, look: { color: '#f0e8d0' } },
   { id: 'whaleWhisker', name: 'Whale Whisker', desc: 'Neither wood nor metal; said to be the whisker of a whale larger than an island.', price: 0, rare: true, wp: 16, wev: 20, look: { color: '#1a1a24', color2: '#8090b0', glow: '#80a0ff' } },
 ]);

@@ -18,7 +18,9 @@ let cam: any = null;
 
 function setup() {
   if (rt) return;
-  rt = new THREE.RenderTarget(W, H, { type: THREE.UnsignedByteType, samples: BACKEND === 'webgl1' ? 0 : 4 } as any);
+  // the legacy WebGL1 renderer can only read back its own WebGLRenderTarget
+  const RT = BACKEND === 'webgl1' && (THREE as any).WebGLRenderTarget ? (THREE as any).WebGLRenderTarget : THREE.RenderTarget;
+  rt = new RT(W, H, { type: THREE.UnsignedByteType, samples: BACKEND === 'webgl1' ? 0 : 4 } as any);
   scene = new THREE.Scene();
   const key = new THREE.DirectionalLight('#fff4e0', 3.2);
   key.position.set(1.2, 2.2, 3);

@@ -484,7 +484,9 @@ export class Battle {
     const attack = ABILITIES.get('attack');
     if (attack) out.push({ id: 'attack', name: 'Attack', abilities: [attack] });
     if (u.isMonster) {
-      const acts = u.monsterActions().filter((a) => a.id !== 'attack');
+      // a player's monster only recalls its secret art with a Beast Lore ally close by
+      const lore = u.team !== 0 || this.units.some((o) => o !== u && o.team === u.team && o.alive && !o.gone && o.hasSupport('monsterSkill') && Math.abs(o.x - u.x) + Math.abs(o.z - u.z) <= 3);
+      const acts = u.monsterActions(lore).filter((a) => a.id !== 'attack');
       out.push({ id: 'monster', name: u.job.skillset.name, abilities: acts });
       return out;
     }
@@ -862,6 +864,8 @@ export class Battle {
             const d2 = this.modifyDamage(c, t, a, weaponDamage(c, c.weapon2, this.rng), c.weapon2.element, true, ctx.zodiac, h);
             dmg += d2;
           }
+          // mending staves turn the blow into healing (the undead still suffer it)
+          if (a.id === 'attack' && c.weapon?.healOnHit && dmg > 0 && !t.has('undead')) dmg = -dmg;
           if (dmg < 0) {
             // absorbed
             if (stat === 'hp') { this.heal(t, -dmg, undefined, false); h.heal = (h.heal ?? 0) - dmg; }
@@ -901,7 +905,9 @@ export class Battle {
             if (t.has('undead')) break;
             this.revive(t, e.pct, false); h.revive = true; h.heal = t.hp;
           } else if (t.has('undead') && t.alive) {
-            this.knockOut(t); h.ko = true;
+            // the unquiet dead are unmade by holy rites — though great powers merely reel
+            if (t.boss) { const real = this.damage(t, Math.floor(t.maxHp * 0.12)); h.dmg = (h.dmg ?? 0) + real; }
+            else { this.knockOut(t); h.ko = true; }
           }
           break;
         }
@@ -994,6 +1000,7 @@ export class Battle {
       const oh = c.weapon.onHit;
       if (this.rng.pct(oh.chance)) {
         for (const s of oh.status ?? []) if (this.addStatus(t, s)) (h.add ??= []).push(s);
+        for (const s of oh.cure ?? []) if (t.has(s)) { t.statuses.delete(s); (h.remove ??= []).push(s); }
         const sp = oh.spell ? ABILITIES.get(oh.spell) : undefined;
         if (sp && depth === 0) react.push(() => { if (t.alive && c.alive) this.subAction(c, sp, t.x, t.z); });
       }
@@ -1006,6 +1013,12 @@ export class Battle {
       this.poached.push(it);
       t.gone = true;
       (h.text ??= []).push('Poached!');
+    }
+    if (t.alive && t.critical && t.isMonster && c.hasSupport('train') && t.team !== c.team && dealtHp > 0 && !t.boss && !t.vip && !t.roster.charId && !t.job.noInvite && this.rng.pct(60)) {
+      t.team = c.team; t.baseTeam = c.team; t.controlled = c.team === 0; t.statuses.delete('charm');
+      if (c.team === 0) this.invited.push(t);
+      this.emit({ t: 'teamChange', uid: t.uid, team: t.team });
+      (h.text ??= []).push('Tamed!');
     }
     // ---- queue post-hit reactions ----
     if (t !== c && !this.isAlly(c, t) && depth === 0) {
@@ -1080,6 +1093,7 @@ export class Battle {
           let base = a.id === 'attack' ? weaponDamage(c, c.weapon, null, { avg: true }) : e.formula(ctx);
           let d = this.modifyDamage(c, t, a, base, el, physical, ctx.zodiac, dummy, true);
           if (a.id === 'attack' && c.weapon2) d += this.modifyDamage(c, t, a, weaponDamage(c, c.weapon2, null, { avg: true }), c.weapon2.element, true, ctx.zodiac, dummy, true);
+          if (a.id === 'attack' && c.weapon?.healOnHit && d > 0 && !t.has('undead')) d = -d;
           if ((e.stat ?? 'hp') === 'hp') { if (d < 0) p.heal = (p.heal ?? 0) - d; else p.dmg = (p.dmg ?? 0) + d; }
           else p.mp = (p.mp ?? 0) + d;
           break;
@@ -1090,7 +1104,7 @@ export class Battle {
           else p.mp = -(amt);
           break;
         }
-        case 'revive': if (t.has('ko')) { p.heal = Math.floor(t.maxHp * e.pct); status.push('Revive'); } else if (t.has('undead')) p.ko = true; break;
+        case 'revive': if (t.has('ko')) { p.heal = Math.floor(t.maxHp * e.pct); status.push('Revive'); } else if (t.has('undead')) { if (t.boss) p.dmg = (p.dmg ?? 0) + Math.floor(t.maxHp * 0.12); else p.ko = true; } break;
         case 'status':
           for (const s of e.add ?? []) if (!t.has(s) && !t.immune.has(s)) status.push(STATUS[s].name);
           for (const s of e.remove ?? []) if (t.has(s)) status.push('-' + STATUS[s].name);

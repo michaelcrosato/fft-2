@@ -264,7 +264,7 @@ export class Game {
         b.checkEnd();
       },
     });
-    if ((window as any).__forceWin) { (window as any).__forceWin = false; b.forced = 'victory'; b.checkEnd(); console.warn('[autoplay] forced victory in ' + def.id); }
+    if ((window as any).__forceWin || (window as any).__quickWin) { (window as any).__forceWin = false; b.forced = 'victory'; b.checkEnd(); console.warn('[autoplay] forced victory in ' + def.id); }
     const result = await ctrl.run();
     ctrl.dispose();
     this.currentBattle = null;

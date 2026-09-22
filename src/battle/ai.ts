@@ -39,6 +39,8 @@ export function planTurn(b: Battle, u: BattleUnit): AiPlan {
 
   // ---- status-driven behaviour ----
   if (u.has('chicken')) return flee(b, u, enemies, faceNearest);
+  // cowards keep their distance once a foe draws near or they are hurt
+  if (u.ai === 'coward' && (u.hp < u.maxHp * 0.6 || enemies.some((e) => Math.abs(e.x - u.x) + Math.abs(e.z - u.z) <= 4))) return flee(b, u, enemies, faceNearest);
   // ---- reach objectives: allies head for the goal when the way is clear (or it is close) ----
   const vic = b.def.victory;
   if (vic.type === 'reach' && u.team === 0 && !u.moved && u.canMove) {
@@ -187,12 +189,18 @@ function scoreAction(b: Battle, u: BattleUnit, a: AbilityDef, prev: TargetPrevie
       const frac = Math.min(1, p.dmg / Math.max(1, t.hp));
       let v = frac * 60 + (p.dmg >= t.hp ? 45 : 0);
       if (t.boss) v *= 1.2;
-      if (t.vip) v *= 1.5;
+      if (t.vip) v *= 1.2;
       if (!t.alive) v = 0;
       s += (ally ? -1.4 : 1) * v * hit * (t.hp > 0 ? 1 : 0);
     }
     if (p.heal) {
-      if (t.has('ko')) s += (ally ? 1 : -1) * 70 * hit;
+      if (t.has('ko')) {
+        // raising the leader (whose fall loses the day) or a ward comes first
+        let v = 70;
+        if (ally && (t.vip || (t.team === 0 && t.sid === b.heroSid))) v = 170;
+        else if (ally && t.koCount <= 1) v = 95;
+        s += (ally ? 1 : -1) * v * hit;
+      }
       else {
         const missing = t.maxHp - t.hp;
         const eff = Math.min(missing, p.heal) / t.maxHp;

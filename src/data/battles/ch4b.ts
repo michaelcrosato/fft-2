@@ -19,7 +19,7 @@ export const battles: BattleDef[] = [
         equip: { rhand: 'defender', lhand: 'aegisShield', head: 'circlet', body: 'carabineerMail', accessory: 'powerWrist' },
         secondary: 'wizard', reaction: 'catch', support: 'defenseUp', movement: 'move1',
       },
-      { id: 'azazel', job: 'azazel', name: 'Azazel', level: '+5', at: [6, 2], facing: 'S', team: 1, boss: true, hpMult: 3.5, hidden: true, noLoot: true },
+      { id: 'azazel', job: 'azazel', name: 'Azazel', level: '+5', at: [6, 2], facing: 'S', team: 1, boss: true, hpMult: 2.4, hidden: true, noLoot: true },
       {
         char: 'zander', level: '+3', at: [7, 6], facing: 'N', team: 0, ai: 'berserk', statuses: ['berserk'],
         equip: { rhand: 'runeBlade', lhand: 'crystalShield', head: 'crystalHelmet', body: 'crystalMail', accessory: 'germainBoots' },
@@ -368,7 +368,7 @@ export const battles: BattleDef[] = [
         equip: { rhand: 'runeBlade', lhand: 'crystalShield', head: 'crystalHelmet', body: 'crystalMail', accessory: 'elvenMantle' },
         reaction: 'counter', support: 'defenseUp', movement: 'move1',
       },
-      { id: 'astaroth', job: 'astaroth', name: 'Astaroth', level: '+6', at: [8, 2], facing: 'S', team: 1, boss: true, hpMult: 4, hidden: true, noLoot: true },
+      { id: 'astaroth', job: 'astaroth', name: 'Astaroth', level: '+6', at: [8, 2], facing: 'S', team: 1, boss: true, hpMult: 2.6, hidden: true, noLoot: true },
       { job: 'sanctumKnight', name: 'Sanctum Knight', level: '+3', at: [4, 2], facing: 'S', team: 1, reaction: 'counter' },
       { job: 'sanctumKnight', name: 'Sanctum Knight', level: '+3', at: [12, 3], facing: 'S', team: 1, reaction: 'weaponGuard' },
       { job: 'revenant', name: 'Drowned Aeronaut', level: '+3', at: [6, 6], facing: 'S', team: 1 },
@@ -420,8 +420,8 @@ export const battles: BattleDef[] = [
     maxDeploy: 5,
     hint: 'The Seraph wears Alys\'s body. Break the saint\'s borrowed shape — and then face what lies beneath it.',
     units: [
-      { id: 'altessaHost', job: 'altessaHost', name: 'Saint Altessa', level: '+7', at: [5, 2], facing: 'S', team: 1, boss: true, hpMult: 5, noLoot: true },
-      { id: 'altessa', job: 'altessa', name: 'Altessa', level: '+8', at: [6, 2], facing: 'S', team: 1, boss: true, hpMult: 6, hidden: true, noLoot: true },
+      { id: 'altessaHost', job: 'altessaHost', name: 'Saint Altessa', level: '+7', at: [5, 2], facing: 'S', team: 1, boss: true, hpMult: 3, noLoot: true },
+      { id: 'altessa', job: 'altessa', name: 'Altessa', level: '+8', at: [6, 2], facing: 'S', team: 1, boss: true, hpMult: 3.5, hidden: true, noLoot: true },
       { job: 'revenant', name: 'Shade of the Host', level: '+4', at: [2, 6], facing: 'S', team: 1 },
       { job: 'revenant', name: 'Shade of the Host', level: '+4', at: [9, 6], facing: 'S', team: 1 },
       {
