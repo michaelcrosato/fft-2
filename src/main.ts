@@ -63,6 +63,16 @@ async function boot() {
     await game.runBattle(q.get('id') ?? 'b_galwyn');
     return;
   }
+  if (test === 'side') {
+    // play one side-quest step (scenes + battle) in isolation
+    const { SIDE } = await import('./data/db');
+    game.state = newGame('Rhen', [4, 12]);
+    game.state.chapter = Number(q.get('ch') ?? 4);
+    game.state.roster.forEach((u) => setLevel(u, Number(q.get('lv') ?? 30)));
+    const st = SIDE.find((x) => x.id === q.get('id'));
+    if (st) { for (const c of st.needChar ?? []) (await import('./game/state')).joinCharacter(game.state, c); await game.runSide(st); }
+    return;
+  }
   if (test === 'scene') {
     game.state = newGame('Rhen', [4, 12]);
     await game.playScene(q.get('id') ?? '');

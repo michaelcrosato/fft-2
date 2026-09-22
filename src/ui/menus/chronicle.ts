@@ -5,6 +5,8 @@ import { menu } from '../widgets';
 import { h } from '../dom';
 import { overlay } from './common';
 import { input } from '../input';
+import { ZODIAC_STONES } from '../../data/misc/zodiacStones';
+import { ZODIAC_NAMES, ZODIAC_GLYPH } from '../../battle/zodiac';
 
 export async function openChronicle(game: Game) {
   const s = game.state;
@@ -18,7 +20,7 @@ export async function openChronicle(game: Game) {
   };
   try {
     for (;;) {
-      const sec = await menu({ items: [{ label: 'Events', value: 'events' }, { label: 'Persons', value: 'persons' }, { label: 'Artefacts & Wonders', value: 'artefacts' }, { label: 'Errands', value: 'errands' }, { label: 'Records', value: 'records' }], x: 16, y: 64, title: 'Chronicle', parent: ov.root }).promise;
+      const sec = await menu({ items: [{ label: 'Events', value: 'events' }, { label: 'Persons', value: 'persons' }, { label: 'Artefacts & Wonders', value: 'artefacts' }, { label: 'Zodiac Stones', value: 'stones', right: `${ZODIAC_STONES.filter((z) => s.flags[z.flag]).length}/13` }, { label: 'Errands', value: 'errands' }, { label: 'Records', value: 'records' }], x: 16, y: 64, title: 'Chronicle', parent: ov.root }).promise;
       if (!sec) return;
       if (sec === 'events') {
         const list = [...CHRONICLE.values()].filter((e) => s.chronicle.includes(e.id) || s.flags[e.id]).sort((a, b) => a.chapter - b.chapter);
@@ -37,6 +39,13 @@ export async function openChronicle(game: Game) {
       if (sec === 'artefacts') {
         const list = s.artefacts.map((id) => ARTEFACTS.get(id)).filter(Boolean) as NonNullable<ReturnType<typeof ARTEFACTS.get>>[];
         await menu({ items: list.length ? list.map((a) => ({ label: a.name, value: a.id })) : [{ label: 'None found — send parties on errands', value: '', disabled: true }], x: 16, y: 64, title: 'Artefacts', parent: ov.root, maxHeight: '70vh', onHover: (id) => { const a = ARTEFACTS.get(id as string); if (a) show(a.name, a.desc); } }).promise;
+      }
+      if (sec === 'stones') {
+        await menu({
+          items: ZODIAC_STONES.map((z) => ({ label: `${ZODIAC_GLYPH[z.sign]}  ${s.flags[z.flag] ? ZODIAC_NAMES[z.sign] : '— unknown —'}`, value: z.sign, disabled: !s.flags[z.flag] })),
+          x: 16, y: 64, title: 'Zodiac Stones', parent: ov.root, maxHeight: '70vh',
+          onHover: (id) => { const z = ZODIAC_STONES.find((q) => q.sign === id); if (z && s.flags[z.flag]) show(`${ZODIAC_GLYPH[z.sign]} The Stone of ${ZODIAC_NAMES[z.sign]}`, `${z.lore}\n\nFound: ${z.where}.`); },
+        }).promise;
       }
       if (sec === 'errands') {
         const list = s.errandsDone.map((id) => ERRANDS.get(id)).filter(Boolean) as NonNullable<ReturnType<typeof ERRANDS.get>>[];
