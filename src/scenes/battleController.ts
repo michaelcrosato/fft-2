@@ -47,6 +47,7 @@ export class BattleController {
   private auras = new Map<number, () => void>();
   private speed = 1;
   private autoAll = false;
+  private goalShown = false;
 
   constructor(stage: Stage, b: Battle, hooks: ControllerHooks) {
     this.stage = stage;
@@ -74,6 +75,13 @@ export class BattleController {
       if (this.b.result) break;
       if (!unit) continue;
       this.hud.turnList(this.b);
+      // reach objectives: once the field is clear, show the way onward
+      const v = this.b.def.victory;
+      if (v.type === 'reach' && !this.goalShown && !this.b.units.some((o) => o.team !== 0 && o.active && !o.hidden)) {
+        this.goalShown = true;
+        this.stage.markGoal(v.cells);
+        toast('The way onward reveals itself…', 3000);
+      }
       const forcedAi = unit.has('confuse') || unit.has('berserk') || unit.has('charm') || unit.has('chicken') || unit.has('vampire');
       if (unit.controlled && unit.team === 0 && !forcedAi && !this.autoAll && !(window as any).__autoBattle) await this.playerTurn(unit);
       else await this.aiTurn(unit);

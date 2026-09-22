@@ -150,8 +150,8 @@ export function setupBattle(state: GameState, def: BattleDef, party: DeployChoic
   const rng = new Rng(opts.seed ?? state.seed + state.battlesWon * 7919 + state.day);
   const grid = new MapGrid(mapDef(def.map));
   const diff = (opts as { difficulty?: string }).difficulty ?? loadOptions().difficulty ?? 'normal';
-  const pl = Math.max(1, partyLevel(state) + (diff === 'easy' ? -2 : diff === 'hard' ? 2 : 0));
-  const hpScale = diff === 'easy' ? 0.85 : diff === 'hard' ? 1.15 : 1;
+  const pl = Math.max(1, partyLevel(state) + (diff === 'easy' ? -3 : diff === 'hard' ? 1 : -1));
+  const hpScale = diff === 'easy' ? 0.8 : diff === 'hard' ? 1.1 : 0.9;
   const units: BattleUnit[] = [];
   const temp: RosterUnit[] = [];
   for (const p of party) {

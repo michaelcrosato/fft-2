@@ -39,6 +39,18 @@ export function planTurn(b: Battle, u: BattleUnit): AiPlan {
 
   // ---- status-driven behaviour ----
   if (u.has('chicken')) return flee(b, u, enemies, faceNearest);
+  // ---- reach objectives: allies head for the goal when the way is clear (or it is close) ----
+  const vic = b.def.victory;
+  if (vic.type === 'reach' && u.team === 0 && !u.moved && u.canMove) {
+    const cells = b.moveRange(u);
+    const onGoal = cells.find((c) => vic.cells.some(([x, z]) => x === c.x && z === c.z));
+    if (onGoal) return { move: [onGoal.x, onGoal.z], facing: u.facing, score: 999 };
+    if (!enemies.length) {
+      let best = cells[0], bd = 1e9;
+      for (const c of cells) for (const [x, z] of vic.cells) { const d = Math.abs(c.x - x) + Math.abs(c.z - z); if (d < bd) { bd = d; best = c; } }
+      if (best) return { move: [best.x, best.z], facing: u.facing, score: 1 };
+    }
+  }
   const confused = u.has('confuse');
   const berserk = u.has('berserk') || u.ai === 'berserk';
 

@@ -117,6 +117,10 @@ describe('audio engine without an AudioContext', () => {
     expect(audio.getVolumes()).toEqual({ master: 0.5, music: 1, sfx: 0 });
     expect(() => audio.stopMusic()).not.toThrow();
     expect(audio.currentMusic).toBeNull();
+    expect(() => audio.setQuality('low')).not.toThrow();
+    expect(audio.getQuality()).toBe('low');
+    audio.setQuality('high');
+    expect(audio.debug().state).toBe('locked');
   });
 
   it('warns and stops on unknown music ids', () => {

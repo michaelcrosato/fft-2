@@ -4,7 +4,13 @@
  *   import { audio } from './audio/audio';
  *   audio.attachUnlock();          // or call audio.unlock() from a user gesture
  *   audio.playMusic('title');      // crossfades; remembered until unlocked
- *   audio.sfx('confirm');
+ *   audio.sfx('confirm', { pan: -0.3, pitch: 1.1 });
+ *   audio.duck(0.6, 1.5);          // dip the music under a big spell
+ *   audio.setVolumes({ music: 0.5 });
+ *   audio.setQuality('low');       // cheaper mixing for weak devices
+ *
+ * Track ids: see TRACKS in tracks.ts (audio.trackIds); sfx ids: SFX in sfx.ts.
+ * Dev audition page: /audio-test.html (npm run dev).
  *
  * All sound is synthesized at runtime (see synth.ts / tracks.ts / sfx.ts).
  * No AudioContext exists before unlock(); without Web Audio the engine is a

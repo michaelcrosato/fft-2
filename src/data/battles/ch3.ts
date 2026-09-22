@@ -49,7 +49,7 @@ export const battles: BattleDef[] = [
     id: 'b_lesandre', name: 'Lesandre, the Royal Plaza', map: 'lesandre_plaza', music: 'tension', maxDeploy: 5,
     hint: 'Drive Inquisitor Zalmon off the terrace. Keep Alys alive — she will shield you if she can.',
     units: [
-      { char: 'alys', job: 'cleric', level: '+0', at: [8, 13], facing: 'N', team: 0, ai: 'support', vip: true },
+      { char: 'alys', job: 'cleric', level: '+0', at: [8, 13], facing: 'N', team: 0, ai: 'support', vip: true, hpMult: 1.5, statuses: ['protect', 'shell'] },
       { char: 'zalmon', level: '+2', at: [8, 2], facing: 'S', team: 1, boss: true, hpMult: 1.3, movement: 'moveHpUp' },
       { id: 'churchKnight1', job: 'knight', gender: 'm', name: 'Church Knight', level: '+0', at: [8, 5], facing: 'S', team: 1, learned: ['sunderArmor', 'sunderPower'] },
       { id: 'churchKnight2', job: 'knight', gender: 'm', name: 'Church Knight', level: '+0', at: [4, 5], facing: 'S', team: 1, learned: ['sunderWeapon', 'sunderSpeed'] },
@@ -68,7 +68,7 @@ export const battles: BattleDef[] = [
         ],
       },
       {
-        when: { hpBelow: ['zalmon', 35] },
+        when: { hpBelow: ['zalmon', 40] },
         script: [
           ['say', 'zalmon', 'Gah — the devil lends his servants strength! This changes nothing, Valorne. Your name is written, and the Church does not unwrite.'],
           ['say', 'zalmon', 'Run, then. Run to the ends of Ivaldis. There is no road on which the Glorian Church will not be waiting.'],
@@ -116,7 +116,7 @@ export const battles: BattleDef[] = [
     hint: 'Isidore leaps from afar and strikes from above. Wound him badly and he will break off. The summoner below the tombs is closer than he looks.',
     units: [
       {
-        char: 'isidore', level: '+2', at: [2, 2], facing: 'S', team: 1, boss: true, hpMult: 1.3,
+        char: 'isidore', level: '+2', at: [2, 2], facing: 'S', team: 1, boss: true, hpMult: 1.2,
         secondary: 'lancer', learned: ['jump', 'jumpH5', 'jumpV5'], movement: 'ignoreHeight', support: 'maintenance',
       },
       { id: 'cryptKnight1', job: 'knight', gender: 'm', name: 'Sanctum Man-at-Arms', level: '+0', at: [7, 4], facing: 'S', team: 1, learned: ['sunderWeapon', 'sunderArmor'] },
@@ -134,7 +134,7 @@ export const battles: BattleDef[] = [
         ],
       },
       {
-        when: { hpBelow: ['isidore', 30] },
+        when: { hpBelow: ['isidore', 50] },
         script: [
           ['say', 'isidore', 'Ngh... You fight like a man with nothing left to lose. I, however, have a duty yet undone.'],
           ['say', 'isidore', 'The stone was never down here — the old abbot lied to us all. Then it lies above... beneath the Saint\'s own altar!'],
@@ -155,12 +155,12 @@ export const battles: BattleDef[] = [
     hint: 'Wolfram\'s sacred blade reaches far and cuts through ranks. Spread out. Archers hold the choir gallery; a wizard hides on the book-press.',
     units: [
       {
-        char: 'wolfram', level: '+3', at: [6, 7], facing: 'S', team: 1, boss: true, hpMult: 1.4,
+        char: 'wolfram', level: '+2', at: [6, 7], facing: 'S', team: 1, boss: true, hpMult: 1.2,
         secondary: 'sanctumKnight', learned: ['sanctumMailrend', 'sanctumSwordbane', 'sanctumCrownsplitter'],
         reaction: 'counter', support: 'maintenance', movement: 'move1',
       },
-      { id: 'chapelKnight1', job: 'knight', gender: 'f', name: 'Sanctum Sister-at-Arms', level: '+0', at: [2, 5], facing: 'S', team: 1, learned: ['sunderArmor', 'sunderMana'] },
-      { id: 'chapelKnight2', job: 'knight', gender: 'f', name: 'Sanctum Sister-at-Arms', level: '+0', at: [8, 5], facing: 'S', team: 1, learned: ['sunderWeapon', 'sunderPower'] },
+      { id: 'chapelKnight1', job: 'knight', gender: 'f', name: 'Sanctum Sister-at-Arms', level: '-1', at: [2, 5], facing: 'S', team: 1, learned: ['sunderArmor', 'sunderMana'] },
+      { id: 'chapelKnight2', job: 'knight', gender: 'f', name: 'Sanctum Sister-at-Arms', level: '-1', at: [8, 5], facing: 'S', team: 1, learned: ['sunderWeapon', 'sunderPower'] },
       { id: 'chapelArcher1', job: 'archer', gender: 'f', name: 'Sanctum Bowwoman', level: '+0', at: [10, 6], facing: 'W', team: 1, learned: ['aim2', 'aim4'] },
       { id: 'chapelArcher2', job: 'archer', gender: 'f', name: 'Sanctum Bowwoman', level: '-1', at: [11, 8], facing: 'W', team: 1, learned: ['aim2', 'aim3'] },
       { id: 'chapelWizard', job: 'wizard', gender: 'f', name: 'Sanctum Magus', level: '+0', at: [2, 9], facing: 'E', team: 1, learned: ['fira', 'thundara', 'blizzara', 'poison'] },
@@ -174,7 +174,7 @@ export const battles: BattleDef[] = [
         ],
       },
       {
-        when: { hpBelow: ['wolfram', 40] },
+        when: { hpBelow: ['wolfram', 50] },
         script: [
           ['say', 'wolfram', 'Hah... You have grown. So have I. But I did not come here to die for the Church — only to take what it is owed.'],
           ['say', 'wolfram', 'Hold them, sisters. I have an altar to rob.'],
@@ -328,7 +328,7 @@ export const battles: BattleDef[] = [
     hint: 'Wolfram fights alone and holds nothing back. Whatever happens when he falls — be ready. Silence and immobility are said to bind the Ram.',
     units: [
       {
-        char: 'wolfram', level: '+3', at: [6, 3], facing: 'S', team: 1, boss: true, hpMult: 1.2,
+        char: 'wolfram', level: '+2', at: [6, 3], facing: 'S', team: 1, boss: true, hpMult: 1.0,
         secondary: 'monk', learned: ['shockwave', 'earthRend'], reaction: 'counter', support: 'maintenance', movement: 'move1',
       },
       { job: 'beleth', id: 'beleth', boss: true, hpMult: 3, level: '+4', at: [6, 2], facing: 'S', team: 1, hidden: true, noLoot: true },
