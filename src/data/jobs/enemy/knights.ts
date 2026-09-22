@@ -310,18 +310,18 @@ export const abilities: AbilityDef[] = [
   // ======================================================= Sanctum Commander — High Sanctum Arts
   {
     id: 'sanctumCmdJudgement', name: 'Judgement Blade', kind: 'action', jp: 800, skillset: 'highSanctum',
-    desc: 'A blade of white light falls on a small area up to three tiles away, halting heretics where they stand. (PA × WP × 1.1 holy, Stop 20%)',
-    range: 3, aoe: 2, aoeV: 2, target: 'enemy', element: 'holy', anim: 'swing', vfx: 'holy', color: '#fff0b0',
+    desc: 'A blade of white light falls on a small area up to three tiles away, halting heretics where they stand. (PA × WP × 0.85 holy, Stop 20%)',
+    range: 3, aoe: 2, aoeV: 2, ct: 2, target: 'enemy', element: 'holy', anim: 'swing', vfx: 'holy', color: '#fff0b0',
     requires: { weapon: SANCTUM_ARMS }, noReflect: true,
-    effects: [{ type: 'damage', formula: paWp(1.1), element: 'holy' }],
+    effects: [{ type: 'damage', formula: paWp(0.85), element: 'holy' }],
     statusChance: [{ status: 'stop', chance: 20 }],
   },
   {
     id: 'sanctumCmdLionsRoar', name: 'Lion\'s Roar', kind: 'action', jp: 600, skillset: 'highSanctum',
-    desc: 'A roar of command batters every foe within two tiles and shakes their courage. (PA × 8, Brave -8)',
+    desc: 'A roar of command batters every foe within two tiles and shakes their courage. (PA × 6, Brave -8)',
     range: 0, aoe: 3, aoeV: 3, target: 'enemy', enemiesOnly: true, anim: 'roar', vfx: 'wind', color: '#e8c060',
     noReflect: true,
-    effects: [{ type: 'damage', formula: F.pa(8) }, { type: 'stat', stat: 'brave', amount: -8 }],
+    effects: [{ type: 'damage', formula: F.pa(6) }, { type: 'stat', stat: 'brave', amount: -8 }],
   },
   {
     id: 'sanctumCmdChains', name: 'Chains of Order', kind: 'action', jp: 700, skillset: 'highSanctum',
