@@ -195,7 +195,7 @@ const max = (...v: number[]) => Math.max(...v);
 export const SFX: Record<string, SfxDef> = {
   // ---- UI --------------------------------------------------------------
   cursor: {
-    vol: 0.7,
+    vol: 1.6,
     rev: 0.05,
     gap: 30,
     play: (x) =>
@@ -212,7 +212,7 @@ export const SFX: Record<string, SfxDef> = {
       ),
   },
   cancel: {
-    vol: 0.8,
+    vol: 1.25,
     rev: 0.08,
     play: (x) =>
       max(
@@ -230,7 +230,7 @@ export const SFX: Record<string, SfxDef> = {
       ),
   },
   menuOpen: {
-    vol: 0.75,
+    vol: 1.6,
     rev: 0.2,
     play: (x) =>
       max(
@@ -245,7 +245,7 @@ export const SFX: Record<string, SfxDef> = {
     play: (x) => max(inst(x, 'celesta', 81, 0.3, 0.55), inst(x, 'celesta', 88, 0.5, 0.5, 0.09), inst(x, 'harp', 69, 0.5, 0.35, 0.09)),
   },
   textBlip: {
-    vol: 0.5,
+    vol: 2.2,
     rev: 0.02,
     gap: 28,
     play: (x) => tone(x, { type: 'triangle', f: 620 * (1 + rnd(0.03)), dur: 0.018, peak: 0.1, lp: 2400, a: 0.002, tau: 0.01 }),
@@ -253,7 +253,7 @@ export const SFX: Record<string, SfxDef> = {
 
   // ---- movement ----------------------------------------------------------
   step: {
-    vol: 0.6,
+    vol: 1.7,
     rev: 0.06,
     gap: 40,
     play: (x) => {
@@ -265,7 +265,7 @@ export const SFX: Record<string, SfxDef> = {
     },
   },
   jump: {
-    vol: 0.7,
+    vol: 1.25,
     rev: 0.1,
     play: (x) => max(noise(x, { f: 380, f1: 1700, q: 1.4, dur: 0.18, peak: 0.16, a: 0.04 }), tone(x, { f: 170, f1: 360, dur: 0.14, peak: 0.07, a: 0.01, lp: 1200 })),
   },
@@ -281,7 +281,7 @@ export const SFX: Record<string, SfxDef> = {
   },
 
   // ---- combat ------------------------------------------------------------
-  swing: { vol: 0.8, rev: 0.1, play: (x) => max(sweep(x, 600, 2900, 800, 0.2, 0.32, 2.4), sweep(x, 1200, 4200, 1600, 0.18, 0.08, 3)) },
+  swing: { vol: 1.6, rev: 0.1, play: (x) => max(sweep(x, 600, 2900, 800, 0.2, 0.32, 2.4), sweep(x, 1200, 4200, 1600, 0.18, 0.08, 3)) },
   hit: {
     vol: 0.9,
     rev: 0.14,
@@ -324,7 +324,7 @@ export const SFX: Record<string, SfxDef> = {
         noise(x, { f: 2000, f1: 8000, q: 2, dur: 0.18, peak: 0.12, a: 0.02 }),
       ),
   },
-  miss: { vol: 0.7, rev: 0.12, play: (x) => max(sweep(x, 1500, 4200, 2500, 0.15, 0.14, 3), tone(x, { f: 900, f1: 1400, dur: 0.12, peak: 0.03, a: 0.03 })) },
+  miss: { vol: 2.0, rev: 0.12, play: (x) => max(sweep(x, 1500, 4200, 2500, 0.15, 0.14, 3), tone(x, { f: 900, f1: 1400, dur: 0.12, peak: 0.03, a: 0.03 })) },
   block: {
     vol: 0.9,
     rev: 0.25,
@@ -347,7 +347,7 @@ export const SFX: Record<string, SfxDef> = {
     play: (x) => max(inst(x, 'lute', 40, 0.15, 0.9), noise(x, { f: 3200, f1: 1300, q: 5, dur: 0.28, peak: 0.16, a: 0.04, delay: 0.03 })),
   },
   gun: {
-    vol: 1,
+    vol: 0.6,
     rev: 0.35,
     play: (x) =>
       max(
@@ -356,7 +356,7 @@ export const SFX: Record<string, SfxDef> = {
         tone(x, { f: 95, f1: 38, glide: 0.15, dur: 0.2, peak: 0.6, tau: 0.08 }),
       ),
   },
-  throw: { vol: 0.75, rev: 0.1, play: (x) => max(sweep(x, 900, 2600, 1200, 0.16, 0.22, 2), tone(x, { f: 380, f1: 620, dur: 0.1, peak: 0.04, a: 0.02 })) },
+  throw: { vol: 1.7, rev: 0.1, play: (x) => max(sweep(x, 900, 2600, 1200, 0.16, 0.22, 2), tone(x, { f: 380, f1: 620, dur: 0.1, peak: 0.04, a: 0.02 })) },
 
   // ---- magic -------------------------------------------------------------
   magic: {
@@ -469,7 +469,7 @@ export const SFX: Record<string, SfxDef> = {
         noise(x, { type: 'bandpass', f: 700, q: 1, dur: 0.3, peak: 0.3, tau: 0.08 }),
       ),
   },
-  wind: { vol: 0.85, rev: 0.35, play: (x) => max(sweep(x, 400, 1900, 600, 1.0, 0.4, 4), sweep(x, 800, 2800, 1100, 0.9, 0.15, 6, 0.08)) },
+  wind: { vol: 1.35, rev: 0.35, play: (x) => max(sweep(x, 400, 1900, 600, 1.0, 0.4, 4), sweep(x, 800, 2800, 1100, 0.9, 0.15, 6, 0.08)) },
   holy: {
     vol: 0.85,
     rev: 0.6,
@@ -500,7 +500,7 @@ export const SFX: Record<string, SfxDef> = {
     },
   },
   poison: {
-    vol: 0.85,
+    vol: 1.2,
     rev: 0.3,
     play: (x) => {
       let end = x.t;
@@ -544,7 +544,7 @@ export const SFX: Record<string, SfxDef> = {
       ),
   },
   debuff: {
-    vol: 0.8,
+    vol: 1.1,
     rev: 0.3,
     play: (x) =>
       max(
@@ -554,7 +554,7 @@ export const SFX: Record<string, SfxDef> = {
       ),
   },
   status: {
-    vol: 0.75,
+    vol: 1.2,
     rev: 0.3,
     play: (x) => {
       const { ctx, t } = x;
@@ -657,12 +657,12 @@ export const SFX: Record<string, SfxDef> = {
     },
   },
   steal: {
-    vol: 0.8,
+    vol: 1.1,
     rev: 0.15,
     play: (x) => max(sweep(x, 1800, 5200, 3000, 0.12, 0.15, 3), ping(x, 3100, [[1, 1, 0.04], [1.5, 0.5, 0.03]], 0.1, 0.1), ping(x, 4100, [[1, 1, 0.05]], 0.08, 0.15)),
   },
   item: {
-    vol: 0.8,
+    vol: 1.1,
     rev: 0.3,
     play: (x) => max(tone(x, { f: 420, f1: 950, glide: 0.05, dur: 0.07, peak: 0.12, tau: 0.03 }), inst(x, 'celesta', 91, 0.3, 0.5, 0.06), inst(x, 'celesta', 98, 0.4, 0.45, 0.12)),
   },
@@ -808,7 +808,7 @@ export const SFX: Record<string, SfxDef> = {
     },
   },
   kweh: {
-    vol: 0.9,
+    vol: 0.6,
     rev: 0.2,
     play: (x) => {
       const { ctx, t } = x;

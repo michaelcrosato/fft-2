@@ -127,7 +127,7 @@ export class BattleController {
         { label: 'Status', value: 'status', icon: '☰' },
         { label: 'Auto-Battle', value: 'auto', icon: '⚙' },
       ];
-      const m = menu({ items, x: 14, y: '46%', title: u.name, cancelable: true, onAction: (a) => this.globalKeys(a) });
+      const m = menu({ items, x: 14, bottom: 'var(--menu-bottom)', title: u.name, cancelable: true, onAction: (a) => this.globalKeys(a) });
       const choice = await m.promise;
       if (choice === null) {
         // undo move if nothing else done
@@ -187,7 +187,7 @@ export class BattleController {
     for (;;) {
       const g = await menu({
         items: groups.map((gr) => ({ label: gr.name, value: gr.id, disabled: gr.abilities.length === 0 ? 'Nothing learned' : false })),
-        x: 14, y: '46%', title: 'Act', onAction: (a) => this.globalKeys(a),
+        x: 14, bottom: 'var(--menu-bottom)', title: 'Act', onAction: (a) => this.globalKeys(a),
       }).promise;
       if (g === null) return false;
       const grp = groups.find((x) => x.id === g)!;
@@ -201,7 +201,7 @@ export class BattleController {
             const stock = a.consumes ? ` ×${this.b.inventory.get(a.consumes) ?? 0}` : '';
             return { label: a.name, value: a.id, disabled: reason ?? false, right: mp ? `${mp} MP` : stock || (a.ct ? `CT ${this.b.chargeTicks(u, a)}` : ''), desc: a.desc };
           }),
-          x: 14, y: '30%', title: grp.name, showDesc: true, maxHeight: '48vh', onAction: (a) => this.globalKeys(a),
+          x: 14, bottom: 'var(--menu-bottom)', title: grp.name, showDesc: true, maxHeight: '48vh', onAction: (a) => this.globalKeys(a),
         }).promise;
         if (pick === null) continue;
         ability = ABILITIES.get(pick) ?? null;
@@ -211,7 +211,7 @@ export class BattleController {
       // sub-choices
       if (ability.special === 'throw') {
         const list = throwables(this.b, String(ability.params?.cat ?? 'shuriken'));
-        const it = await menu({ items: list.map((id) => ({ label: ITEMS.get(id)?.name ?? id, value: id, right: `WP ${ITEMS.get(id)?.wp ?? 0} ×${this.b.inventory.get(id)}` })), x: 14, y: '30%', title: 'Throw' }).promise;
+        const it = await menu({ items: list.map((id) => ({ label: ITEMS.get(id)?.name ?? id, value: id, right: `WP ${ITEMS.get(id)?.wp ?? 0} ×${this.b.inventory.get(id)}` })), x: 14, bottom: 'var(--menu-bottom)', title: 'Throw' }).promise;
         if (!it) continue;
         opts.item = it;
       }
@@ -227,12 +227,12 @@ export class BattleController {
 
   private async calcMenu(u: BattleUnit): Promise<ActionOpts['calc'] | null> {
     const learned = (p: string) => u.roster.learned.filter((id) => id.startsWith(p)).map((id) => ABILITIES.get(id)!).filter(Boolean);
-    const attr = await menu({ items: learned('calcAttr').map((a) => ({ label: a.name, value: String(a.params?.value) })), x: 14, y: '30%', title: 'Attribute' }).promise;
+    const attr = await menu({ items: learned('calcAttr').map((a) => ({ label: a.name, value: String(a.params?.value) })), x: 14, bottom: 'var(--menu-bottom)', title: 'Attribute' }).promise;
     if (!attr) return null;
-    const div = await menu({ items: learned('calcDiv').map((a) => ({ label: a.name, value: String(a.params?.value) })), x: 14, y: '30%', title: 'Divisor' }).promise;
+    const div = await menu({ items: learned('calcDiv').map((a) => ({ label: a.name, value: String(a.params?.value) })), x: 14, bottom: 'var(--menu-bottom)', title: 'Divisor' }).promise;
     if (!div) return null;
     const spells = u.roster.learned.map((id) => ABILITIES.get(id)).filter((a): a is AbilityDef => !!a && !!a.calc);
-    const sp = await menu({ items: spells.map((a) => ({ label: a.name, value: a.id, desc: a.desc })), x: 14, y: '30%', title: 'Spell', showDesc: true, maxHeight: '48vh' }).promise;
+    const sp = await menu({ items: spells.map((a) => ({ label: a.name, value: a.id, desc: a.desc })), x: 14, bottom: 'var(--menu-bottom)', title: 'Spell', showDesc: true, maxHeight: '48vh' }).promise;
     if (!sp) return null;
     return { attr, div, spell: sp };
   }
@@ -267,7 +267,7 @@ export class BattleController {
   }
 
   private async confirmHere(text: string): Promise<boolean> {
-    const r = await menu({ items: [{ label: 'Execute', value: true }, { label: 'Cancel', value: false }], x: 14, y: '46%', title: text }).promise;
+    const r = await menu({ items: [{ label: 'Execute', value: true }, { label: 'Cancel', value: false }], x: 14, bottom: 'var(--menu-bottom)', title: text }).promise;
     return !!r;
   }
 

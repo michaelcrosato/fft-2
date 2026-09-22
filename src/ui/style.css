@@ -25,7 +25,9 @@
   --ui-scale: 1;
   --font-body: 'EB Garamond', Georgia, 'Times New Roman', serif;
   --font-head: 'Cinzel', 'EB Garamond', Georgia, serif;
+  --menu-bottom: 172px;
 }
+.touch .helpbar { display: none; }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; background: #07060a; overflow: hidden; overscroll-behavior: none; }
@@ -201,7 +203,9 @@ body { font-family: var(--font-body); color: var(--ink); -webkit-font-smoothing:
 .touchpad .tb { width: 54px; height: 54px; border-radius: 50%; background: rgba(20, 14, 10, 0.55); border: 1px solid rgba(240, 210, 140, 0.45); color: #f7e3a8; display: flex; align-items: center; justify-content: center; font-family: var(--font-head); font-size: 1.1em; }
 
 @media (max-width: 760px), (max-height: 520px) {
-  :root { --ui-scale: 0.82; }
+  :root { --ui-scale: 0.74; --menu-bottom: 120px; }
+  .unitcard { min-width: 250px; padding: 6px 10px 6px 6px; }
+  .menu .scroll { max-height: 40vh; }
   .unitcard .portrait { width: 64px; height: 72px; }
   .atlist { display: none; }
   .dialogue { grid-template-columns: 76px 1fr; }

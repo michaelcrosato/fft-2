@@ -1301,8 +1301,15 @@ export interface MasterBus {
 
 export function createMasterBus(core: SynthCore, destination: AudioNode): MasterBus {
   const ctx = core.ctx;
-  const pre = mkGain(ctx, 1);
-  const reverbIn = mkGain(ctx, 1);
+  const stereo = (g: GainNode): GainNode => {
+    // fixed stereo so downstream filters never see their channel count change
+    g.channelCount = 2;
+    g.channelCountMode = 'explicit';
+    g.channelInterpretation = 'speakers';
+    return g;
+  };
+  const pre = stereo(mkGain(ctx, 1));
+  const reverbIn = stereo(mkGain(ctx, 1));
   const conv = ctx.createConvolver();
   conv.buffer = makeImpulse(ctx);
   const reverbOut = mkGain(ctx, 0.9);
