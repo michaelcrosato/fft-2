@@ -157,7 +157,12 @@ export function createCharacter(charId: string, partyLevel: number, rng = new Rn
   return u;
 }
 
-export function unitJobLevel(u: RosterUnit, jobId: string) { return jobLevel(u.totalJp[jobId] ?? 0); }
+export function unitJobLevel(u: RosterUnit, jobId: string) {
+  let lv = jobLevel(u.totalJp[jobId] ?? 0);
+  // the hero's unique squire job counts as Squire for the job tree
+  if (jobId === 'squire' && u.totalJp.hero) lv = Math.max(lv, jobLevel(u.totalJp.hero));
+  return lv;
+}
 
 /** Is a job available to this unit (job tree + gender + uniqueness)? */
 export function jobUnlocked(u: RosterUnit, j: JobDef): boolean {

@@ -167,6 +167,22 @@ export type AnimKind =
   | 'throw' | 'item' | 'jump' | 'dance' | 'sing' | 'talk' | 'steal' | 'charge'
   | 'draw' | 'summon' | 'roar' | 'breath' | 'bite' | 'claw' | 'spin' | 'guard' | 'none';
 
+/**
+ * Visual effect recipes implemented by src/gfx/vfx. Combine with AbilityDef.color.
+ * Keep to this list — the compiler will reject unknown ids.
+ */
+export type VfxId =
+  // weapons & physical
+  | 'slash' | 'impact' | 'pierce' | 'arrow' | 'bullet' | 'stone' | 'shuriken' | 'punch' | 'jumpImpact' | 'sword'
+  // elements
+  | 'flames' | 'inferno' | 'ice' | 'glacier' | 'bolt' | 'thunder' | 'water' | 'quake' | 'wind' | 'holy'
+  | 'dark' | 'poison' | 'meteor' | 'flare' | 'ultima' | 'explosion' | 'breath' | 'beam' | 'lava' | 'sand'
+  | 'ivy' | 'blizzard'
+  // support & status
+  | 'heal' | 'healBig' | 'revive' | 'buff' | 'debuff' | 'status' | 'time' | 'gravity' | 'teleport' | 'drain'
+  | 'steal' | 'song' | 'dance' | 'talk' | 'summon' | 'glyph' | 'potion' | 'phoenix' | 'elixir' | 'guard'
+  | 'sparkleGreen' | 'buffRed' | 'buffBlue' | 'none';
+
 /** Context passed to formula functions. */
 export interface FormulaCtx {
   /** caster */
@@ -254,7 +270,7 @@ export interface AbilityDef {
   /** uses an item from inventory (Item, Throw, Iaido) */
   consumes?: string;
   anim?: AnimKind;
-  vfx?: string;
+  vfx?: VfxId;
   /** colour hint for vfx */
   color?: string;
   sfx?: string;

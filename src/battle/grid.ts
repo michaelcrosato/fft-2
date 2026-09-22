@@ -251,14 +251,18 @@ export class MapGrid {
     return 'side';
   }
 
-  /** geomancy element per terrain */
+  /**
+   * Geomancy terrain group per terrain letter. Twelve groups, one per geomancy art:
+   * soil, water, grass, stone, rock, brick, wood, marsh, sand, snow, roof, lava
+   */
   static terrainGroup(t: string): string {
     switch (t) {
       case 'd': case 'f': return 'soil';
       case 'w': case 'W': return 'water';
-      case 'g': case 'k': return 'grass';
-      case 's': case 'b': case 'u': return 'stone';
+      case 'g': return 'grass';
+      case 's': case 'u': return 'stone';
       case 'r': return 'rock';
+      case 'b': case 'k': return 'brick';
       case 'o': case 'c': return 'wood';
       case 'm': case 'p': return 'marsh';
       case 'n': case 'y': return 'sand';
