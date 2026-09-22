@@ -139,7 +139,7 @@ export function tileMaterial(colorHex: string, pulse = true, opacity = 0.5): Mat
 }
 
 export function basicMaterial(colorHex: string, opts: { additive?: boolean; opacity?: number; map?: Texture; side?: 'double' } = {}): Material {
-  const m = new THREE.MeshBasicMaterial({ color: colorHex, transparent: true, opacity: opts.opacity ?? 1, depthWrite: false, map: opts.map });
+  const m = new THREE.MeshBasicMaterial({ color: colorHex, transparent: true, opacity: opts.opacity ?? 1, depthWrite: false, ...(opts.map ? { map: opts.map } : {}) });
   if (opts.additive) m.blending = THREE.AdditiveBlending;
   if (opts.side === 'double') m.side = THREE.DoubleSide;
   return m;
