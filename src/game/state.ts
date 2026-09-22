@@ -20,12 +20,14 @@ export interface Options {
   confirmMoves: boolean;
   showGrid: boolean;
   camShake: boolean;
+  /** random ambushes when stopping at open-field locations */
+  encounters: boolean;
 }
 
 export const DEFAULT_OPTIONS: Options = {
   difficulty: 'normal',
   gentle: false, battleSpeed: 1, textSpeed: 1, music: 0.7, sfx: 0.8, quality: 'auto', renderer: 'auto',
-  confirmMoves: true, showGrid: true, camShake: true,
+  confirmMoves: true, showGrid: true, camShake: true, encounters: true,
 };
 
 export interface ErrandRun { id: string; units: string[]; start: number; due: number }

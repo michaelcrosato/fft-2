@@ -1,6 +1,6 @@
 // Title → new game / continue → story & world map loop.
 import type { Game } from './game';
-import { newGame, saveGame, loadGame, listSaves, latestSave, partyLevel, addItem, type GameState } from './state';
+import { newGame, saveGame, loadGame, listSaves, latestSave, partyLevel, addItem, loadOptions, type GameState } from './state';
 import { NODES, EDGES, STORY, ERRANDS, JOBS, CHARACTERS, BATTLES, ITEMS } from '../data/db';
 import type { BattleDef, UnitSpawn, WorldNode } from '../data/types';
 import { WorldView } from '../scenes/worldmap';
@@ -207,6 +207,7 @@ async function worldLoop(game: Game): Promise<'title' | 'continue'> {
   audio.playMusic(s.chapter >= 3 ? 'worldmap' : 'worldmap', { fade: 1.5 });
   const hud = h('div.passthru', { style: { position: 'absolute', inset: '0' } });
   uiRoot().appendChild(hud);
+  worldHud = hud;
   const top = h('div.panel', { style: { left: '12px', top: '12px', padding: '6px 14px', fontSize: '0.9em' } });
   const label = h('div.panel', { style: { display: 'none', padding: '3px 12px', fontFamily: 'Cinzel, serif', fontWeight: '700', transform: 'translate(-50%, -100%)', pointerEvents: 'none' } });
   hud.appendChild(top); hud.appendChild(label);
@@ -249,7 +250,22 @@ async function worldLoop(game: Game): Promise<'title' | 'continue'> {
           return true;
         });
       }
-      // arrival
+      // arrival: wandering foes may lie in wait in open country
+      const here = NODES.get(s.location);
+      if (here?.kind === 'field' && here.random && STORY[s.storyIndex]?.at !== s.location && !(window as any).__autoPlay && loadOptions().encounters !== false && new Rng().pct(28)) {
+        const def = randomBattleDef(game, here);
+        if (def) {
+          toast('Ambush! Foes block the road.');
+          audio.sfx('roar');
+          BATTLES.set(def.id, def);
+          const r = await hudHidden(() => game.runBattle(def.id));
+          BATTLES.delete(def.id);
+          if (r === 'defeat') { result = 'title'; return; }
+          game.autosave();
+          result = 'continue';
+          return;
+        }
+      }
       const res = await nodeMenu(game, world, s.location);
       if (res === 'rebuild' || res === 'title') { result = res === 'title' ? 'title' : 'continue'; return; }
       world.setMarkerStates(markerStates(game));
@@ -333,6 +349,7 @@ async function worldLoop(game: Game): Promise<'title' | 'continue'> {
   while (!result) await sleep(100);
   for (const f of cleanupFns) f();
   hud.remove();
+  worldHud = null;
   game.setScreen(null);
   return result;
 }
@@ -368,6 +385,14 @@ function advanceDay(game: Game, n: number) {
 }
 
 // ---------------------------------------------------------------- node menu
+/** the world map's status panel and menu button; hidden while a scene or battle plays */
+let worldHud: HTMLElement | null = null;
+async function hudHidden<T>(fn: () => Promise<T>): Promise<T> {
+  const el = worldHud;
+  if (el) el.style.display = 'none';
+  try { return await fn(); } finally { if (el) el.style.display = ''; }
+}
+
 async function nodeMenu(game: Game, world: WorldView, nodeId: string): Promise<'stay' | 'rebuild' | 'title'> {
   const s = game.state;
   const node = NODES.get(nodeId)!;
@@ -397,22 +422,24 @@ async function nodeMenu(game: Game, world: WorldView, nodeId: string): Promise<'
     info.remove();
     if (pick === null || pick === 'leave') { audio.playMusic('worldmap', { fade: 1.2 }); return 'stay'; }
     if (pick === 'story' && stepHere) {
-      const ok = await game.runStep(stepHere);
-      game.autosave();
-      if (!ok) return 'title';
-      // continue chained / location-less steps
-      if (!(await runImmediate(game))) return 'title';
-      return 'rebuild';
+      return hudHidden(async () => {
+        const ok = await game.runStep(stepHere);
+        game.autosave();
+        if (!ok) return 'title';
+        // continue chained / location-less steps
+        if (!(await runImmediate(game))) return 'title';
+        return 'rebuild';
+      });
     }
     if (pick.startsWith('side:')) {
       const q = sides.find((x) => 'side:' + x.id === pick);
-      if (q) { const ok = await game.runSide(q); if (!ok) return 'title'; return 'rebuild'; }
+      if (q) { const ok = await hudHidden(() => game.runSide(q)); if (!ok) return 'title'; return 'rebuild'; }
     }
     if (pick === 'fight') {
       const def = randomBattleDef(game, node);
       if (def) {
         BATTLES.set(def.id, def);
-        const r = await game.runBattle(def.id);
+        const r = await hudHidden(() => game.runBattle(def.id));
         BATTLES.delete(def.id);
         if (r === 'defeat') return 'title';
         game.autosave();

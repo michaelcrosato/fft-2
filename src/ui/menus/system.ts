@@ -46,6 +46,7 @@ export async function openOptions(game: Game) {
         { label: 'Text speed', value: 'text', right: `${o.textSpeed}×` },
         { label: 'Difficulty', value: 'difficulty', right: { easy: 'Squire (easy)', normal: 'Knight (normal)', hard: 'Lord (hard)' }[o.difficulty ?? 'normal'], desc: 'Enemy level and vigour relative to your company.' },
         { label: 'Gentle mode', value: 'gentle', right: o.gentle ? 'On' : 'Off', desc: 'Fallen allies retreat instead of crystallizing.' },
+        { label: 'Random encounters', value: 'encounters', right: o.encounters === false ? 'Off' : 'On', desc: 'Wandering foes may ambush the company in open country.' },
         { label: 'Camera shake', value: 'shake', right: o.camShake ? 'On' : 'Off' },
         { label: 'Graphics quality', value: 'quality', right: `${o.quality} (${rinfo?.quality ?? ''})` },
         { label: 'Renderer', value: 'renderer', right: `${o.renderer} (${rinfo?.backend ?? ''})`, desc: 'Takes effect after reloading the page.' },
@@ -62,6 +63,7 @@ export async function openOptions(game: Game) {
       if (pick === 'gentle') o.gentle = !o.gentle;
       if (pick === 'difficulty') o.difficulty = cycle(['easy', 'normal', 'hard'] as Options['difficulty'][], o.difficulty ?? 'normal');
       if (pick === 'shake') o.camShake = !o.camShake;
+      if (pick === 'encounters') o.encounters = o.encounters === false;
       if (pick === 'quality') { o.quality = cycle(['auto', 'ultra', 'high', 'medium', 'low'] as Array<Quality | 'auto'>, o.quality); if (o.quality !== 'auto') setQuality(o.quality); toast('Some quality changes apply on the next map.'); }
       if (pick === 'renderer') o.renderer = cycle(['auto', 'webgpu', 'webgl2', 'webgl1'] as Options['renderer'][], o.renderer);
       saveOptions(o);
