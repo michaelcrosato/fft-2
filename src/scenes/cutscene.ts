@@ -1,6 +1,6 @@
 // Cutscene script interpreter (story scenes and mid-battle scripts).
 import type { SceneCmd, Facing, StatusId, EnvTime, Weather } from '../data/types';
-import { say, narrate, titleCard, fade, menu } from '../ui/widgets';
+import { say, narrate, titleCard, fade, menu, closeDialogue } from '../ui/widgets';
 import type { Stage } from './stage';
 import type { UnitView } from './unitview';
 import type { ClipName } from '../gfx/models/anim';
@@ -49,6 +49,8 @@ export async function runScene(cmds: SceneCmd[], host: SceneHost): Promise<void>
     await runCmds(cmds, host);
   } finally {
     skip.remove();
+    // the last line of dialogue stays up between lines; clear it when the scene is over
+    closeDialogue();
   }
 }
 
