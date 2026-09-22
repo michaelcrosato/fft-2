@@ -22,13 +22,13 @@ export class TacticsCamera {
   highAngle = false;
 
   constructor(aspect: number) {
-    this.cam = new THREE.PerspectiveCamera(24, aspect, 0.5, 400);
+    this.cam = new THREE.PerspectiveCamera(fovFor(aspect), aspect, 0.5, 400);
     this.target = new THREE.Vector3();
     this.goal.target = this.target.clone();
     this.apply();
   }
 
-  setAspect(a: number) { this.cam.aspect = a; this.cam.updateProjectionMatrix(); }
+  setAspect(a: number) { this.cam.aspect = a; this.cam.fov = fovFor(a); this.cam.updateProjectionMatrix(); }
 
   /** snap everything (no animation) */
   snap(target: Vector3, dist?: number) {
@@ -122,4 +122,12 @@ export class TacticsCamera {
     // yaw 45° means up-arrow moves diagonally on screen; choose the axis more aligned with screen-up
     return d;
   }
+}
+
+/** vertical FOV that keeps at least the landscape horizontal view on tall (portrait) screens */
+function fovFor(aspect: number) {
+  const BASE = 24, REF = 1.5;
+  if (aspect >= REF) return BASE;
+  const half = Math.atan(Math.tan((BASE * Math.PI) / 360) * REF);
+  return Math.min(62, (Math.atan(Math.tan(half) / aspect) * 360) / Math.PI);
 }
