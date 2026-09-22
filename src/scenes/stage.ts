@@ -38,6 +38,7 @@ export class Stage {
   private disposed = false;
   private chargeMarks = new Map<number, Group>();
   timeScale = 1;
+  private stormT = 4;
 
   constructor(mapId: string, opts: { time?: EnvTime; weather?: Weather } = {}) {
     this.def = mapDef(mapId);
@@ -66,6 +67,7 @@ export class Stage {
   async init() {
     this.post = await createPost(this.scene, this.cam.cam);
     this.post.setGrade({ warmth: this.env.mood.warmth, saturation: this.env.mood.saturation, exposure: this.env.mood.exposure });
+    if (this.def.tint) { const c = new THREE.Color(this.def.tint); this.post.setGrade({ tint: [0.75 + c.r * 0.25, 0.75 + c.g * 0.25, 0.75 + c.b * 0.25] }); }
     this.vfx.onFlash = (c, a) => this.post.flash(c, a);
     this.bindCameraControls();
   }
@@ -209,6 +211,16 @@ export class Stage {
     this.env.update(sdt);
     this.cam.update(dt);
     this.vfx.update(sdt, this.cam.cam);
+    // storms: distant lightning
+    if (this.env.time === 'storm') {
+      this.stormT -= dt;
+      if (this.stormT <= 0) {
+        this.stormT = 5 + Math.random() * 9;
+        this.post.flash('#e8f0ff', 0.45);
+        this.env.lightning();
+        setTimeout(() => import('../audio/audio').then((m) => m.audio.sfx('thunderclap', { volume: 0.6 })), 250 + Math.random() * 600);
+      }
+    }
     // focus DOF on the camera target
     this.post.setFocus(this.cam.dist, Math.max(10, this.cam.dist * 0.55));
   }

@@ -54,6 +54,7 @@ export class BattleController {
     this.hooks = hooks;
     this.hud = new BattleHud();
     this.speed = loadOptions().battleSpeed;
+    if ((window as any).__autoPlay) this.speed = 8;
   }
 
   view(uid: number) { return this.stage.views.get(uid); }

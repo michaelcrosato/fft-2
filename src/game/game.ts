@@ -20,6 +20,8 @@ import { input } from '../ui/input';
 import { audio } from '../audio/audio';
 import { BattleUnit } from '../battle/unit';
 import { screenDir } from '../scenes/battleController';
+import { Rng, hashStr } from '../core/rng';
+import { randomLook } from './roster';
 
 export interface Screen {
   update(dt: number): void;
@@ -87,7 +89,7 @@ export class Game {
   }
 
   // ============================================================ actors
-  private charSpec(id: string, opts: { job?: string; team?: number; name?: string } = {}): { spec: ConstructorParameters<typeof UnitView>[0]; name: string; charId?: string } | null {
+  private charSpec(id: string, opts: { job?: string; team?: number; name?: string } = {}, actorId?: string): { spec: ConstructorParameters<typeof UnitView>[0]; name: string; charId?: string } | null {
     const c: CharacterDef | undefined = CHARACTERS.get(id);
     if (c) {
       const jobId = opts.job ?? this.rosterFor(c.id)?.job ?? c.job;
@@ -102,7 +104,10 @@ export class Game {
     }
     const j: JobDef | undefined = JOBS.get(id);
     if (!j) return null;
-    return { spec: { job: j, look: { hairStyle: 'short', hair: '#5a3a24' }, gender: j.gender ?? 'm', team: opts.team ?? 1 }, name: opts.name ?? j.name };
+    // extras get a varied but stable appearance from their actor id
+    const rng = new Rng(hashStr(actorId ?? id));
+    const gender: 'm' | 'f' = j.gender ?? (rng.pct(35) ? 'f' : 'm');
+    return { spec: { job: j, look: randomLook(gender, rng), gender, team: opts.team ?? 1 }, name: opts.name ?? j.name };
   }
 
   rosterFor(charId: string): RosterUnit | undefined { return this.state?.roster.find((r) => r.charId === charId); }
@@ -137,7 +142,7 @@ export class Game {
       actor: (aid) => actors.get(aid)?.view ?? game.stage?.views.get(aid),
       spawn: (aid, who, x, z, facing, opts) => {
         if (!game.stage) return undefined;
-        const s = game.charSpec(who, opts);
+        const s = game.charSpec(who, opts, aid);
         if (!s) { console.warn('unknown actor', who); return undefined; }
         game.stage.removeUnit(aid);
         const v = game.stage.addUnit(aid, s.spec, x, z, facing);
@@ -162,6 +167,17 @@ export class Game {
         if (bu) {
           const { portraitFor } = await import('../ui/battleHud');
           return portraitFor(bu);
+        }
+        // generic actor: portrait from its job's outfit
+        const v = a?.view;
+        if (v) {
+          const spec = v.spec;
+          if (spec.job.monster) {
+            const { getMonsterBuilder } = await import('../scenes/unitview');
+            const mb = getMonsterBuilder();
+            return mb ? portrait('job:' + spec.job.id, () => mb(spec.job.monster), '#5a4a3a') : null;
+          }
+          return portrait('actor:' + aid + ':' + spec.job.id, () => buildHumanoid({ job: spec.job.look, look: spec.look, gender: spec.gender === 'f' ? 'f' : 'm' }), spec.team === 1 ? '#6a3a30' : '#4a5a6a');
         }
         return null;
       },
@@ -267,6 +283,19 @@ export class Game {
 
   private async playBattleScript(script: import('../data/types').SceneCmd[], b: import('../battle/battle').Battle, stage: Stage, hooks: SceneHost['battle']) {
     const game = this;
+    // a retreat immediately followed by a reveal is a transformation: the new form appears where the old one stood
+    const origReveal = hooks!.reveal, origRetreat = hooks!.retreat;
+    let lastRetreat: { x: number; z: number; facing: Facing } | null = null;
+    hooks = {
+      ...hooks!,
+      retreat: async (sid) => { const u = b.bySid(sid); if (u) lastRetreat = { x: u.x, z: u.z, facing: u.facing }; await origRetreat(sid); },
+      reveal: async (sid) => {
+        const u = b.units.find((o) => o.sid === sid && o.hidden);
+        if (u && lastRetreat && !b.unitAt(lastRetreat.x, lastRetreat.z)) { u.x = lastRetreat.x; u.z = lastRetreat.z; u.facing = lastRetreat.facing; stage.post.flash('#ffffff', 0.5); stage.cam.shake(0.3, 0.6); }
+        lastRetreat = null;
+        await origReveal(sid);
+      },
+    };
     const host: SceneHost = {
       stage: () => stage,
       changeMap: async () => {},

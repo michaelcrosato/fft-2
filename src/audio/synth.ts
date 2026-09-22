@@ -194,6 +194,19 @@ export function percEnv(p: AudioParam, t: number, peak: number, tau: number, atk
   return t + atk + tau * 5.8 + 0.01;
 }
 
+/**
+ * Let an automated param update once per render quantum instead of per
+ * sample (much cheaper for filter sweeps). Ignored where unsupported.
+ */
+export function kRate(p: AudioParam): void {
+  try {
+    const q = p as AudioParam & { automationRate?: string };
+    if ('automationRate' in q) q.automationRate = 'k-rate';
+  } catch {
+    /* unsupported for this param */
+  }
+}
+
 /** per-note vibrato (delayed onset) on the given detune params */
 export function vibrato(ctx: BaseAudioContext, t: number, end: number, rate: number, cents: number, delay: number, targets: AudioParam[]): void {
   // short notes never reach the vibrato: don't pay for an LFO
@@ -205,7 +218,10 @@ export function vibrato(ctx: BaseAudioContext, t: number, end: number, rate: num
   g.gain.setValueAtTime(0, t + delay);
   g.gain.linearRampToValueAtTime(cents, t + delay + 0.4);
   lfo.connect(g);
-  for (const tg of targets) g.connect(tg);
+  for (const tg of targets) {
+    kRate(tg);
+    g.connect(tg);
+  }
   lfo.start(t);
   lfo.stop(end);
 }
@@ -510,14 +526,20 @@ function bowed(p: BowedP): NoteFn {
     const ctx = core.ctx;
     const f = mtof(m);
     const atk = p.atk * (1.3 - 0.55 * Math.min(1, vel));
-    const end = t + Math.max(dur, atk) + p.rel * 1.3 + 0.03;
+    // short notes: shorter tails, one oscillator, no filter sweep (CPU)
+    const short = dur < 0.45;
+    const relT = Math.min(p.rel, 0.08 + dur * 0.6);
+    const end = t + Math.max(dur, atk) + relT * 1.3 + 0.03;
     const cut = Math.min(12000, f * (1.4 + p.bright * (0.5 + vel)) + p.base);
-    const lp = mkFilter(ctx, 'lowpass', cut * 0.5, p.q ?? 0.6);
-    lp.frequency.setValueAtTime(cut * 0.5, t);
-    lp.frequency.linearRampToValueAtTime(cut, t + Math.max(0.01, atk * 1.1));
+    const lp = mkFilter(ctx, 'lowpass', short ? cut * 0.85 : cut * 0.5, p.q ?? 0.6);
+    if (!short) {
+      kRate(lp.frequency);
+      lp.frequency.setValueAtTime(cut * 0.5, t);
+      lp.frequency.linearRampToValueAtTime(cut, t + Math.max(0.01, atk * 1.1));
+    }
     const g = mkGain(ctx, 0);
     const oscs: OscillatorNode[] = [];
-    const n = p.voices;
+    const n = short ? 1 : p.voices;
     for (let k = 0; k < n; k++) {
       const det = n > 1 ? p.spread * ((k / (n - 1)) * 2 - 1) : 0;
       const o = mkOsc(ctx, 'sawtooth', f, t, end, det + rnd(2.5));
@@ -526,7 +548,7 @@ function bowed(p: BowedP): NoteFn {
     }
     vibrato(ctx, t, end, 5 + rnd(0.5), p.vib, p.vibDelay, oscs.map((o) => o.detune));
     lp.connect(g).connect(dest);
-    return adsr(g.gain, t, dur, atk, p.dec ?? 0.5, p.sus ?? 0.85, p.rel, (p.amp * velAmp(vel)) / Math.sqrt(n));
+    return adsr(g.gain, t, dur, atk, p.dec ?? 0.5, p.sus ?? 0.85, relT, (p.amp * velAmp(vel)) / Math.sqrt(n));
   };
 }
 
@@ -555,7 +577,9 @@ function brass(p: BrassP): NoteFn {
     const fLo = f * 1.05 + 120;
     const fPk = Math.min(12000, f * (1.6 + p.bright * 4.5 * v * v) + p.base);
     const fSus = Math.min(10000, f * (1.35 + p.bright * 2.2 * v) + p.base * 0.7);
+    // filter envelope = the brass "blat"; k-rate keeps it cheap
     const lp = mkFilter(ctx, 'lowpass', fLo, p.q);
+    kRate(lp.frequency);
     lp.frequency.setValueAtTime(fLo, t);
     lp.frequency.linearRampToValueAtTime(fPk, aEnd);
     const sEnd = aEnd + 0.35;
@@ -565,15 +589,16 @@ function brass(p: BrassP): NoteFn {
     } else lp.frequency.exponentialRampToValueAtTime(fPk + (fSus - fPk) * ((rel - aEnd) / 0.35), rel);
     lp.frequency.exponentialRampToValueAtTime(fLo, rel + p.rel);
     const g = mkGain(ctx, 0);
-    for (let k = 0; k < p.voices; k++) {
-      const det = p.voices > 1 ? (k ? 5 : -5) + rnd(2) : rnd(2);
+    const nv = dur < 0.35 ? 1 : p.voices;
+    for (let k = 0; k < nv; k++) {
+      const det = nv > 1 ? (k ? 5 : -5) + rnd(2) : rnd(2);
       const o = mkOsc(ctx, 'sawtooth', f, t, end, det);
       o.detune.setValueAtTime(det - p.scoop, t);
       o.detune.linearRampToValueAtTime(det, t + 0.05 + atk * 0.3);
       o.connect(lp);
     }
     lp.connect(g).connect(dest);
-    return Math.max(end, adsr(g.gain, t, dur, atk, 0.35, 0.78, p.rel, (p.amp * velAmp(v)) / Math.sqrt(p.voices)));
+    return Math.max(end, adsr(g.gain, t, dur, atk, 0.35, 0.78, p.rel, (p.amp * velAmp(v)) / Math.sqrt(nv)));
   };
 }
 
@@ -728,7 +753,7 @@ const timpaniNote: NoteFn = (core, dest, t, m, _dur, vel) => {
   const f = mtof(m);
   const a = 0.42 * velAmp(vel);
   const out = mkGain(ctx, 1);
-  const tau = 0.26 + 0.2 * Math.min(1, vel);
+  const tau = 0.24 + 0.18 * Math.min(1, vel);
   const end = t + tau * 5.8 + 0.02;
   const o1 = mkOsc(ctx, 'sine', f, t, end);
   o1.frequency.setValueAtTime(f * 1.035, t);
@@ -945,8 +970,6 @@ const windPadNote: NoteFn = (core, dest, t, m, dur, vel) => {
   const nz = mkNoise(core, t, end);
   const b1 = mkFilter(ctx, 'bandpass', f, 22);
   const b2 = mkFilter(ctx, 'bandpass', f * 2.01, 26);
-  b1.frequency.setValueAtTime(f * 0.985, t);
-  b1.frequency.linearRampToValueAtTime(f * 1.01, t + dur + 1);
   nz.connect(b1).connect(mkGain(ctx, 11)).connect(g);
   nz.connect(b2).connect(mkGain(ctx, 5)).connect(g);
   g.connect(dest);
@@ -1066,19 +1089,19 @@ export const INSTRUMENTS: Record<string, Instrument> = {
   },
   // --- brass
   horn: {
-    note: brass({ bright: 0.55, q: 0.9, amp: 0.2, atk: 0.055, scoop: 22, base: 250, rel: 0.28, voices: 2 }),
+    note: brass({ bright: 0.55, q: 0.9, amp: 0.2, atk: 0.055, scoop: 22, base: 250, rel: 0.28, voices: 1 }),
     insert: (c) => ensembleInsert(c, 0.3, BRASS_TONE),
     rev: 0.42,
     rollRate: 10,
   },
   trumpet: {
-    note: brass({ bright: 1.0, q: 1.5, amp: 0.165, atk: 0.03, scoop: 28, base: 500, rel: 0.2, voices: 2 }),
+    note: brass({ bright: 1.0, q: 1.5, amp: 0.165, atk: 0.03, scoop: 28, base: 500, rel: 0.2, voices: 1 }),
     insert: (c) => ensembleInsert(c, 0.25, BRASS_TONE),
     rev: 0.36,
     rollRate: 10,
   },
   trombone: {
-    note: brass({ bright: 0.8, q: 1.2, amp: 0.21, atk: 0.05, scoop: 18, base: 200, rel: 0.25, voices: 2 }),
+    note: brass({ bright: 0.8, q: 1.2, amp: 0.21, atk: 0.05, scoop: 18, base: 200, rel: 0.25, voices: 1 }),
     insert: (c) => ensembleInsert(c, 0.25, BRASS_TONE),
     rev: 0.36,
     rollRate: 10,
