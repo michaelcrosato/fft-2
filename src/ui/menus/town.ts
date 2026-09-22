@@ -11,6 +11,7 @@ import { canEquip, createGeneric, slotFor } from '../../game/roster';
 import { audio } from '../../audio/audio';
 import { Rng } from '../../core/rng';
 import { input } from '../input';
+import { STATUS } from '../../battle/status';
 
 type Rumor = { id: string; title: string; text: string; towns: string[]; chapterMin: number; chapterMax?: number; needs?: string[] };
 const rumorMods = import.meta.glob<{ rumors?: Rumor[] }>('../../data/misc/*.ts', { eager: true });
@@ -45,10 +46,13 @@ export async function openShop(game: Game, node: WorldNode) {
           const c = CATS.find((x) => x.label === cat)!;
           for (;;) {
             const list = stock.filter(c.test).sort((a, b) => a.price - b.price);
+            let info: HTMLElement | null = null;
             const pick = await menu({
-              items: list.map((it) => ({ label: it.name, value: it.id, right: `${it.price} · own ${s.inventory[it.id] ?? 0}`, disabled: it.price > s.gil ? 'Not enough gil' : false, desc: `${who(game, it)} — ${it.desc}` })),
+              items: list.map((it) => ({ label: it.name, value: it.id, right: `${it.price} · own ${s.inventory[it.id] ?? 0}`, disabled: it.price > s.gil ? 'Not enough gil' : false, desc: it.desc })),
               x: 16, y: 64, title: cat, parent: ov.root, showDesc: true, maxHeight: '62vh',
+              onHover: (id) => { info?.remove(); const it = id ? ITEMS.get(id as string) : undefined; if (it) { info = itemPanel(game, it); ov.root.appendChild(info); } },
             }).promise;
+            (info as HTMLElement | null)?.remove();
             if (!pick) break;
             const it = ITEMS.get(pick)!;
             const maxN = Math.min(99, Math.floor(s.gil / it.price));
@@ -71,11 +75,51 @@ export async function openShop(game: Game, node: WorldNode) {
   } finally { ov.close(); }
 }
 
-function who(game: Game, it: ItemDef): string {
+const EL_NAMES: Record<string, string> = { fire: 'Fire', ice: 'Ice', lightning: 'Lightning', water: 'Water', earth: 'Earth', wind: 'Wind', holy: 'Holy', dark: 'Dark' };
+
+/** FFT-style shop detail: the item's numbers, then who in the company could use it and what it would change */
+function itemPanel(game: Game, it: ItemDef): HTMLElement {
+  const rows: Array<[string, string]> = [];
+  const pct = (n?: number) => `${n ?? 0}%`;
+  if (it.kind === 'weapon') { rows.push(['Weapon power', String(it.wp ?? 0)]); rows.push(['Weapon evade', pct(it.wev)]); if (it.range && it.range > 1) rows.push(['Range', String(it.range)]); }
+  if (it.kind === 'shield') { rows.push(['Physical evade', pct(it.sev)]); rows.push(['Magic evade', pct(it.smev)]); }
+  if (it.hp) rows.push(['HP', '+' + it.hp]);
+  if (it.mp) rows.push(['MP', '+' + it.mp]);
+  if (it.aev) rows.push(['Physical evade', pct(it.aev)]);
+  if (it.amev) rows.push(['Magic evade', pct(it.amev)]);
+  for (const [k, v] of Object.entries(it.stats ?? {})) rows.push([({ pa: 'PA', ma: 'MA', speed: 'Speed', move: 'Move', jump: 'Jump', brave: 'Brave', faith: 'Faith' } as Record<string, string>)[k] ?? k, (v! > 0 ? '+' : '') + v]);
+  if (it.element) rows.push(['Element', EL_NAMES[it.element] ?? it.element]);
+  if (it.twoHanded) rows.push(['Grip', 'Two hands']);
+  const st = (l?: string[]) => (l ?? []).map((x) => STATUS[x as keyof typeof STATUS]?.name ?? x).join(', ');
+  if (it.always?.length) rows.push(['Always', st(it.always)]);
+  if (it.start?.length) rows.push(['On entering battle', st(it.start)]);
+  if (it.immune?.length) rows.push(['Immune to', st(it.immune)]);
+  const els = (l?: string[]) => (l ?? []).map((x) => EL_NAMES[x] ?? x).join(', ');
+  if (it.absorb?.length) rows.push(['Absorbs', els(it.absorb)]);
+  if (it.nullify?.length) rows.push(['Nullifies', els(it.nullify)]);
+  if (it.halve?.length) rows.push(['Halves', els(it.halve)]);
+  if (it.boost?.length) rows.push(['Strengthens', els(it.boost)]);
+  if (it.onHit) rows.push(['On hit', `${it.onHit.chance}%: ${[st(it.onHit.status), it.onHit.spell ? 'casts ' + it.onHit.spell : '', it.onHit.cure?.length ? 'cures ' + st(it.onHit.cure) : ''].filter(Boolean).join(', ')}`]);
+  if (it.healOnHit) rows.push(['On hit', 'heals instead of harming']);
+  if (it.drain) rows.push(['On hit', 'drains HP']);
   const slots = slotFor(it);
-  if (!slots.length) return 'Consumable';
-  const names = game.state.roster.filter((u) => slots.some((sl) => canEquip(u, it, sl))).map((u) => u.name);
-  return names.length ? `Usable by ${names.slice(0, 5).join(', ')}${names.length > 5 ? '…' : ''}` : 'No one can equip this';
+  const users = game.state.roster.filter((u) => !u.errand && slots.some((sl) => canEquip(u, it, sl)));
+  const cmp = (u: (typeof users)[number]) => {
+    const cur = ITEMS.get(u.equip[slots[0]] ?? '');
+    if (it.kind === 'weapon') { const d = (it.wp ?? 0) - (cur?.wp ?? 0); return d ? `WP ${d > 0 ? '+' : ''}${d}` : '='; }
+    if (it.kind === 'head' || it.kind === 'body') { const d = (it.hp ?? 0) - (cur?.hp ?? 0); return d ? `HP ${d > 0 ? '+' : ''}${d}` : '='; }
+    if (it.kind === 'shield') { const d = (it.sev ?? 0) - (cur?.sev ?? 0); return d ? `Ev ${d > 0 ? '+' : ''}${d}%` : '='; }
+    return cur?.id === it.id ? 'equipped' : '';
+  };
+  const kindName = it.cat ? it.cat.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase()) : it.kind === 'consumable' ? 'Consumable' : it.kind === 'throwable' ? 'Throwing weapon' : it.kind.replace(/^./, (c) => c.toUpperCase());
+  return h('div.panel', { style: { right: '16px', top: '64px', width: 'min(420px, 44vw)', maxHeight: '78vh', overflowY: 'auto' } },
+    h('div', { style: { fontFamily: 'Cinzel, serif', fontWeight: '700', fontSize: '1.15em' } }, it.name),
+    h('div.muted', { style: { margin: '0 0 6px' } }, `${kindName} · ${it.price.toLocaleString()} gil`),
+    ...rows.map(([k, v]) => h('div', { style: { display: 'flex', justifyContent: 'space-between', gap: '12px' } }, h('span', null, k), h('b', null, v))),
+    slots.length ? h('div', { style: { marginTop: '8px', borderTop: '1px solid rgba(90,60,30,.25)', paddingTop: '6px' } },
+      h('div.muted', null, users.length ? 'Can equip' : 'No one in the company can equip this'),
+      ...users.slice(0, 10).map((u) => h('div', { style: { display: 'flex', justifyContent: 'space-between' } }, h('span', null, `${u.name} · ${JOBS.get(u.job)?.name ?? u.job}`), h('span', null, cmp(u))))) : null,
+  );
 }
 
 async function quantity(parent: HTMLElement, name: string, max: number, unit: number): Promise<number> {

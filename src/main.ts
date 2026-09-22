@@ -80,6 +80,20 @@ async function boot() {
     await openFormation(game);
     return;
   }
+  if (test === 'town') {
+    // open one town service (shop | tavern | recruit | fur) at a node
+    const { NODES } = await import('./data/db');
+    const town = await import('./ui/menus/town');
+    game.state = newGame('Rhen', [4, 12]);
+    game.state.chapter = Number(q.get('ch') ?? 1); game.state.tier = Number(q.get('tier') ?? 2); game.state.gil = 50000;
+    const node = NODES.get(q.get('node') ?? 'galwyn')!;
+    const which = q.get('open') ?? 'shop';
+    if (which === 'shop') await town.openShop(game, node);
+    if (which === 'tavern') await town.openTavern(game, node);
+    if (which === 'recruit') await town.openRecruit(game, node);
+    if (which === 'fur') await town.openFurShop(game, node);
+    return;
+  }
   if (test === 'scene') {
     game.state = newGame('Rhen', [4, 12]);
     await game.playScene(q.get('id') ?? '');
