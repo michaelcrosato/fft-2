@@ -108,6 +108,8 @@ export function menu<T = string>(o: MenuOpts<T>): MenuHandle<T> {
     }
   });
   (o.parent ?? uiRoot()).appendChild(el);
+  // now that the list is in the document, bring the initial choice into view
+  rows[sel]?.scrollIntoView?.({ block: 'nearest' });
   return {
     promise, el, close: () => finish(null),
     refresh: (ni) => { items = ni; render(); setSel(Math.min(sel, items.length - 1), false); },

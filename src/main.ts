@@ -73,6 +73,13 @@ async function boot() {
     if (st) { for (const c of st.needChar ?? []) (await import('./game/state')).joinCharacter(game.state, c); await game.runSide(st); }
     return;
   }
+  if (test === 'formation') {
+    game.state = newGame('Rhen', [4, 12]);
+    game.state.roster.forEach((u) => setLevel(u, Number(q.get('lv') ?? 12)));
+    const { openFormation } = await import('./ui/menus/formation');
+    await openFormation(game);
+    return;
+  }
   if (test === 'scene') {
     game.state = newGame('Rhen', [4, 12]);
     await game.playScene(q.get('id') ?? '');

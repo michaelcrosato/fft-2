@@ -183,9 +183,16 @@ export function jobUnlocked(u: RosterUnit, j: JobDef): boolean {
 }
 
 /** Jobs that this unit may switch to */
+/** a generic job replaced by the unit's own unique version of it (Rhen's Squire) */
+export function supersededJob(u: RosterUnit, j: JobDef): boolean {
+  if (!j.generic || !u.charId) return false;
+  for (const o of JOBS.values()) if (o.unique === u.charId && o.name === j.name) return true;
+  return false;
+}
+
 export function availableJobs(u: RosterUnit): JobDef[] {
   const out: JobDef[] = [];
-  for (const j of JOBS.values()) if (jobUnlocked(u, j)) out.push(j);
+  for (const j of JOBS.values()) if (jobUnlocked(u, j) && !supersededJob(u, j)) out.push(j);
   // named characters may also use generic jobs
   return out;
 }

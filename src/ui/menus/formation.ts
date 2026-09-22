@@ -5,7 +5,7 @@ import { h } from '../dom';
 import { overlay, unitPanel, statDelta } from './common';
 import { JOBS, ABILITIES, ITEMS } from '../../data/db';
 import type { EquipSlot, ItemDef } from '../../data/types';
-import { availableJobs, jobUnlocked, learnAbility, canEquip, validateEquipment, validateAbilities, unitJobLevel, type RosterUnit } from '../../game/roster';
+import { availableJobs, jobUnlocked, supersededJob, learnAbility, canEquip, validateEquipment, validateAbilities, unitJobLevel, type RosterUnit } from '../../game/roster';
 import { addItem } from '../../game/state';
 import { audio } from '../../audio/audio';
 import { BattleUnit } from '../../battle/unit';
@@ -72,7 +72,10 @@ async function unitMenu(game: Game, u: RosterUnit, parent: HTMLElement, refresh:
 }
 
 async function jobMenu(game: Game, u: RosterUnit, parent: HTMLElement, refresh: () => void) {
-  const all = [...JOBS.values()].filter((j) => !j.monster && (j.generic || j.unique === u.charId));
+  // the classic job-tree order, the unit's own unique calling first
+  const TREE = ['squire', 'chemist', 'knight', 'archer', 'monk', 'priest', 'wizard', 'timeMage', 'summoner', 'thief', 'orator', 'mystic', 'geomancer', 'lancer', 'samurai', 'ninja', 'arithmancer', 'bard', 'dancer', 'mime'];
+  const rank = (id: string) => { const i = TREE.indexOf(id); return i < 0 ? -1 : i; };
+  const all = [...JOBS.values()].filter((j) => !j.monster && (j.generic || j.unique === u.charId) && !supersededJob(u, j)).sort((a, b) => rank(a.id) - rank(b.id));
   const items = all.map((j) => {
     const ok = jobUnlocked(u, j);
     const req = (j.requires ?? []).map((r) => `${JOBS.get(r.job)?.name ?? r.job} ${r.level}`).join(', ');
