@@ -35,6 +35,7 @@
  *   rq       rest               ~q   tie: extend the previous note/chord
  *   <d4 f a>h  chord (relative pitches inside, reference = first note after)
  *   suffixes: ! accent  ? soft  * staccato  = tenuto (legato overlap)
+ *             ~ roll/tremolo, ~< crescendo roll, ~> diminuendo roll
  *   @pp @p @mp @mf @f @ff @0.8   dynamics;  @< @>  ramp to the next dynamic
  *   |        bar line (checked against the time signature)
  *   [ ... ]*3   repeat a group
@@ -50,7 +51,8 @@
  *   . r      rest            -   tie (hold previous)
  *   suffixes: ' , octave, ! ? accent/soft, ~ roll (tremolo), ~< ~> cresc/dim roll
  *   `at` = lowest note of the window the chord root is placed in.
- *   Compact drum strings (no spaces): 'X..x..x.' x X o . - r(roll) R(cresc roll)
+ *   Compact drum strings (only these chars; whitespace ignored):
+ *            'X..x..x.'  x X o hit, . rest, - hold, r roll, R crescendo roll
  *
  * ---------------------------------------------------------------------------
  *  PADS  (`{ pad: 4, at: 'a3', hi: 'e5', pat?: 'ch ch' }`)
@@ -388,7 +390,7 @@ function expandRepeats(src: string): string {
   return s;
 }
 
-const NOTE_RE = /^([a-g])(#{1,2}|b{1,2}|n)?(\d)?([',]*)([whqiszut.]*)([!?*=]*)$/;
+const NOTE_RE = /^([a-g])(#{1,2}|b{1,2}|n)?(\d)?([',]*)([whqiszut.]*)([!?*=~<>]*)$/;
 
 export interface MelodyResult {
   notes: RawNote[];
@@ -425,14 +427,19 @@ export function parseMelody(src: string, barBeats: number, errors: string[], whe
   const applyArt = (n: RawNote, art: string, writ: number) => {
     let v = n.vel;
     let d = writ * leg;
-    for (const a of art) {
+    for (let k = 0; k < art.length; k++) {
+      const a = art[k];
       if (a === '!') v *= 1.22;
       else if (a === '?') v *= 0.62;
       else if (a === '*') d = writ * 0.42;
       else if (a === '=') d = writ * 1.04;
+      else if (a === '~') {
+        n.roll = art[k + 1] === '<' ? 2 : art[k + 1] === '>' ? 3 : 1;
+        if (n.roll > 1) k++;
+      }
     }
     n.vel = Math.min(1.25, v);
-    n.d = d;
+    n.d = n.roll ? writ : d;
   };
 
   for (const tk of tokens) {
@@ -519,7 +526,7 @@ export function parseMelody(src: string, barBeats: number, errors: string[], whe
       if (!lastGroup.length) errors.push(`${where}: tie without a note at beat ${pos}`);
       for (const n of lastGroup) {
         n.w += lastDur;
-        n.d = n.w * leg;
+        n.d = n.roll ? n.w : n.w * leg;
       }
       pos += lastDur;
       continue;
@@ -578,9 +585,10 @@ const PAT_RE = /^(\d{1,2}|[xXoc]|\.|-|r)([',]*)([whqiszut.]*)([!?~<>*]*)$/;
 function parsePattern(src: string, stepDefault: number, errors: string[], where: string): { toks: PatToken[]; staccato: boolean[] } {
   const toks: PatToken[] = [];
   const stac: boolean[] = [];
-  const text = expandRepeats(src).trim();
-  const compact = !/\s/.test(text) && /^[xXo.\-rR|]+$/.test(text);
+  let text = expandRepeats(src).trim();
+  const compact = /^[xXo.\-rR|\s]+$/.test(text);
   if (compact) {
+    text = text.replace(/\s+/g, '');
     let runR = false;
     for (const c of text) {
       if (c === '|') continue;

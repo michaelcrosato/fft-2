@@ -84,9 +84,9 @@ export const abilities: AbilityDef[] = [
   },
   {
     id: 'sorcererMeteor', name: 'Meteor', kind: 'action', jp: 1500, skillset: 'sorcery',
-    desc: 'Calls a burning star down upon a wide area after a long incantation. Friend and foe alike. (Magic Q50, radius 2)',
+    desc: 'Calls a burning star down upon a wide area after a long incantation. Friend and foe alike. (Magic Q42, radius 2)',
     range: 4, aoe: 3, aoeV: 3, ct: 12, mp: 70, target: 'enemy', magic: true, noReflect: true, anim: 'cast', vfx: 'meteor', color: '#ff8040',
-    effects: [{ type: 'damage', formula: F.magic(50) }],
+    effects: [{ type: 'damage', formula: F.magic(42) }],
   },
   {
     id: 'sorcererBlackSanctus', name: 'Black Sanctus', kind: 'action', jp: 800, skillset: 'sorcery',

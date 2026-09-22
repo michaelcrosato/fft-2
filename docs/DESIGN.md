@@ -296,3 +296,66 @@ characters use the character id). `['actor', id, charIdOrJobId, x, z, facing]` s
 Dialogue is `['say', id, text]` — keep each line ≤ 180 chars, split long speeches.
 Use `['emote']`, `['anim']`, `['move']`, `['camera']` and `['wait']` to stage things.
 Narration uses `['narrate', text]`.
+
+---------------------------------------------------------------------------------
+
+## 4. Story authoring guide (maps, battles, scenes, story steps)
+
+### Files & ordering
+Each story agent writes its own files (never edit someone else's):
+`src/data/maps/<part>.ts`, `src/data/battles/<part>.ts`, `src/data/scenes/<part>.ts`, `src/data/story/<order>_<part>.ts`.
+STORY steps are concatenated in **path sort order**, so story files are named
+`story/00_prologue_ch1.ts`, `story/10_ch2.ts`, `story/20_ch3.ts`, `story/30_ch4a.ts`, `story/31_ch4b.ts`.
+Side quests export `side` (SideQuestStep[]) from `story/90_side.ts`.
+
+### How the game runs a story step
+1. The world map highlights `step.at` (red node). The player travels there (or, if `at` is omitted, the step
+   runs immediately after the previous one — use for back-to-back events like prologue → Galwyn flashback).
+2. `pre` scene plays (on its own `map`), then the `battle` (deploy screen → fight), then the `post` scene.
+3. On completion: battle id is set as a flag (e.g. `b_galwyn`), plus `flags`, `unlock` nodes appear, `tier` raises
+   shop stock, `join` characters enter the party, `moveTo` relocates the party marker.
+   A step may be scene-only (no battle) — e.g. the Ygress conversations between battles.
+4. Losing a battle → Game Over (retry from the deploy screen or load).
+
+### Party level & enemy levels
+`level: '+2'` means party level + 2 (party level = average of the 5 highest-level party members).
+Use relative levels for rank-and-file; bosses may use `'+3'`..`'+5'` and `hpMult` 1.5–3 (Umbral lords 3–5).
+Early Chapter I battles: party level ≈ 1–8; Ch.II ≈ 8–18; Ch.III ≈ 18–30; Ch.IV ≈ 30–45.
+
+### Unit spawns
+* Generic enemies: `{ job: 'knight', level: '+1', at: [x,z], facing: 'S', team: 1 }` — equipment and abilities are
+  **auto-assigned** by the engine from the job + current shop tier if `equip`/`learned` are omitted. Add
+  `secondary`, `reaction`, `support` to make them interesting. Give memorable enemies a `name`.
+* Named characters: `{ char: 'wolfram', level: '+3', at, boss: true, hpMult: 2 }` (id defaults to the char id).
+  Their job comes from CharacterDef unless you set `job` (e.g. Delan in Ch.II+ → `job: 'lionKnight'`).
+* Guests (AI allies): `team: 0, ai: 'aggressive'` (or 'defensive'/'support'); add `vip: true` + list in `protect`
+  if their fall loses the battle.
+* Monsters: `{ job: 'goblin', level: '+0', at, team: 1 }`.
+* `hidden: true` units appear later via a BattleEvent script `['reveal', id]` (reinforcements).
+* Keep deploy cells free of spawns. Enemies start 5–10 tiles away from deploy cells.
+
+### Victory conditions
+`defeatAll` (default), `defeat` (boss ids), `defeatAny`, `survive` (N hero turns), `reach` (cells, e.g. the sluice lever).
+A boss retreat mid-battle: `events: [{ when: { hpBelow: ['wolfram', 50] }, script: [['say','wolfram','…'], ['retreat','wolfram'], ['battleEnd','victory']] }]`.
+
+### Scenes
+* `map` = scene stage (can be a battle map or a dedicated small scene map like `scene_ygress_hall`; author scene maps
+  in your maps file with `deploy` set to any 5 standable cells).
+* Spawn actors first: `['actor', 'rhen', 'rhen', 4, 6, 'N']` (id, character-or-job id, x, z, facing).
+  Generic extras: `['actor', 'guard1', 'knight', 2, 3, 'S', { name: 'Northsky Guard', team: 1 }]`.
+* Refer to the hero by `{hero}` in text (the player may rename him); his family name is Valorne.
+* Dialogue: `['say', id, 'text']`, ≤ 180 chars per line; use many short lines, like the source's dialogue boxes.
+  Use `{ mood: 'shout' }` for shouts, `'think'` for inner thoughts, `'whisper'`.
+* Stage directions: `['move', id, x, z]`, `['face', id, 'E' | otherId]`, `['anim', id, 'kneel']`,
+  `['emote', id, '!']`, `['camera', { at: id, zoom: 0.8, time: 1.2 }]`, `['wait', 0.6]`, `['fade','out',1]`,
+  `['music', 'somber']` (music ids: title prologue worldmap town tavern battle1 battle2 battle3 boss umbral
+  finalBoss victory defeat somber tension church heroic romance campfire dungeon ending credits chapter formation),
+  `['sfx', 'thunderclap']`, `['vfx', 'holy', 'actorId']`, `['shake', 0.3, 0.6]`, `['flash', '#ffffff', 0.8]`.
+* Narration between scenes: `['narrate', 'text']`; chapter cards: `['title', 'Chapter I', 'The Low-Born']`.
+* Chronicle unlocks: `['chronicle', 'ev_campfire']` (ids from src/data/world/chronicle.ts).
+* Party changes: `['join', 'mattis']`, `['leave', 'adria']`. Items: `['item', 'elixir', 1]`, `['gil', 500]`.
+* Choices: `['choice', 'What will you do?', [['Save Argan!', [...cmds]], ['Rout the enemy!', [...cmds]]]]` — use
+  `['flag', 'name']` inside branches if later text depends on it, then `['if', 'name', thenCmds, elseCmds]`.
+* A scene should feel directed: establish shots with camera moves, let characters walk in, pause with `wait`,
+  use emotes. Fill in the drama the source only implies — the political intrigue, Delan's bitterness, Rhen's
+  doubt, the Church's hypocrisy — in an earnest, slightly archaic register. Original prose only.

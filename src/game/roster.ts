@@ -116,10 +116,10 @@ export function createMonster(jobId: string, level: number, rng = new Rng()): Ro
 }
 
 /** Create a roster unit for a named story character. */
-export function createCharacter(charId: string, partyLevel: number, rng = new Rng()): RosterUnit {
+export function createCharacter(charId: string, partyLevel: number, rng = new Rng(), exactLevel?: number): RosterUnit {
   const c = CHARACTERS.get(charId);
   if (!c) throw new Error('Unknown character ' + charId);
-  const level = Math.max(1, Math.min(99, c.levelAbs ? (c.level ?? 1) : partyLevel + (c.level ?? 0)));
+  const level = exactLevel !== undefined ? Math.max(1, Math.min(99, exactLevel)) : Math.max(1, Math.min(99, c.levelAbs ? (c.level ?? 1) : partyLevel + (c.level ?? 0)));
   const g = c.gender;
   const raw = newRaw(g, rng);
   const j = getJob(c.job);

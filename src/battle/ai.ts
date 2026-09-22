@@ -181,13 +181,19 @@ function scoreAction(b: Battle, u: BattleUnit, a: AbilityDef, prev: TargetPrevie
     }
     if (p.ko && !p.dmg) s += (ally ? -1.5 : 1) * 95 * hit;
     if (p.status) {
-      for (const st of (a.effects ?? []).flatMap((e) => (e.type === 'status' ? e.add ?? [] : []))) {
-        if (t.has(st) || t.immune.has(st)) continue;
-        const bad = STATUS[st].bad;
-        const v = bad ? BAD_VALUE[st] ?? 15 : GOOD_VALUE[st] ?? 10;
-        if (bad) s += (ally ? -1.2 : 1) * v * hit * (t.alive ? 1 : 0);
-        else s += (ally ? 1 : -1) * v * hit * (support ? 1.2 : 0.8);
+      for (const e of a.effects ?? []) {
+        if (e.type !== 'status' || !e.add?.length) continue;
+        // "one of these" lists land a single status: average their value
+        const div = e.all || e.add.length <= 1 ? 1 : e.add.length;
+        for (const st of e.add) {
+          if (t.has(st) || t.immune.has(st)) continue;
+          const bad = STATUS[st].bad;
+          const v = (bad ? BAD_VALUE[st] ?? 15 : GOOD_VALUE[st] ?? 10) / div;
+          if (bad) s += (ally ? -1.2 : 1) * v * hit * (t.alive ? 1 : 0);
+          else s += (ally ? 1 : -1) * v * hit * (support ? 1.2 : 0.8);
+        }
       }
+      if (p.mp) s += (ally ? -0.5 : 0.5) * Math.min(1, p.mp / Math.max(1, t.maxMp)) * 25 * hit * (t.maxMp > 20 ? 1 : 0.2);
       for (const st of (a.effects ?? []).flatMap((e) => (e.type === 'status' ? e.remove ?? [] : []))) {
         if (!t.has(st)) continue;
         const bad = STATUS[st].bad;

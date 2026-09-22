@@ -91,7 +91,7 @@ export function mkOsc(
   detune = 0,
 ): OscillatorNode {
   const o = ctx.createOscillator();
-  if (typeof type === 'string') o.type = type;
+  if (typeof type === 'string') o.type = type as OscillatorType;
   else o.setPeriodicWave(type);
   o.frequency.value = freq;
   if (detune) o.detune.value = detune;
@@ -129,24 +129,48 @@ export function makePanner(ctx: BaseAudioContext, pan: number): AudioNode {
   return p;
 }
 
+/**
+ * Envelopes use only setValue / linear / exponential ramps (no
+ * setTargetAtTime), so every Web Audio implementation renders them the same.
+ */
+
 /** attack / decay / sustain / release; returns the time the voice is silent */
 export function adsr(p: AudioParam, t: number, dur: number, a: number, d: number, s: number, r: number, peak: number): number {
+  const pk = Math.max(1e-5, peak);
   const aa = Math.min(a, Math.max(0.004, dur * 0.7));
   const aEnd = t + Math.max(0.003, aa);
-  p.setValueAtTime(0, t);
-  p.linearRampToValueAtTime(peak, aEnd);
-  if (s < 1 && d > 0) p.setTargetAtTime(peak * s, aEnd, d / 3);
   const rel = Math.max(t + dur, aEnd + 0.005);
-  p.setTargetAtTime(0, rel, Math.max(0.005, r / 5));
-  return rel + r * 1.25 + 0.02;
+  p.setValueAtTime(0, t);
+  p.linearRampToValueAtTime(pk, aEnd);
+  let vRel = pk;
+  if (s < 1 && d > 0) {
+    const sus = Math.max(1e-5, pk * s);
+    const dEnd = aEnd + d;
+    if (dEnd <= rel) {
+      p.exponentialRampToValueAtTime(sus, dEnd);
+      p.setValueAtTime(sus, rel);
+      vRel = sus;
+    } else {
+      vRel = pk * Math.pow(s, (rel - aEnd) / d);
+      p.exponentialRampToValueAtTime(vRel, rel);
+    }
+  } else p.setValueAtTime(pk, rel);
+  return release(p, vRel, rel, Math.max(0.01, r));
 }
 
-/** percussive envelope: fast attack, exponential decay */
+/** exponential fade from `from` (current value at t) to silence over `r` seconds */
+export function release(p: AudioParam, from: number, t: number, r: number): number {
+  p.exponentialRampToValueAtTime(Math.max(1e-6, from * 0.001), t + r);
+  p.setValueAtTime(0, t + r + 0.001);
+  return t + r + 0.01;
+}
+
+/** percussive envelope: fast attack, exponential decay (tau = time-constant) */
 export function percEnv(p: AudioParam, t: number, peak: number, tau: number, atk = 0.002): number {
+  const pk = Math.max(1e-5, peak);
   p.setValueAtTime(0, t);
-  p.linearRampToValueAtTime(peak, t + atk);
-  p.setTargetAtTime(0, t + atk, tau);
-  return t + atk + tau * 7;
+  p.linearRampToValueAtTime(pk, t + atk);
+  return release(p, pk, t + atk, tau * 6.9);
 }
 
 /** per-note vibrato (delayed onset) on the given detune params */
@@ -514,8 +538,12 @@ function brass(p: BrassP): NoteFn {
     const lp = mkFilter(ctx, 'lowpass', fLo, p.q);
     lp.frequency.setValueAtTime(fLo, t);
     lp.frequency.linearRampToValueAtTime(fPk, aEnd);
-    lp.frequency.setTargetAtTime(fSus, aEnd, 0.16);
-    lp.frequency.setTargetAtTime(fLo, rel, p.rel / 3);
+    const sEnd = aEnd + 0.35;
+    if (sEnd < rel) {
+      lp.frequency.exponentialRampToValueAtTime(fSus, sEnd);
+      lp.frequency.setValueAtTime(fSus, rel);
+    } else lp.frequency.exponentialRampToValueAtTime(fPk + (fSus - fPk) * ((rel - aEnd) / 0.35), rel);
+    lp.frequency.exponentialRampToValueAtTime(fLo, rel + p.rel);
     const g = mkGain(ctx, 0);
     for (let k = 0; k < p.voices; k++) {
       const det = p.voices > 1 ? (k ? 5 : -5) + rnd(2) : rnd(2);
@@ -563,7 +591,7 @@ function wind(p: WindP): NoteFn {
       const b = p.breath * (0.5 + vel);
       ng.gain.setValueAtTime(0, t);
       ng.gain.linearRampToValueAtTime(b * 2.2, t + Math.min(0.03, atk));
-      ng.gain.setTargetAtTime(b * 0.6, t + 0.04, 0.05);
+      ng.gain.exponentialRampToValueAtTime(b * 0.6, t + 0.04 + Math.min(0.15, Math.max(0.01, dur)));
     }
     g.connect(dest);
     return adsr(g.gain, t, dur, atk, 0.3, 0.9, p.rel, p.amp * velAmp(vel));
@@ -587,16 +615,15 @@ function plucked(p: PluckP): NoteFn {
     const buf = getPluck(core, m, p.spec);
     const src = ctx.createBufferSource();
     src.buffer = buf;
-    const lp = mkFilter(ctx, 'lowpass', p.lp * (0.35 + 0.8 * Math.min(1, vel)), 0.5);
     const g = mkGain(ctx, 0);
     const hold = Math.max(dur, p.ring);
     const peak = p.amp * velAmp(vel);
     g.gain.setValueAtTime(0, t);
     g.gain.linearRampToValueAtTime(peak, t + 0.003);
     g.gain.setValueAtTime(peak, t + hold);
-    g.gain.setTargetAtTime(0, t + hold, p.rel / 5);
+    release(g.gain, peak, t + hold, p.rel);
     const end = Math.min(t + buf.duration, t + hold + p.rel * 1.3) + 0.01;
-    src.connect(lp).connect(g).connect(dest);
+    src.connect(g).connect(dest);
     src.start(t);
     src.stop(end);
     return end;
@@ -622,7 +649,7 @@ const organNote: NoteFn = (core, dest, t, m, dur, vel) => {
   nz.connect(mkFilter(ctx, 'bandpass', Math.min(8000, f * 3), 2.5)).connect(cg).connect(g);
   percEnv(cg.gain, t, 0.35 * vel, 0.025, 0.005);
   lp.connect(g).connect(dest);
-  return adsr(g.gain, t, dur, 0.045, 0.1, 0.95, rel, 0.12 * velAmp(Math.max(0.5, vel)));
+  return adsr(g.gain, t, dur, 0.045, 0.1, 0.95, rel, 0.168 * velAmp(Math.max(0.5, vel)));
 };
 
 // ---- choir -----------------------------------------------------------------
@@ -637,12 +664,9 @@ function choirNote(amp: number, atkBase: number): NoteFn {
     const g = mkGain(ctx, 0);
     const o1 = mkOsc(ctx, 'sawtooth', f, t, end, -7 + rnd(3));
     const o2 = mkOsc(ctx, 'sawtooth', f, t, end, 7 + rnd(3));
-    const o3 = mkOsc(ctx, 'triangle', f, t, end, rnd(4));
-    vibrato(ctx, t, end, 4.6 + rnd(0.6), 9, 0.35, [o1.detune, o2.detune, o3.detune]);
     const lp = mkFilter(ctx, 'lowpass', Math.min(9000, 2800 + f * 2), 0.5);
     o1.connect(lp);
     o2.connect(lp);
-    o3.connect(mkGain(ctx, 0.8)).connect(lp);
     lp.connect(g).connect(dest);
     return adsr(g.gain, t, dur, atk, 0.6, 0.9, rel, amp * velAmp(vel));
   };
@@ -684,35 +708,35 @@ function partials(list: Array<[number, number, number]>, amp: number, strike = 0
 const timpaniNote: NoteFn = (core, dest, t, m, _dur, vel) => {
   const ctx = core.ctx;
   const f = mtof(m);
-  const a = 0.62 * velAmp(vel);
+  const a = 0.32 * velAmp(vel);
   const out = mkGain(ctx, 1);
-  const tau = 0.45 + 0.35 * Math.min(1, vel);
-  const end = t + tau * 7;
+  const tau = 0.38 + 0.25 * Math.min(1, vel);
+  const end = t + tau * 6.9 + 0.01;
   const o1 = mkOsc(ctx, 'sine', f, t, end);
   o1.frequency.setValueAtTime(f * 1.035, t);
   o1.frequency.exponentialRampToValueAtTime(f, t + 0.12);
   const g1 = mkGain(ctx, 0);
   percEnv(g1.gain, t, a, tau, 0.004);
   o1.connect(g1).connect(out);
-  const o2 = mkOsc(ctx, 'sine', f * 1.505, t, end);
+  const o2 = mkOsc(ctx, 'sine', f * 1.505, t, t + tau * 4);
   const g2 = mkGain(ctx, 0);
   percEnv(g2.gain, t, a * 0.33, tau * 0.55, 0.004);
   o2.connect(g2).connect(out);
-  const o3 = mkOsc(ctx, 'sine', f * 1.985, t, t + tau * 3);
-  const g3 = mkGain(ctx, 0);
-  percEnv(g3.gain, t, a * 0.14, tau * 0.35, 0.004);
-  o3.connect(g3).connect(out);
-  const nz = mkNoise(core, t, t + 0.4);
+  const nz = mkNoise(core, t, t + 0.6);
   const ng = mkGain(ctx, 0);
   nz.connect(mkFilter(ctx, 'bandpass', f * 3.5, 0.9)).connect(ng).connect(out);
   percEnv(ng.gain, t, a * 0.55, 0.025);
-  const nz2 = mkNoise(core, t, t + 0.9);
   const ng2 = mkGain(ctx, 0);
-  nz2.connect(mkFilter(ctx, 'lowpass', 220, 0.7)).connect(ng2).connect(out);
-  percEnv(ng2.gain, t, a * 0.7, 0.09);
+  nz.connect(mkFilter(ctx, 'lowpass', 220, 0.7)).connect(ng2).connect(out);
+  percEnv(ng2.gain, t, a * 0.7, 0.08);
   out.connect(dest);
   return end;
 };
+
+/** envelope value at the end of a roll */
+function rollEnd(kind: number, peak: number): number {
+  return kind === 2 ? peak : kind === 3 ? peak * 0.14 : peak * 0.62;
+}
 
 function rollEnvelope(p: AudioParam, t: number, dur: number, kind: number, peak: number): void {
   const lo = peak * 0.14;
@@ -740,11 +764,11 @@ function rollAM(ctx: BaseAudioContext, t: number, end: number, rate: number, dep
 const timpaniRoll: RollFn = (core, dest, t, m, dur, vel, kind) => {
   const ctx = core.ctx;
   const f = mtof(m);
-  const peak = 0.5 * velAmp(vel);
+  const peak = 0.26 * velAmp(vel);
   const end = t + dur + 3;
   const env = mkGain(ctx, 0);
   rollEnvelope(env.gain, t, dur, kind, peak);
-  env.gain.setTargetAtTime(0, t + dur, 0.5);
+  release(env.gain, rollEnd(kind, peak), t + dur, 0.5 * 5);
   const am = rollAM(ctx, t, end, 13 + rnd(1.5), 0.35);
   mkOsc(ctx, 'sine', f, t, end).connect(am);
   mkOsc(ctx, 'sine', f * 1.505, t, end).connect(mkGain(ctx, 0.3)).connect(am);
@@ -757,33 +781,30 @@ const timpaniRoll: RollFn = (core, dest, t, m, dur, vel, kind) => {
 
 const snareNote: NoteFn = (core, dest, t, _m, _dur, vel) => {
   const ctx = core.ctx;
-  const a = 0.5 * velAmp(vel);
+  const a = 0.44 * velAmp(vel);
   const out = mkGain(ctx, 1);
-  const tau = 0.055 + 0.04 * Math.min(1, vel);
-  const nz = mkNoise(core, t, t + 0.6);
+  const tau = 0.05 + 0.035 * Math.min(1, vel);
+  const nz = mkNoise(core, t, t + tau * 7);
   const ng = mkGain(ctx, 0);
-  nz.connect(mkFilter(ctx, 'highpass', 900, 0.7)).connect(mkFilter(ctx, 'peaking', 4800, 1, 5)).connect(ng).connect(out);
+  nz.connect(mkFilter(ctx, 'bandpass', 3800, 0.55)).connect(ng).connect(out);
   percEnv(ng.gain, t, a, tau);
-  const wires = mkGain(ctx, 0);
-  nz.connect(mkFilter(ctx, 'bandpass', 3200, 0.8)).connect(wires).connect(out);
-  percEnv(wires.gain, t, a * 0.35, tau * 2.2, 0.004);
-  const b = mkOsc(ctx, 'triangle', 215, t, t + 0.3);
+  const b = mkOsc(ctx, 'triangle', 215, t, t + 0.25);
   b.frequency.setValueAtTime(215, t);
   b.frequency.exponentialRampToValueAtTime(168, t + 0.04);
   const bg = mkGain(ctx, 0);
-  percEnv(bg.gain, t, a * 0.9, 0.035);
+  percEnv(bg.gain, t, a * 0.9, 0.032);
   b.connect(bg).connect(out);
   out.connect(dest);
-  return t + 0.6;
+  return t + tau * 7 + 0.01;
 };
 
 const snareRoll: RollFn = (core, dest, t, _m, dur, vel, kind) => {
   const ctx = core.ctx;
-  const peak = 0.34 * velAmp(vel);
+  const peak = 0.22 * velAmp(vel);
   const end = t + dur + 0.4;
   const env = mkGain(ctx, 0);
   rollEnvelope(env.gain, t, dur, kind, peak);
-  env.gain.setTargetAtTime(0, t + dur, 0.04);
+  release(env.gain, rollEnd(kind, peak), t + dur, 0.04 * 5);
   const am = rollAM(ctx, t, end, 23 + rnd(2), 0.55);
   const nz = mkNoise(core, t, end);
   nz.connect(mkFilter(ctx, 'highpass', 1000, 0.7)).connect(mkFilter(ctx, 'peaking', 4500, 1, 4)).connect(am);
@@ -793,7 +814,7 @@ const snareRoll: RollFn = (core, dest, t, _m, dur, vel, kind) => {
 
 const bassDrumNote: NoteFn = (core, dest, t, _m, _dur, vel) => {
   const ctx = core.ctx;
-  const a = 0.95 * velAmp(vel);
+  const a = 0.8 * velAmp(vel);
   const out = mkGain(ctx, 1);
   const end = t + 2.2;
   const o = mkOsc(ctx, 'sine', 62, t, end);
@@ -815,11 +836,11 @@ const bassDrumNote: NoteFn = (core, dest, t, _m, _dur, vel) => {
 
 const bassDrumRoll: RollFn = (core, dest, t, _m, dur, vel, kind) => {
   const ctx = core.ctx;
-  const peak = 0.75 * velAmp(vel);
+  const peak = 0.63 * velAmp(vel);
   const end = t + dur + 2;
   const env = mkGain(ctx, 0);
   rollEnvelope(env.gain, t, dur, kind, peak);
-  env.gain.setTargetAtTime(0, t + dur, 0.35);
+  release(env.gain, rollEnd(kind, peak), t + dur, 0.35 * 5);
   const am = rollAM(ctx, t, end, 11 + rnd(1), 0.4);
   mkOsc(ctx, 'sine', 46, t, end).connect(am);
   mkNoise(core, t, end).connect(mkFilter(ctx, 'lowpass', 130, 0.8)).connect(mkGain(ctx, 1.1)).connect(am);
@@ -829,7 +850,7 @@ const bassDrumRoll: RollFn = (core, dest, t, _m, dur, vel, kind) => {
 
 const cymbalNote: NoteFn = (core, dest, t, _m, _dur, vel) => {
   const ctx = core.ctx;
-  const a = 0.26 * velAmp(vel);
+  const a = 0.155 * velAmp(vel);
   const soft = vel < 0.5;
   const tau = soft ? 0.35 : 0.55 + 0.5 * Math.min(1, vel);
   const end = t + tau * 7;
@@ -851,11 +872,11 @@ const cymbalNote: NoteFn = (core, dest, t, _m, _dur, vel) => {
 
 const cymbalRoll: RollFn = (core, dest, t, _m, dur, vel, kind) => {
   const ctx = core.ctx;
-  const peak = 0.2 * velAmp(vel);
+  const peak = 0.12 * velAmp(vel);
   const end = t + dur + 3.5;
   const env = mkGain(ctx, 0);
   rollEnvelope(env.gain, t, dur, kind === 1 ? 2 : kind, peak);
-  env.gain.setTargetAtTime(0, t + dur, 0.55);
+  release(env.gain, rollEnd(kind, peak), t + dur, 0.55 * 5);
   const nz = mkNoise(core, t, end);
   nz.connect(mkFilter(ctx, 'highpass', 3000, 0.6)).connect(env);
   nz.connect(mkFilter(ctx, 'bandpass', 6500, 1.2)).connect(mkGain(ctx, 0.7)).connect(env);
@@ -865,7 +886,7 @@ const cymbalRoll: RollFn = (core, dest, t, _m, dur, vel, kind) => {
 
 const tambourineNote: NoteFn = (core, dest, t, _m, _dur, vel) => {
   const ctx = core.ctx;
-  const a = 0.3 * velAmp(vel);
+  const a = 0.23 * velAmp(vel);
   const out = mkGain(ctx, 1);
   const nz = mkNoise(core, t, t + 0.5);
   const bp = mkFilter(ctx, 'bandpass', 8200, 1.4);
@@ -882,7 +903,7 @@ const tambourineNote: NoteFn = (core, dest, t, _m, _dur, vel) => {
 
 const frameDrumNote: NoteFn = (core, dest, t, _m, _dur, vel) => {
   const ctx = core.ctx;
-  const a = 0.7 * velAmp(vel);
+  const a = 0.59 * velAmp(vel);
   const out = mkGain(ctx, 1);
   const o = mkOsc(ctx, 'sine', 120, t, t + 0.9);
   o.frequency.setValueAtTime(122, t);
@@ -911,7 +932,7 @@ const windPadNote: NoteFn = (core, dest, t, m, dur, vel) => {
   nz.connect(b1).connect(mkGain(ctx, 11)).connect(g);
   nz.connect(b2).connect(mkGain(ctx, 5)).connect(g);
   g.connect(dest);
-  return adsr(g.gain, t, dur, 1.1, 0.5, 0.9, 1.6, 0.5 * velAmp(vel));
+  return adsr(g.gain, t, dur, 1.1, 0.5, 0.9, 1.6, 0.45 * velAmp(vel));
 };
 
 // ---- generic roll (tremolo) -------------------------------------------------
@@ -948,113 +969,113 @@ const BPIZZ: PluckSpec = { key: 'bpizz', decay: 1.3, bright: 0.22, pos: 0.25, le
 export const INSTRUMENTS: Record<string, Instrument> = {
   // --- strings
   strings: {
-    note: bowed({ voices: 2, spread: 8, atk: 0.3, rel: 0.6, bright: 1.1, base: 450, amp: 0.13, vib: 0, vibDelay: 0 }),
+    note: bowed({ voices: 2, spread: 8, atk: 0.3, rel: 0.6, bright: 1.1, base: 450, amp: 0.24, vib: 0, vibDelay: 0 }),
     insert: (c) => ensembleInsert(c, 0.6, STR_TONE),
     rev: 0.4,
     rollRate: 12,
   },
   violin: {
-    note: bowed({ voices: 3, spread: 9, atk: 0.09, rel: 0.32, bright: 1.35, base: 800, amp: 0.15, vib: 13, vibDelay: 0.22 }),
+    note: bowed({ voices: 3, spread: 9, atk: 0.09, rel: 0.32, bright: 1.35, base: 800, amp: 0.19, vib: 13, vibDelay: 0.22 }),
     insert: (c) => ensembleInsert(c, 0.4, STR_TONE),
     rev: 0.38,
     rollRate: 13,
   },
   celli: {
-    note: bowed({ voices: 2, spread: 9, atk: 0.11, rel: 0.36, bright: 1.25, base: 380, amp: 0.17, vib: 11, vibDelay: 0.22 }),
+    note: bowed({ voices: 2, spread: 9, atk: 0.11, rel: 0.36, bright: 1.25, base: 380, amp: 0.26, vib: 11, vibDelay: 0.22 }),
     insert: (c) => ensembleInsert(c, 0.45, STR_TONE),
     rev: 0.36,
     rollRate: 12,
   },
   spicc: {
-    note: bowed({ voices: 2, spread: 8, atk: 0.012, rel: 0.1, bright: 1.6, base: 700, amp: 0.2, vib: 0, vibDelay: 0, dec: 0.13, sus: 0.35 }),
+    note: bowed({ voices: 2, spread: 8, atk: 0.012, rel: 0.1, bright: 1.6, base: 700, amp: 0.34, vib: 0, vibDelay: 0, dec: 0.13, sus: 0.35 }),
     insert: (c) => ensembleInsert(c, 0.45, STR_TONE),
     rev: 0.3,
     rollRate: 14,
     human: 0.004,
   },
   contrabass: {
-    note: bowed({ voices: 2, spread: 7, atk: 0.07, rel: 0.3, bright: 1.3, base: 200, amp: 0.3, vib: 6, vibDelay: 0.3 }),
+    note: bowed({ voices: 2, spread: 7, atk: 0.07, rel: 0.3, bright: 1.3, base: 200, amp: 0.24, vib: 6, vibDelay: 0.3 }),
     insert: (c) => ensembleInsert(c, 0.25, { hp: 30, lp: 3500 }),
     rev: 0.22,
     rollRate: 11,
   },
   fiddle: {
-    note: bowed({ voices: 2, spread: 6, atk: 0.03, rel: 0.14, bright: 1.7, base: 900, amp: 0.15, vib: 14, vibDelay: 0.14, q: 0.9 }),
+    note: bowed({ voices: 2, spread: 6, atk: 0.03, rel: 0.14, bright: 1.7, base: 900, amp: 0.123, vib: 14, vibDelay: 0.14, q: 0.9 }),
     insert: (c) => eqInsert(c, { hp: 180, peaks: [[2600, 3, 1.2]], shelf: [7000, -4] }),
     rev: 0.22,
     rollRate: 14,
   },
   pizz: {
-    note: plucked({ spec: PIZZ, amp: 0.55, ring: 0.2, rel: 0.25, lp: 5000 }),
+    note: plucked({ spec: PIZZ, amp: 0.6, ring: 0.2, rel: 0.25, lp: 5000 }),
     insert: (c) => eqInsert(c, { hp: 70, peaks: [[250, 3, 1]] }),
     rev: 0.35,
     pluck: PIZZ,
     human: 0.005,
   },
   bassPizz: {
-    note: plucked({ spec: BPIZZ, amp: 0.8, ring: 0.5, rel: 0.3, lp: 2200 }),
+    note: plucked({ spec: BPIZZ, amp: 0.58, ring: 0.5, rel: 0.3, lp: 2200 }),
     insert: (c) => eqInsert(c, { hp: 30, peaks: [[110, 3, 1]] }),
     rev: 0.2,
     pluck: BPIZZ,
   },
   // --- brass
   horn: {
-    note: brass({ bright: 0.55, q: 0.9, amp: 0.15, atk: 0.055, scoop: 22, base: 250, rel: 0.28, voices: 2 }),
+    note: brass({ bright: 0.55, q: 0.9, amp: 0.2, atk: 0.055, scoop: 22, base: 250, rel: 0.28, voices: 2 }),
     insert: (c) => ensembleInsert(c, 0.3, BRASS_TONE),
     rev: 0.42,
     rollRate: 10,
   },
   trumpet: {
-    note: brass({ bright: 1.0, q: 1.5, amp: 0.13, atk: 0.03, scoop: 28, base: 500, rel: 0.2, voices: 2 }),
+    note: brass({ bright: 1.0, q: 1.5, amp: 0.165, atk: 0.03, scoop: 28, base: 500, rel: 0.2, voices: 2 }),
     insert: (c) => ensembleInsert(c, 0.25, BRASS_TONE),
     rev: 0.36,
     rollRate: 10,
   },
   trombone: {
-    note: brass({ bright: 0.8, q: 1.2, amp: 0.17, atk: 0.05, scoop: 18, base: 200, rel: 0.25, voices: 2 }),
+    note: brass({ bright: 0.8, q: 1.2, amp: 0.21, atk: 0.05, scoop: 18, base: 200, rel: 0.25, voices: 2 }),
     insert: (c) => ensembleInsert(c, 0.25, BRASS_TONE),
     rev: 0.36,
     rollRate: 10,
   },
   tuba: {
-    note: brass({ bright: 0.45, q: 0.8, amp: 0.26, atk: 0.06, scoop: 12, base: 120, rel: 0.25, voices: 1 }),
+    note: brass({ bright: 0.45, q: 0.8, amp: 0.24, atk: 0.06, scoop: 12, base: 120, rel: 0.25, voices: 1 }),
     insert: (c) => eqInsert(c, { hp: 28, lp: 2500 }),
     rev: 0.28,
   },
   // --- woodwinds
   flute: {
-    note: wind({ wave: 'flute', breath: 0.05, atk: 0.06, rel: 0.14, vib: 11, vibDelay: 0.18, lpMul: 5, lpBase: 1500, amp: 0.2, breathF: 2 }),
+    note: wind({ wave: 'flute', breath: 0.05, atk: 0.06, rel: 0.14, vib: 11, vibDelay: 0.18, lpMul: 5, lpBase: 1500, amp: 0.125, breathF: 2 }),
     rev: 0.42,
   },
   oboe: {
-    note: wind({ wave: 'oboe', breath: 0.02, atk: 0.04, rel: 0.1, vib: 8, vibDelay: 0.2, lpMul: 6, lpBase: 900, amp: 0.13 }),
+    note: wind({ wave: 'oboe', breath: 0.02, atk: 0.04, rel: 0.1, vib: 8, vibDelay: 0.2, lpMul: 6, lpBase: 900, amp: 0.143 }),
     insert: (c) => eqInsert(c, { hp: 200, peaks: [[1250, 3, 1.3]], shelf: [5000, -5] }),
     rev: 0.38,
   },
   clarinet: {
-    note: wind({ wave: 'clarinet', breath: 0.02, atk: 0.05, rel: 0.12, vib: 3, vibDelay: 0.3, lpMul: 5, lpBase: 700, amp: 0.17 }),
+    note: wind({ wave: 'clarinet', breath: 0.02, atk: 0.05, rel: 0.12, vib: 3, vibDelay: 0.3, lpMul: 5, lpBase: 700, amp: 0.118 }),
     insert: (c) => eqInsert(c, { hp: 120, shelf: [4500, -4] }),
     rev: 0.38,
   },
   bassoon: {
-    note: wind({ wave: 'bassoon', breath: 0.015, atk: 0.05, rel: 0.12, vib: 4, vibDelay: 0.3, lpMul: 5, lpBase: 400, amp: 0.2 }),
+    note: wind({ wave: 'bassoon', breath: 0.015, atk: 0.05, rel: 0.12, vib: 4, vibDelay: 0.3, lpMul: 5, lpBase: 400, amp: 0.19 }),
     insert: (c) => eqInsert(c, { hp: 50, peaks: [[500, 2, 1.2]], shelf: [3000, -6] }),
     rev: 0.34,
   },
   recorder: {
-    note: wind({ wave: 'recorder', breath: 0.07, atk: 0.025, rel: 0.07, vib: 7, vibDelay: 0.15, lpMul: 6, lpBase: 1500, amp: 0.17, breathF: 3 }),
+    note: wind({ wave: 'recorder', breath: 0.07, atk: 0.025, rel: 0.07, vib: 7, vibDelay: 0.15, lpMul: 6, lpBase: 1500, amp: 0.118, breathF: 3 }),
     rev: 0.3,
   },
   // --- plucked
   harp: {
-    note: plucked({ spec: HARP, amp: 0.5, ring: 1.6, rel: 0.6, lp: 7000 }),
+    note: plucked({ spec: HARP, amp: 0.45, ring: 1.6, rel: 0.6, lp: 7000 }),
     insert: (c) => eqInsert(c, { hp: 60, peaks: [[180, 2, 1]], shelf: [6000, -3] }),
     rev: 0.45,
     pluck: HARP,
     human: 0.006,
   },
   lute: {
-    note: plucked({ spec: LUTE, amp: 0.42, ring: 0.5, rel: 0.25, lp: 6500 }),
+    note: plucked({ spec: LUTE, amp: 0.48, ring: 0.5, rel: 0.25, lp: 6500 }),
     insert: (c) => eqInsert(c, { hp: 85, peaks: [[230, 3, 1.1], [2400, 2, 1.2]], shelf: [7000, -4] }),
     rev: 0.28,
     pluck: LUTE,
@@ -1074,7 +1095,7 @@ export const INSTRUMENTS: Record<string, Instrument> = {
         [2, 0.12, 0.2],
         [4, 0.22, 0.07],
       ],
-      0.22,
+      0.132,
       0.08,
     ),
     rev: 0.45,
@@ -1087,7 +1108,7 @@ export const INSTRUMENTS: Record<string, Instrument> = {
         [2.76, 0.25, 0.1],
         [5.4, 0.12, 0.04],
       ],
-      0.17,
+      0.1,
       0.12,
     ),
     rev: 0.45,
@@ -1096,33 +1117,33 @@ export const INSTRUMENTS: Record<string, Instrument> = {
   bell: {
     note: partials(
       [
-        [0.5, 0.55, 1.3],
-        [1, 1, 0.95],
-        [1.19, 0.5, 0.7],
-        [1.5, 0.3, 0.55],
-        [2, 0.35, 0.45],
-        [2.52, 0.18, 0.3],
-        [3.01, 0.12, 0.22],
+        [0.5, 0.55, 0.9],
+        [1, 1, 0.75],
+        [1.19, 0.5, 0.55],
+        [1.5, 0.3, 0.4],
+        [2, 0.35, 0.3],
+        [2.52, 0.18, 0.2],
+        [3.01, 0.12, 0.14],
       ],
-      0.13,
+      0.147,
       0.2,
     ),
     rev: 0.55,
   },
   // --- choir
   choir: {
-    note: choirNote(0.2, 0.38),
+    note: choirNote(0.145, 0.38),
     insert: (c) => formantInsert(c, VOWELS.a, 0.6),
     rev: 0.52,
     rollRate: 8,
   },
   choirOo: {
-    note: choirNote(0.24, 0.45),
+    note: choirNote(0.096, 0.45),
     insert: (c) => formantInsert(c, VOWELS.u, 0.6, 600),
     rev: 0.55,
   },
   choirLow: {
-    note: choirNote(0.26, 0.35),
+    note: choirNote(0.153, 0.35),
     insert: (c) => formantInsert(c, VOWELS.o, 0.5, 600),
     rev: 0.5,
   },
@@ -1244,7 +1265,7 @@ export function createMasterBus(core: SynthCore, destination: AudioNode): Master
   lim.ratio.value = 20;
   lim.attack.value = 0.002;
   lim.release.value = 0.12;
-  const trim = mkGain(ctx, 0.72);
+  const trim = mkGain(ctx, 0.9);
   const master = mkGain(ctx, 1);
   const analyser = ctx.createAnalyser();
   analyser.fftSize = 1024;

@@ -182,10 +182,10 @@ export const abilities: AbilityDef[] = [
   // ======================================================= Arc Knight — Arc Blade
   {
     id: 'arcNightfall', name: 'Nightfall', kind: 'action', jp: 500, skillset: 'arcBlade',
-    desc: 'The knight lets the dark within the blade spill out, drowning every foe within two tiles. ((PA + MA) / 2 × 10 dark, Blind 20%)',
+    desc: 'The knight lets the dark within the blade spill out, drowning every foe within two tiles. ((PA + MA) / 2 × 9 dark, Blind 20%)',
     range: 0, aoe: 3, aoeV: 3, target: 'enemy', enemiesOnly: true, element: 'dark', anim: 'draw', vfx: 'dark', color: '#4a2070',
     noReflect: true,
-    effects: [{ type: 'damage', formula: F.paMa(10), element: 'dark' }],
+    effects: [{ type: 'damage', formula: F.paMa(9), element: 'dark' }],
     statusChance: [{ status: 'blind', chance: 20 }],
   },
   {

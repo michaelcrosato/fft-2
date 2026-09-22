@@ -37,15 +37,18 @@ export const wpOr = (x: FormulaCtx, min: number) => Math.max(min, x.wp);
 /** PA × WP (weapon floor 5) — the classic sword-art formula. */
 export const paWp = (mult = 1) => (x: FormulaCtx) => Math.floor(x.c.pa * wpOr(x, 5) * mult);
 
-/** Gun-art power: WP² (floor 8) with an optional multiplier. */
-export const gunPow = (mult = 1) => (x: FormulaCtx) => { const w = wpOr(x, 8); return Math.floor(w * w * mult); };
+/** Gun WP used by gun arts: floor 8, capped at 14 so the relic guns (WP 20+) don't explode the WP² curve. */
+export const gunWp = (x: FormulaCtx) => Math.min(14, Math.max(8, x.wp));
+
+/** Gun-art power: WP² (WP clamped 8..14) with an optional multiplier. */
+export const gunPow = (mult = 1) => (x: FormulaCtx) => { const w = gunWp(x); return Math.floor(w * w * mult); };
 
 /**
  * Spell-gun volley: the chamber fires a lesser (70%), middling (20%) or greater (10%)
  * charge of the element. Faith is ignored, like the relic guns of the Lost Age.
  */
 export const spellGun = (mult = 1) => (x: FormulaCtx) => {
-  const w = wpOr(x, 8);
+  const w = gunWp(x);
   const roll = x.rng.int(1, 10);
   const tier = roll <= 7 ? 1 : roll <= 9 ? 1.4 : 2;
   return Math.floor(w * w * tier * mult);

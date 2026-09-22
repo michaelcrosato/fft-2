@@ -57,6 +57,8 @@ export class BattleUnit {
   boss = false;
   vip = false;
   noLoot = false;
+  /** boss HP multiplier (lifts the 999 cap) */
+  hpMult = 1;
   hidden = false;
   /** exp/jp earned this battle for the results screen */
   expGained = 0;
@@ -145,7 +147,7 @@ export class BattleUnit {
     }
     const sup = this.supportAbility();
     if (sup?.id === 'maintenance') { /* handled in break/steal */ }
-    this.maxHp = Math.min(999, Math.max(1, hp));
+    this.maxHp = this.hpMult > 1 ? Math.min(9999, Math.max(1, Math.floor(hp * this.hpMult))) : Math.min(999, Math.max(1, hp));
     this.maxMp = Math.min(999, Math.max(0, mp));
     this.baseSpeed = Math.max(1, sp);
     this.basePa = Math.max(1, pa);

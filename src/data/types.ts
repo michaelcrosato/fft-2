@@ -600,6 +600,10 @@ export interface StoryStep {
   chain?: boolean;
   /** move the party to this node afterwards */
   moveTo?: string;
+  /** shop tier (1..8) unlocked when this step completes */
+  tier?: number;
+  /** characters joining the party permanently when the step completes (also possible via ['join'] in scenes) */
+  join?: string[];
 }
 
 export interface SideQuestStep {
