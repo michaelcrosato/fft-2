@@ -164,6 +164,13 @@ export class Stage {
   }
   hideCursor() { this.cursorMesh.visible = false; }
 
+  /** persistent goal marker (reach objectives) — survives clearHighlight() */
+  markGoal(cells: Array<[number, number]>) {
+    const g = new THREE.Group();
+    g.add(this.makeTileMesh(cells, tileMaterial('#ffd24a', true, 0.75), 0.05));
+    this.scene.add(g);
+  }
+
   /** persistent marker for charged spell targets */
   markCharge(uid: number, cells: Array<[number, number]>) {
     this.unmarkCharge(uid);

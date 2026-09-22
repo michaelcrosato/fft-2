@@ -1,6 +1,6 @@
 // Persistent game state + save slots.
 import type { RosterUnit } from './roster';
-import { createCharacter, createGeneric, newUid } from './roster';
+import { createCharacter, createGeneric, newUid, randomName } from './roster';
 import { Rng } from '../core/rng';
 import { zodiacFromDate } from '../battle/zodiac';
 import { STORY, CHARACTERS } from '../data/db';
@@ -73,8 +73,7 @@ export function newGame(heroName: string, birthday: [number, number]): GameState
   const genders: Array<'m' | 'f'> = ['m', 'f', 'f', 'm', 'm', 'f'];
   const taken: string[] = [hero.name];
   for (let i = 0; i < 6; i++) {
-    const u = createGeneric({ gender: genders[i], level: 1 + (i % 2), job: jobs[i], rng });
-    while (taken.includes(u.name)) u.name = u.name + '';
+    const u = createGeneric({ gender: genders[i], level: 1 + (i % 2), job: jobs[i], rng, name: randomName(genders[i], rng, taken) });
     taken.push(u.name);
     u.equip = jobs[i] === 'chemist' ? { rhand: 'dagger', head: 'leatherCap', body: 'clothes' } : { rhand: 'broadsword', head: 'leatherCap', body: 'clothes' };
     // chemists know Potion from the start; squires know Rush

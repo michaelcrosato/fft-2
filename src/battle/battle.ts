@@ -281,7 +281,8 @@ export class Battle {
     this.emit({ t: 'koCount', uid: u.uid, n: u.koCount });
     if (u.koCount <= 0) {
       if (u.has('undead') && this.rng.pct(50)) { this.revive(u, 1); this.emit({ t: 'text', uid: u.uid, text: 'Rises again!', color: '#9f9' }); return; }
-      if (u.team === 0 && (this.gentle || u.vip || u.sid === this.heroSid)) {
+      // named story characters and guests never crystallize: they withdraw from the field
+      if (u.baseTeam === 0 && (this.gentle || u.vip || u.sid === this.heroSid || !!u.roster.charId || !u.controlled)) {
         // gentle mode / story guests: retreat instead of crystallizing
         if (u.sid === this.heroSid || u.vip) return; // handled by defeat check
         u.gone = true; this.emit({ t: 'leave', uid: u.uid });

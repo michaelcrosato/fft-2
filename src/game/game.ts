@@ -244,6 +244,7 @@ export class Game {
     for (const u of b.units) { const v = this.addBattleView(stage, u); if (u.hidden) v.root.visible = false; }
     preloadPortraits(b);
     audio.playMusic(def.music ?? 'battle1', { fade: 1.2 });
+    if (def.victory.type === 'reach' && stage.def.theme !== 'dungeon') stage.markGoal(def.victory.cells);
     const ctrl = new BattleController(stage, b, {
       runScript: async (index) => {
         const ev = def.events?.[index];
