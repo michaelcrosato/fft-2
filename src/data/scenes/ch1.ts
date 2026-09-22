@@ -43,6 +43,8 @@ export const scenes: SceneDef[] = [
   {
     id: 'sc_pro_orvelle_pre', map: 'orvelle_court', time: 'dawn', music: 'church',
     cmds: [
+      ['fade', 'out', 0],
+      ['title', 'Prologue', 'The Abbey'],
       ['actor', 'oriane', 'oriane', 4, 4, 'N'],
       ['actor', 'simeon', 'simeon', 5, 4, 'N', { hidden: true }],
       ['actor', 'adria', 'adria', 4, 6, 'N'],
@@ -119,7 +121,7 @@ export const scenes: SceneDef[] = [
       ['actor', 'alisse', 'alisse', 3, 4, 'S', { hidden: true }],
       ['actor', 'simeon', 'simeon', 5, 4, 'S', { hidden: true }],
       ['actor', 'kweh', 'kwehbo', 6, 11, 'N', { name: 'Kwehbo', hidden: true }],
-      ['actor', 'delan', 'delan', 7, 11, 'N', { job: 'lionKnight', name: '???', hidden: true }],
+      ['actor', 'delan', 'delan', 7, 11, 'N', { name: '???', hidden: true }],
       ['camera', { at: 'garmond', zoom: 1.2, time: 0 }],
       ['fade', 'in', 1.2],
       ['say', 'garmond', 'That\'s the last of them. Five riders, five less mouths for the Black Lion to feed. Not a bad morning\'s work.'],
@@ -398,11 +400,13 @@ export const scenes: SceneDef[] = [
       ['choice', 'What will you do?', [
         ['Save Argan!', [
           ['flag', 'ch1_save_argan'],
+          ['flag', 'ch1_rout_brigade', false],
           ['say', 'rhen', 'Father would never leave a man to die in a ditch. We get to him — whatever it costs.'],
           ['say', 'delan', 'Then run. If he falls before we reach him, it\'s on us.'],
         ]],
         ['Rout the enemy!', [
           ['flag', 'ch1_rout_brigade'],
+          ['flag', 'ch1_save_argan', false],
           ['say', 'rhen', 'We break the Brigade first. If he\'s worth his badge, he\'ll hold until we reach him.'],
           ['say', 'delan', 'Cold, {hero}. Sensible, but cold. Your brother Dorian would approve.'],
           ['emote', 'rhen', 'sweat'],
@@ -892,7 +896,7 @@ export const scenes: SceneDef[] = [
       ['say', 'dorian', 'The Brigade has made a grave error. They meant to take a Valorne, and took a steward\'s ward instead. Zander has been recalled from Fovain; he will deal with them.'],
       ['say', 'delan', 'Deal with them? And Tessa?'],
       ['say', 'dorian', 'Zander will do what can be done. But I will be plain with you, Harrow. Her safety cannot be the first consideration.'],
-      ['say', 'argan', 'Of course it can\'t. She\'s a commoner. The Northsky will not risk a single patrol to fetch back a stable-girl — nor should it.'],
+      ['say', 'argan', 'Of course it can\'t. She\'s only a commoner. The Northsky will not risk a single patrol to fetch back a stable-girl — nor should it.'],
       ['emote', 'delan', 'anger'],
       ['move', 'delan', 4, 5, { run: true }],
       ['anim', 'delan', 'attack'],

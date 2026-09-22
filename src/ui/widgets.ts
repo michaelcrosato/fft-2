@@ -93,6 +93,8 @@ export function menu<T = string>(o: MenuOpts<T>): MenuHandle<T> {
   if (typeof o.initial === 'number' && !items.some((it) => it.value === o.initial)) init = o.initial;
   else if (o.initial !== undefined) init = Math.max(0, items.findIndex((it) => it.value === o.initial));
   while (init < items.length && !selectable(init)) init++;
+  // prefer an enabled entry when the requested one is disabled
+  if (items[init]?.disabled) { const e = items.findIndex((it, i) => selectable(i) && !it.disabled); if (e >= 0) init = e; }
   setSel(Math.min(init, items.length - 1), false);
   const pop = input.push((a) => {
     if (o.onAction && o.onAction(a, items[sel]?.value ?? null)) return true;

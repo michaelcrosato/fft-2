@@ -99,6 +99,10 @@ export class BattleController {
         v.anim.setBase(want);
         v.anim.hover = u.has('float') ? 0.28 : (v.model as any).hover ? 0.25 : 0;
       }
+      // tints & status badges
+      v.setTint(u.has('petrify') ? '#9a9a9a' : u.has('stop') ? '#8ab0ff' : u.has('frog') ? '#7ad06a' : u.has('undead') && !u.job.monster ? '#b8c8a8' : u.has('invisible') ? '#d8d8ff' : null);
+      const icons = u.alive ? [...u.statuses.keys()].filter((s) => !STATUS[s].hidden && !['critical', 'charging', 'performing', 'jumping', 'defending'].includes(s) && !u.always.has(s)).map((s) => STATUS[s].icon) : [];
+      v.setBadges(icons);
       if (!u.charging && this.auras.has(u.uid)) { this.auras.get(u.uid)!(); this.auras.delete(u.uid); this.stage.unmarkCharge(u.uid); }
       if (v.team !== u.team) v.setTeam(u.team, u.team === 0 && !u.controlled);
     }

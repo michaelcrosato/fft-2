@@ -473,7 +473,7 @@ export function parseMelody(src: string, barBeats: number, errors: string[], whe
       continue;
     }
     if (tk[0] === '<') {
-      const m = /^<([^>]*)>([whqiszut.]*)([!?*=]*)$/.exec(tk);
+      const m = /^<([^>]*)>([whqiszut.]*)([!?*=~<>]*)$/.exec(tk);
       if (!m) {
         errors.push(`${where}: bad chord token "${tk}"`);
         continue;

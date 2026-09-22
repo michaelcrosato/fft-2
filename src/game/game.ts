@@ -341,6 +341,7 @@ export class Game {
     const briefing = h('div.panel', { style: { left: '50%', top: '10px', transform: 'translateX(-50%)', textAlign: 'center', padding: '6px 18px' } },
       h('h2', null, def.name), h('div.muted', null, victoryText(def)));
     uiRoot().appendChild(briefing);
+    let lastPick: string | undefined;
     try {
       for (;;) {
         if ((window as any).__autoBattle) break;
@@ -349,7 +350,8 @@ export class Game {
           { label: '', value: 'sep', sep: true },
           { label: 'Begin Battle', value: 'go' },
         ];
-        const pick = await menu({ items, x: 14, y: '12%', title: `Deploy ${placements.size}/${max}`, maxHeight: '60vh', cancelable: false, onAction: (a) => stageKeys(stage, a) }).promise;
+        const pick = await menu({ items, x: 14, y: '12%', title: `Deploy ${placements.size}/${max}`, maxHeight: '60vh', cancelable: false, initial: lastPick ?? 'go', onAction: (a) => stageKeys(stage, a) }).promise;
+        lastPick = pick ?? undefined;
         if (pick === 'go') {
           if (!placements.has(heroU)) { toast(`${heroU.name} must lead the battle.`); continue; }
           break;

@@ -373,8 +373,8 @@ export const battles: BattleDef[] = [
   // --------------------------------------------------------------------------
   {
     id: 'b_riverain_roof', name: 'Riverain Castle — The Rooftop', map: 'riverain_roof', music: 'boss', maxDeploy: 5,
-    forced: ['rana'], protect: ['rana'],
-    hint: 'Cerise and Lida move before almost anyone and kill with a kiss. Keep Rana guarded. Wound any of the three badly and the Marquis will call the dance to an end.',
+    forced: ['rana'],
+    hint: 'Cerise and Lida move before almost anyone and kill with a kiss — and they will go for Rana first. Wound any of the three badly and the Marquis will call the dance to an end.',
     units: [
       { char: 'elmond', level: '+5', at: [9, 9], facing: 'W', team: 1, boss: true, hpMult: 2 },
       { char: 'cerise', level: '+4', at: [10, 6], facing: 'W', team: 1, boss: true, hpMult: 1.3 },

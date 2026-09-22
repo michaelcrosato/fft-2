@@ -51,7 +51,7 @@ export const battles: BattleDef[] = [
     hint: 'Firedamp breeds bombs in the old seam. The plank bridges are the quickest way across the sinkhole — and the most exposed.',
     units: [
       { char: 'beorn', level: '+1', at: [5, 12], facing: 'N', team: 0, ai: 'aggressive' },
-      { id: 'acolyte', job: 'wizard', name: 'Brood Acolyte', level: '+2', at: [2, 7], facing: 'S', team: 1, reaction: 'counterMagic', support: 'magicAttackUp' },
+      { id: 'acolyte', job: 'wizard', name: 'Brood Acolyte', level: '+2', at: [11, 2], facing: 'S', team: 1, reaction: 'counterMagic', support: 'magicAttackUp' },
       { job: 'bomb', level: '+0', at: [4, 2], facing: 'S', team: 1 },
       { job: 'bomb', level: '+0', at: [10, 6], facing: 'W', team: 1 },
       { job: 'grenade', level: '+1', at: [8, 8], facing: 'W', team: 1 },

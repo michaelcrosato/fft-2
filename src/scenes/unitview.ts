@@ -100,6 +100,57 @@ export class UnitView {
     this.root.add(blob);
   }
 
+  private tintMats = new Map<any, any>();
+  private tintKey = '';
+  private badge: import('three/webgpu').Sprite | null = null;
+  private badgeKey = '';
+
+  /** material tint for petrify / stop / frog etc. (null restores) */
+  setTint(color: string | null) {
+    const key = color ?? '';
+    if (key === this.tintKey) return;
+    this.tintKey = key;
+    for (const m of this.model.meshes) {
+      const orig = (m as any).userData.origMat ?? m.material;
+      (m as any).userData.origMat = orig;
+      if (!color) { m.material = orig; continue; }
+      let cm = this.tintMats.get(orig);
+      if (!cm) { cm = (orig as any).clone(); this.tintMats.set(orig, cm); }
+      cm.color = new THREE.Color(color);
+      m.material = cm;
+    }
+  }
+
+  /** small icon row above the head for active statuses */
+  setBadges(icons: string[]) {
+    const key = icons.join('');
+    if (key === this.badgeKey) return;
+    this.badgeKey = key;
+    if (this.badge) { this.root.remove(this.badge); (this.badge.material as any).map?.dispose(); this.badge = null; }
+    if (!icons.length) return;
+    const c = document.createElement('canvas');
+    c.width = 256; c.height = 64;
+    const x = c.getContext('2d')!;
+    const n = Math.min(5, icons.length);
+    const w = 44;
+    const start = (256 - n * w) / 2;
+    x.font = 'bold 30px serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+    for (let i = 0; i < n; i++) {
+      x.fillStyle = 'rgba(20,14,10,0.72)';
+      x.beginPath(); x.arc(start + w * i + w / 2, 32, 20, 0, Math.PI * 2); x.fill();
+      x.fillStyle = '#fff4d8';
+      x.fillText(icons[i], start + w * i + w / 2, 33);
+    }
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, toneMapped: false }));
+    sp.scale.set(1.0, 0.25, 1);
+    sp.position.y = 1.35 * this.model.height;
+    sp.renderOrder = 6;
+    this.root.add(sp);
+    this.badge = sp;
+  }
+
   setTeam(team: number, guest = false) {
     this.team = team;
     (this.marker.material as any).color.set(TEAM_COLORS[guest ? 2 : team] ?? '#fff');

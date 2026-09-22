@@ -180,7 +180,7 @@ export const scenes: SceneDef[] = [
     cmds: [
       ['actor', 'rhen', 'rhen', 1, 11, 'N'],
       ['actor', 'beorn', 'beorn', 5, 12, 'N'],
-      ['actor', 'acolyte', 'wizard', 2, 7, 'S', { name: 'Brood Acolyte', team: 1 }],
+      ['actor', 'acolyte', 'wizard', 11, 2, 'S', { name: 'Brood Acolyte', team: 1 }],
       ['actor', 'bomb1', 'bomb', 4, 2, 'S', { team: 1 }],
       ['fade', 'in', 1.2],
       ['narrate', 'The Second Seam. It fell in on itself before any of the living colliers were born, and no one has worked it since.'],
@@ -369,7 +369,7 @@ export const scenes: SceneDef[] = [
       ['actor', 'pilgrim', 'mystic', 6, 4, 'W', { name: 'Wandering Pilgrim' }],
       ['actor', 'rhen', 'rhen', 4, 7, 'N'],
       ['actor', 'beorn', 'beorn', 5, 7, 'N'],
-      ['actor', 'rhosyn', 'rhosyn', 2, 6, 'E'],
+      ['actor', 'rhosyn', 'rhosyn', 1, 6, 'E'],
       ['fade', 'in', 1.2],
       ['narrate', 'Zeltmoor. A garrison tavern in the shadow of the Black Lion\'s walls, where the talk is all of war — except in one corner.'],
       ['say', 'pilgrim', '...and beyond Mount Bervaine there\'s a lake that froze a thousand years ago and never thawed. In the middle of it stands the Isle of Nevel.'],

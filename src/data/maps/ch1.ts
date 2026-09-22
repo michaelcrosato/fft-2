@@ -502,7 +502,8 @@ export const maps: MapDef[] = [
       { type: 'chandelier', at: [4, 3] },
       { type: 'brazier', at: [6, 5] },
       { type: 'crate', at: [7, 4] },
-      { type: 'coffin', at: [7, 6], rot: Math.PI / 2, color: '#4a3a2a' },
+      { type: 'crate', at: [7, 6] },
+      { type: 'bookshelf', at: [1, 6], rot: Math.PI / 2 },
     ],
   },
   {
