@@ -36,12 +36,20 @@ export class GeoBuilder {
     (this.extra[name] ??= { size, data: [] }).data.push(...vals);
   }
 
+  /** zero-fill an extra attribute up to the current vertex count (parts added without it) */
+  private alignExtra(name: string, size: number) {
+    const e = (this.extra[name] ??= { size, data: [] });
+    const want = this.count * e.size;
+    while (e.data.length < want) e.data.push(0);
+  }
+
   /** Append a three.js primitive geometry transformed by matrix, painted a flat colour. */
   add(geo: BufferGeometry, m: Matrix4, color: string | [number, number, number], jitter = 0, extra?: Record<string, number>) {
     const g = geo.index ? geo.toNonIndexed() : geo;
     const p = g.getAttribute('position');
     const uvA = g.getAttribute('uv');
     const c = typeof color === 'string' ? hexRgb(color) : color;
+    if (extra) for (const k in extra) this.alignExtra(k, 1);
     const v = new THREE.Vector3();
     const tmp: number[] = [];
     for (let i = 0; i < p.count; i++) {
@@ -71,7 +79,8 @@ export class GeoBuilder {
     g.setAttribute('normal', new THREE.Float32BufferAttribute(this.nor, 3));
     g.setAttribute('uv', new THREE.Float32BufferAttribute(this.uv, 2));
     g.setAttribute('color', new THREE.Float32BufferAttribute(this.col, 3));
-    for (const [k, e] of Object.entries(this.extra)) g.setAttribute(k, new THREE.Float32BufferAttribute(e.data, e.size));
+    // every attribute must cover every vertex, or WebGPU rejects the draw
+    for (const [k, e] of Object.entries(this.extra)) { this.alignExtra(k, e.size); g.setAttribute(k, new THREE.Float32BufferAttribute(e.data.slice(0, this.count * e.size), e.size)); }
     g.computeBoundingSphere();
     g.computeBoundingBox();
     return g;
