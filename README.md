@@ -28,7 +28,7 @@ Renderer selection is automatic: **WebGPU → WebGL 2 → WebGL 1**. Force one w
   chapter cards, a narrated epilogue and credits.
 * **Side content** — the colliery quest (Beorn & the dragon Rhosyn), the ancient automaton, the
   otherworld swordsman, the ten-floor **Midnight Deep** dungeon, rare battles, 50+ tavern errands,
-  50+ rumours, artefacts, the Chronicle (events, persons, artefacts, records).
+  50+ rumours, artefacts, the thirteen Zodiac Stones, the Chronicle (events, persons, artefacts, stones, records).
 * **Battle system** — CT-based turn order, charge times, height/jump/leaps, facing & evasion, Brave/Faith,
   zodiac compatibility, 35+ status effects, reactions/supports/movement abilities, crystals & chests,
   permadeath (or Gentle mode), Move-Find treasure, knockback, poaching, inviting monsters.
@@ -66,4 +66,15 @@ tools/          content validator, campaign simulator, screenshot helpers
 ```
 
 Checks: `npm run typecheck`, `npm test`, `npm run validate` (content cross-references),
-`npx vite-node tools/simcampaign.ts` (AI-vs-AI simulation of every battle).
+`npx vite-node tools/simcampaign.ts` (AI-vs-AI simulation of every battle, including scripted events).
+
+Debug URLs (append to the game URL):
+
+| Parameter | Effect |
+|---|---|
+| `?renderer=webgpu\|webgl2\|webgl1&quality=ultra\|high\|medium\|low` | force a backend / quality preset |
+| `?test=battle&id=b_galwyn&lv=8&auto=1` | play one battle (auto = AI controls your side too) |
+| `?test=scene&id=sc_pro_alazar` | play one cutscene |
+| `?test=side&id=sq_rare_monks&lv=38` | play one side-quest step |
+| `?test=campaign&autoplay=1&quickwin=1` | run the whole story unattended (quickwin skips the fighting) |
+| `dev.html?map=orvelle_court&jobs=knight,wizard` | map / model viewer |
