@@ -623,7 +623,7 @@ export class Battle {
     const shape = a.shape ?? 'diamond';
     if (shape === 'allAllies' || a.alliesOnly) targets = targets.filter((o) => this.isAlly(o, u));
     if (shape === 'allEnemies' || a.enemiesOnly) targets = targets.filter((o) => !this.isAlly(o, u));
-    if (a.target === 'ko') targets = targets.filter((o) => o.has('ko'));
+    if (a.target === 'ko') targets = targets.filter((o) => o.has('ko') || (o.alive && o.has('undead')));
     else if (a.target !== 'any' && !this.affectsKo(a)) targets = targets.filter((o) => o.alive);
     if (a.target === 'self') targets = targets.filter((o) => o === u);
     return targets;
@@ -678,6 +678,7 @@ export class Battle {
       u.mp -= mp;
       if (mp) this.emit({ t: 'mp', uid: u.uid, delta: -mp });
       sp.start(this, u, a, x, z, opts);
+      if (!opts.depth && !opts.mimic && a.special !== 'jump') this.triggerMimics(u, a, x, z, opts);
       this.checkEnd();
       return this.flush();
     }
@@ -758,7 +759,7 @@ export class Battle {
     const ctx = this.ctx(c, t, wp);
     let p = 100;
     if (a.hit) p = clampPct(a.hit(ctx) * ctx.zodiac);
-    if (a.magic && a.hit) {
+    if (a.magic && a.hit && !this.isAlly(c, t)) {
       const ev = t.evasion();
       p = Math.floor((p * (100 - ev.smev) * (100 - ev.amev)) / 10000);
     }
@@ -830,6 +831,10 @@ export class Battle {
         return h;
       }
     }
+    // ---- beast speech: talk skills don't work on monsters without it ----
+    if ((a.skillset === 'orator' || a.skillset === 'speechcraft') && t.isMonster && !c.hasSupport('monsterTalk')) {
+      h.miss = true; h.guard = 'No effect'; return h;
+    }
     // ---- hit roll ----
     const chance = this.hitChance(c, t, a, wp);
     if (!this.rng.pct(chance)) {
@@ -848,7 +853,8 @@ export class Battle {
         case 'damage': {
           const stat = e.stat ?? 'hp';
           let base = e.formula(ctx);
-          const el = e.element ?? a.element ?? (a.id === 'attack' ? c.weapon?.element : undefined);
+          const thrownEl = opts.item ? ITEMS.get(opts.item)?.element : undefined;
+          const el = e.element ?? a.element ?? thrownEl ?? (a.id === 'attack' ? c.weapon?.element : undefined);
           let dmg = this.modifyDamage(c, t, a, base, el, physical, ctx.zodiac, h);
           if (a.id === 'attack' && c.weapon2 && !opts.depth) {
             // dual wield: second strike
@@ -868,7 +874,7 @@ export class Battle {
               if (t.has('sleep')) { t.statuses.delete('sleep'); (h.remove ??= []).push('sleep'); }
               if (t.has('confuse') && physical) { t.statuses.delete('confuse'); (h.remove ??= []).push('confuse'); }
               if (t.has('charm') && physical) { this.unCharm(t); (h.remove ??= []).push('charm'); }
-              if (e.drain) { this.heal(c, real, undefined, false); }
+              if (e.drain || (a.id === 'attack' && c.weapon?.drain)) { this.heal(c, real, undefined, false); }
             }
           } else {
             const real = Math.min(t.mp, dmg);
@@ -906,7 +912,11 @@ export class Battle {
           }
           const list = e.add ?? [];
           const pick = e.all || list.length <= 1 ? list : [this.rng.pick(list)];
-          for (const s of pick) if (this.addStatus(t, s)) add.push(s);
+          for (const s of pick) {
+            // casting Toad on a toad lifts the curse
+            if (s === 'frog' && t.has('frog')) { t.statuses.delete('frog'); rem.push('frog'); continue; }
+            if (this.addStatus(t, s)) add.push(s);
+          }
           if (add.length) (h.add ??= []).push(...add);
           if (rem.length) (h.remove ??= []).push(...rem);
           if (!add.length && !rem.length && !effects.some((x) => x.type === 'damage' || x.type === 'heal')) h.text = [...(h.text ?? []), 'No effect'];
@@ -935,10 +945,11 @@ export class Battle {
           break;
         }
         case 'breakEquip': {
-          const id = t.roster.equip[e.slot];
+          const slot = this.shieldSlot(t, e.slot);
+          const id = t.roster.equip[slot];
           if (!id) { (h.text ??= []).push('Nothing to break'); break; }
           if (t.hasSupport('maintenance')) { (h.text ??= []).push('Maintained'); break; }
-          delete t.roster.equip[e.slot];
+          delete t.roster.equip[slot];
           t.recompute(false);
           h.broke = id;
           (h.text ??= []).push(`${ITEMS.get(id)?.name ?? id} broken!`);
@@ -977,11 +988,13 @@ export class Battle {
         else if (this.addStatus(t, sc.status)) (h.add ??= []).push(sc.status);
       }
     }
-    // weapon on-hit statuses
+    // weapon on-hit statuses & spells
     if (a.id === 'attack' && c.weapon?.onHit && t.alive) {
       const oh = c.weapon.onHit;
       if (this.rng.pct(oh.chance)) {
         for (const s of oh.status ?? []) if (this.addStatus(t, s)) (h.add ??= []).push(s);
+        const sp = oh.spell ? ABILITIES.get(oh.spell) : undefined;
+        if (sp && depth === 0) react.push(() => { if (t.alive && c.alive) this.subAction(c, sp, t.x, t.z); });
       }
     }
     if (wasAlive && !t.alive && t.has('ko')) h.ko = true;
@@ -1225,6 +1238,8 @@ export class Battle {
   subAction(u: BattleUnit, a: AbilityDef, x: number, z: number) {
     const targets = this.affectedUnits(u, a, x, z);
     this.emit({ t: 'act', uid: u.uid, ability: a.id, name: a.name, x, z, targets: targets.map((t) => t.uid), anim: a.anim, vfx: a.vfx });
+    const sp = a.special ? SPECIALS[a.special] : undefined;
+    if (sp?.resolve) { sp.resolve(this, u, a, x, z, targets, { depth: 1 }); return; }
     const hits: HitInfo[] = [];
     for (const t of targets) hits.push(this.hitUnit(u, t, a, { depth: 1 }, []));
     this.emit({ t: 'hits', src: u.uid, ability: a.id, hits, vfx: a.vfx, color: a.color, x, z });
@@ -1346,6 +1361,7 @@ export class Battle {
     t.statuses.delete('ko');
     t.hp = Math.max(1, Math.floor(t.maxHp * pct));
     t.koCount = 3;
+    for (const s of t.always) if (s !== 'ko') t.statuses.set(s, 0);
     this.updateCritical(t);
     if (emit) this.emit({ t: 'revive', uid: t.uid });
     else this.emit({ t: 'revive', uid: t.uid });
@@ -1403,7 +1419,18 @@ export class Battle {
     }
   }
 
+  /** Sunder/Steal "shield": the shield may be carried in either hand */
+  shieldSlot(t: BattleUnit, slot: EquipSlot): EquipSlot {
+    if (slot !== 'lhand') return slot;
+    const l = t.roster.equip.lhand ? ITEMS.get(t.roster.equip.lhand) : undefined;
+    const r = t.roster.equip.rhand ? ITEMS.get(t.roster.equip.rhand) : undefined;
+    if (l?.kind === 'shield') return 'lhand';
+    if (r?.kind === 'shield') return 'rhand';
+    return 'lhand';
+  }
+
   doSteal(c: BattleUnit, t: BattleUnit, slot: EquipSlot | 'gil' | 'exp' | 'any', h: HitInfo) {
+    if (slot === 'lhand') slot = this.shieldSlot(t, 'lhand');
     if (slot === 'gil') {
       const amt = Math.floor(t.level * c.speed * 2 + this.rng.int(10, 60));
       if (c.team === 0) { this.gil.value += amt; this.lootGil += amt; }

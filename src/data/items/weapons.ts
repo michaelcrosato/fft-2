@@ -87,9 +87,9 @@ const swords = group('sword', [
   { id: 'iceBrand', name: 'Ice Brand', desc: 'A blade as clear as winter ice, and as merciless as the northern frost.', price: 14000, shopTier: 7, wp: 13, wev: 10, element: 'ice', onHit: { spell: 'blizzara', chance: 25 }, look: { color: '#bfefff', glow: '#8fe3ff' } },
   { id: 'runeBlade', name: 'Rune Blade', desc: 'Graven with runes older than the Church; it quickens the wielder\'s sorcery.', price: 20000, shopTier: 8, wp: 14, wev: 15, stats: { ma: 2 }, look: { color: '#c8c0e8', glow: '#9a80ff' } },
   // source: attacks drain HP to the wielder (engine lacks weapon drain)
-  { id: 'bloodSword', name: 'Blood Sword', desc: 'Its magenta blade drinks the life of the wounded and pours it into its bearer.', price: 0, rare: true, wp: 9, wev: 5, look: { color: '#c02040', glow: '#ff3040' } },
+  { id: 'bloodSword', drain: true, name: 'Blood Sword', desc: 'Its magenta blade drinks the life of the wounded and pours it into its bearer.', price: 0, rare: true, wp: 9, wev: 5, look: { color: '#c02040', glow: '#ff3040' } },
   // Kestrel Stryde's oversized blade (Move-Find at Mount Bervaine). Source WP 10; raised per design brief.
-  { id: 'otherworldBlade', name: 'Otherworld Blade', desc: 'A foreigner\'s great sword of strange make; none in Ivaldis can say what forge birthed it.', price: 0, rare: true, wp: 16, wev: 10, look: { color: '#9aa4b0', color2: '#4a3a2a', glow: '#70ffb0' } },
+  { id: 'otherworldBlade', jobs: ['wanderer'], name: 'Otherworld Blade', desc: 'A foreigner\'s great sword of strange make; none in Ivaldis can say what forge birthed it.', price: 0, rare: true, wp: 16, wev: 10, look: { color: '#9aa4b0', color2: '#4a3a2a', glow: '#70ffb0' } },
   { id: 'nagarok', name: 'Nagarok', desc: 'An ebony sword out of the world\'s last days; it cuts poorly, yet turns men into toads.', price: 0, rare: true, wp: 1, wev: 50, onHit: { status: ['frog'], chance: 20 }, look: { color: '#1a1a22', glow: '#60c060' } },
 ]);
 
@@ -221,7 +221,7 @@ const bows = group('bow', [
 const harps = group('instrument', [
   { id: 'lamiaHarp', name: 'Lamia Harp', desc: 'Its strings sing a song that tangles the wits of all who hear it.', price: 5000, shopTier: 5, wp: 10, wev: 10, onHit: { status: ['confuse'], chance: 20 }, look: { color: '#c09040', color2: '#60c080' } },
   // source: attacks drain HP to the wielder (engine lacks weapon drain)
-  { id: 'bloodyStrings', name: 'Bloody Strings', desc: 'A harp strung with sinew; its dark music feeds the player upon the listener.', price: 10000, shopTier: 6, wp: 13, wev: 10, look: { color: '#6a2030', color2: '#c02040', glow: '#ff3040' } },
+  { id: 'bloodyStrings', drain: true, name: 'Bloody Strings', desc: 'A harp strung with sinew; its dark music feeds the player upon the listener.', price: 10000, shopTier: 6, wp: 13, wev: 10, look: { color: '#6a2030', color2: '#c02040', glow: '#ff3040' } },
   { id: 'fairyHarp', name: 'Fairy Harp', desc: 'Its pure tones enthral the heart, and foes forget whose side they fight on.', price: 0, rare: true, wp: 15, wev: 10, onHit: { status: ['charm'], chance: 20 }, look: { color: '#f0e0f0', color2: '#ff90d0', glow: '#ffc0f0' } },
 ]);
 

@@ -67,6 +67,35 @@ export class Stage {
     this.post = await createPost(this.scene, this.cam.cam);
     this.post.setGrade({ warmth: this.env.mood.warmth, saturation: this.env.mood.saturation, exposure: this.env.mood.exposure });
     this.vfx.onFlash = (c, a) => this.post.flash(c, a);
+    this.bindCameraControls();
+  }
+
+  private unbind: Array<() => void> = [];
+  /** drag = orbit (snaps to 90° on release), wheel/pinch = zoom */
+  private bindCameraControls() {
+    const el = renderer.domElement;
+    const pts = new Map<number, { x: number; y: number }>();
+    let dragging = false;
+    let pinch0 = 0;
+    const down = (e: PointerEvent) => { pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); dragging = false; if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch0 = Math.hypot(a.x - b.x, a.y - b.y); } };
+    const move = (e: PointerEvent) => {
+      const p = pts.get(e.pointerId);
+      if (!p) return;
+      const dx = e.clientX - p.x, dy = e.clientY - p.y;
+      if (pts.size === 1) {
+        if (!dragging && Math.hypot(dx, dy) > 10) dragging = true;
+        if (dragging && (e.buttons & 1 || e.pointerType === 'touch')) { this.cam.orbitFree(-dx * 0.006, dy * 0.004); p.x = e.clientX; p.y = e.clientY; }
+      } else if (pts.size === 2) {
+        p.x = e.clientX; p.y = e.clientY;
+        const [a, b] = [...pts.values()];
+        const d = Math.hypot(a.x - b.x, a.y - b.y);
+        if (pinch0 > 0) { this.cam.zoom(pinch0 / d); pinch0 = d; }
+      }
+    };
+    const up = (e: PointerEvent) => { pts.delete(e.pointerId); if (dragging && pts.size === 0) { this.cam.settleYaw(); dragging = false; } };
+    const wheel = (e: WheelEvent) => { this.cam.zoom(e.deltaY > 0 ? 1.1 : 0.9); };
+    el.addEventListener('pointerdown', down); el.addEventListener('pointermove', move); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up); el.addEventListener('wheel', wheel, { passive: true });
+    this.unbind.push(() => { el.removeEventListener('pointerdown', down); el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up); el.removeEventListener('wheel', wheel); });
   }
 
   // ------------------------------------------------------------ units
@@ -189,6 +218,7 @@ export class Stage {
 
   dispose() {
     this.disposed = true;
+    for (const f of this.unbind) f();
     this.vfx.dispose();
     this.post.dispose();
     for (const k of [...this.views.keys()]) this.removeUnit(k);

@@ -235,13 +235,18 @@ export class BattleUnit {
       if (!d || d.kind !== 'action' || d.special === 'passive') continue;
       if (this.knows(a)) out.push(d);
     }
+    // abilities of this skillset learned outside the job list (e.g. the ultimate summon from a quest)
+    for (const id of this.roster.learned) {
+      const d = ABILITIES.get(id);
+      if (d && d.kind === 'action' && d.skillset === j.skillset.id && !out.includes(d) && d.special !== 'passive') out.push(d);
+    }
     return out;
   }
 
   /** monster skills (fixed list) */
   monsterActions(): AbilityDef[] {
     const known = new Set(this.roster.learned);
-    for (const [a] of this.job.monsterSkills ?? []) known.add(a);
+    for (const [a, lv] of this.job.monsterSkills ?? []) if (lv <= this.level) known.add(a);
     return [...known].map((a) => ABILITIES.get(a)).filter((a): a is AbilityDef => !!a && a.kind === 'action' && a.special !== 'passive');
   }
 

@@ -71,7 +71,7 @@ export const maps: MapDef[] = [
     id: 'bervaine_square', name: 'Bervaine, Guildhall Square', theme: 'town', time: 'day', backdrop: 'city',
     desc: 'Broad stairs climb from the market square to the forecourt of the clock tower, hemmed in by tall guild houses.',
     rows: [
-      '9t    9t    9t    9b    12t   12t   9b    6s    6s    6s    7.5t  7.5t  7.5t  7.5t',
+      '9t    9t    9t    9b    14t   14t   9b    6s    6s    6s    7.5t  7.5t  7.5t  7.5t',
       '9t    9t    9t    8.5b  11b   11b   8b    6s    6s    6s    7.5t  7.5t  7.5t  7.5t',
       '8t/s  8t/s  8t/s  7.5b  6s    6s    6s    6s    6sS   6s    7t    7t    7t    7t',
       '4.5s  5s    6s    6s    5.5s  5.5s  5.5s  5.5s  5.5s  5.5s  6.5t  6.5t  6.5t  6.5t',
@@ -297,7 +297,7 @@ export const maps: MapDef[] = [
   //  BETHEL SLUICE — the great sluice gate and its lever
   // ==========================================================================
   {
-    id: 'bethel_sluice', name: 'Bethel Garrison, the Great Sluice', theme: 'castle', time: 'storm', weather: 'rain', backdrop: 'mountains',
+    id: 'bethel_sluice', name: 'Bethel Garrison, the Great Sluice', theme: 'castle', time: 'overcast', weather: 'rain', backdrop: 'mountains',
     desc: 'Spillways and gear-houses beneath Bethel\'s dam. One lever atop the dam can drown the plain below.',
     rows: [
       '11b   11b   11b   11b   11b   10.5b 11a   11a   10.5b 11b   11b   11b   11b   11b',
@@ -348,23 +348,23 @@ export const maps: MapDef[] = [
   //  GERMAIN PEAK — crags above the clouds
   // ==========================================================================
   {
-    id: 'germain_peak', name: 'Germain Peak', theme: 'snow', time: 'day', weather: 'snow', backdrop: 'clouds',
+    id: 'germain_peak', name: 'Germain Peak', theme: 'snow', time: 'dawn', weather: 'snow', backdrop: 'clouds',
     desc: 'Snow-crusted crags and chasms beneath the summit cairn. The clouds lie below, like a white sea.',
     rows: [
-      '.     .     7r    8i    8.5i  8i    .     .     9i    10i   10.5i 10i   9r    .',
+      '.     .     7r    8i    8.5i  8i    9.5r  .     9i    10i   10.5i 10i   9r    10.5r',
       '.     6r    7i    7.5i  8iP   7.5i  6r    .     8.5i  9.5i  10iS  9.5i  9i    8r',
-      '5r    5.5i  6i    6.5i  7i    6.5i  5.5i  6r    8i    9i    9.5i  9i    8.5i  8r',
-      '5i    5i    5.5i  5i    5.5r  5.5i  5i    6.5i  7i    7.5i  8i    8.5i  8i    7.5i',
-      '.     4.5i  4.5i  4i    .     .     4.5i  5.5i  6i    6.5r  7i    7.5iP 7i    6.5i',
-      '.     4i    4iR   3.5i  .     .     4i    5i    5i    .     .     6.5i  6i    6i',
-      '4.5r  3.5i  3.5i  3i    3i    3.5i  3.5i  4i    4.5i  .     .     5.5i  5.5i  5r',
-      '4i    3.5i  3i    3i    2.5i  3i    3i    3.5i  4i    4.5i  5i    5i    5iP   .',
-      '4iP   3.5i  3i    2.5i  2.5i  2.5i  3i    3i    3.5i  4i    4.5i  4.5i  .     .',
-      '.     4i    3.5i  3i    2.5i  2i    2.5i  3i    .     .     4i    4.5i  5i    .',
-      '.     .     3.5i  3i    2.5i  2i    2i    2.5i  .     .     3.5i  4i    4.5i  5r',
-      '.     3.5r  3i    2.5i  2i    2i    2i    2.5i  3i    3i    3.5i  3.5i  4i    4.5i',
-      '.     3i    2.5i  2i    2i    2i    2i    2i    2.5i  3i    3i    3.5iP 4i    .',
-      '.     .     2.5i  2i    2i    2i    2i    2i    2.5i  2.5i  3i    3i    .     .',
+      '5r    5.5i  6i    6.5i  7i    6.5r  5.5i  6r    8d    9d    9.5i  9i    8.5r  8r',
+      '5i    5i    5.5i  5r    5.5r  5.5i  5i    6.5i  7d    7.5r  8i    8.5i  8i    7.5i',
+      '.     4.5i  4.5r  4i    .     .     4.5i  5.5i  6d    6.5r  7i    7.5iP 7i    6.5r',
+      '.     4i    4iR   3.5i  .     .     4i    5i    5d    .     .     6.5i  6r    6i',
+      '4.5r  3.5i  3.5i  3i    3i    3.5i  3.5i  4i    4.5d  .     .     5.5i  5.5r  5r',
+      '4i    3.5i  3i    3i    2.5r  3i    3d    3.5d  4d    4.5i  5i    5i    5iP   .',
+      '4iP   3.5i  3i    2.5i  2.5i  2.5d  3d    3i    3.5i  4r    4.5i  4.5i  .     .',
+      '.     4r    3.5i  3i    2.5i  2d    2.5i  3i    .     .     4i    4.5i  5r    .',
+      '.     .     3.5i  3i    2.5i  2d    2i    2.5i  .     .     3.5r  4i    4.5i  5r',
+      '.     3.5r  3i    2.5i  2i    2d    2i    2.5i  3r    3i    3.5i  3.5i  4i    4.5i',
+      '.     3i    2.5i  2i    2i    2d    2i    2i    2.5i  3i    3i    3.5iP 4i    .',
+      '.     .     2.5i  2i    2i    2d    2i    2i    2.5i  2.5i  3i    3i    .     .',
     ],
     decor: [
       { type: 'banner', at: [9, 0], color: '#c83a3a' },

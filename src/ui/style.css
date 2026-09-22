@@ -85,7 +85,9 @@ body { font-family: var(--font-body); color: var(--ink); -webkit-font-smoothing:
 @keyframes glove { 0%, 100% { transform: translate(0, -50%); } 50% { transform: translate(3px, -50%); } }
 .menu .item .ico { width: 1.1em; text-align: center; opacity: 0.85; }
 .menu .sep { height: 1px; margin: 5px 6px; background: linear-gradient(90deg, transparent, rgba(90, 60, 30, 0.45), transparent); }
-.menu .scroll { max-height: 55vh; overflow-y: auto; padding-right: 4px; scrollbar-width: thin; }
+.menu .scroll { max-height: 55vh; overflow-y: auto; padding: 2px 4px 2px 32px; margin-left: -32px; scrollbar-width: thin; }
+.menu.title-menu { transform: translateX(-50%); min-width: 230px; text-align: left; }
+.menu.title-menu .item { font-family: var(--font-head); font-weight: 500; letter-spacing: 0.05em; font-size: 1.08em; }
 .menu .desc { font-size: 0.82em; font-style: italic; color: var(--ink-soft); max-width: 300px; white-space: normal; margin: 6px 4px 0; }
 
 /* ---------------- unit card ---------------- */

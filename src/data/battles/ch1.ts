@@ -181,7 +181,7 @@ export const battles: BattleDef[] = [
       { char: 'delan', level: '+0', at: [3, 2], facing: 'S', team: 0, ai: 'aggressive', equip: { rhand: 'longsword', head: 'leatherCap', body: 'leatherClothes' } },
       { char: 'argan', level: '+0', at: [1, 2], facing: 'S', team: 0, ai: 'aggressive', equip: { rhand: 'longsword', head: 'leatherHelmet', body: 'leatherArmor' } },
       { id: 'roofArcher', job: 'archer', name: 'Brigade Bowman', level: '+1', at: [9, 1], facing: 'W', team: 1, support: 'concentrate' },
-      { id: 'wizardA', job: 'wizard', name: 'Brigade Hedge-Mage', level: '+0', at: [9, 11], facing: 'N', team: 1 },
+      { id: 'wizardA', job: 'wizard', name: 'Hedge-Mage Brannoc', level: '+0', at: [9, 11], facing: 'N', team: 1 },
       { id: 'archerB', job: 'archer', name: 'Brigade Bowman', level: '+0', at: [8, 11], facing: 'N', team: 1 },
       { id: 'wizardB', job: 'wizard', name: 'Brigade Hedge-Mage', level: '+0', at: [1, 12], facing: 'N', team: 1 },
       { id: 'knightA', job: 'knight', name: 'Brigade Veteran', level: '+1', at: [2, 11], facing: 'N', team: 1, secondary: 'chemist' },

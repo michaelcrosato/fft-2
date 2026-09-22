@@ -155,7 +155,7 @@ export const SPECIALS: Record<string, Special> = {
     effect: (b, c, t, a, h) => {
       const p = Number(a.params?.pct ?? 0.25);
       if (t.boss) { h.text = [...(h.text ?? []), 'Resisted']; return; }
-      const d = b.damage(t, Math.max(1, Math.floor(t.hp * p)));
+      const d = b.damage(t, Math.max(1, Math.floor(t.maxHp * p)));
       h.dmg = (h.dmg ?? 0) + d;
     },
   },

@@ -33,7 +33,8 @@ export function weaponDamage(c: BattleUnit, w: ItemDef | null, rng: Rng | null, 
     case 'gun':
       return wp * wp;
     case 'magicGun':
-      return Math.floor(wp * wp * (0.7 + (rng ? rng.next() * 0.6 : 0.3)));
+      // elemental spell-guns: scaled by the wielder's faith like a spell
+      return Math.floor(wp * wp * 0.55 * (0.5 + c.effFaith / 100) * (0.8 + (rng ? rng.next() * 0.4 : 0.2)));
     case 'instrument': case 'book': case 'cloth':
       return Math.floor((pa + c.ma) / 2) * wp;
   }

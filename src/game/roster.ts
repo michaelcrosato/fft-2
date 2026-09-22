@@ -226,6 +226,9 @@ export function canEquip(u: RosterUnit, it: ItemDef, slot: EquipSlot, jobId = u.
   const cat = it.cat;
   if (it.kind === 'accessory') return true;
   if (!cat) return false;
+  if (it.jobs && !it.jobs.includes(jobId)) return false;
+  // women may wear hair ornaments in any job
+  if (cat === 'ribbon' && u.gender === 'f') return true;
   if (j.equip.includes(cat)) return (slot !== 'lhand' || it.kind !== 'weapon' || dualWield(u, jobId));
   const sup = EQUIP_SUPPORT[cat];
   if (sup && u.support === sup) return (slot !== 'lhand' || it.kind !== 'weapon' || dualWield(u, jobId));
