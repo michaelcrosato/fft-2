@@ -9,15 +9,19 @@ import { Rng } from '../src/core/rng';
 import { setLevel } from '../src/game/roster';
 import { joinCharacter } from '../src/game/state';
 import type { Battle } from '../src/battle/battle';
+import { writeSync } from 'node:fs';
 
 const LEVEL_BY_CHAPTER = [3, 6, 15, 26, 38];
 const filter = process.argv[2];
 function run(b: Battle) {
   let turns = 0;
+  const t0 = performance.now();
   for (let i = 0; i < 4000 && !b.result && turns < 400; i++) {
+    if (performance.now() - t0 > 30000) { writeSync(1, '   (time budget exceeded)\n'); break; }
     const { unit } = b.advance();
     if (!unit) continue;
     turns++;
+    if (process.env.TRACE) writeSync(1, `   turn ${turns} ${unit.name} ${unit.job.id}\n`);
     const plan = planTurn(b, unit);
     if (plan.actFirst && plan.act) { b.doAction(unit, plan.act.ability, plan.act.x, plan.act.z, plan.act.opts); if (plan.move && !b.result) b.doMove(unit, plan.move[0], plan.move[1]); }
     else { if (plan.move) b.doMove(unit, plan.move[0], plan.move[1]); if (plan.act && !b.result) b.doAction(unit, plan.act.ability, plan.act.x, plan.act.z, plan.act.opts); }
@@ -45,6 +49,7 @@ for (const st of steps) {
   const pick = [s.roster[0], ...s.roster.filter((r) => r.charId && r.charId !== 'rhen'), ...s.roster.filter((r) => !r.charId)];
   const party = pick.slice(0, Math.min(def.maxDeploy ?? 5, cells.length)).map((unit, i) => ({ unit, x: cells[i][0], z: cells[i][1] }));
   const t0 = performance.now();
+  writeSync(1, `… ${st.battle}\n`);
   try {
     const { battle } = setupBattle(s, def, party, { seed: 11 });
     battle.heroSid = 'rhen';

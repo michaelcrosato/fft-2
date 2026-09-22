@@ -88,7 +88,7 @@ const title: TrackDef = {
         str: { pad: 4, at: 'd4', hi: 'd5', pat: 'cq ci ci cq cq' },
         vc: { pat: '1q 5 8 5', at: 'd3' },
         cb: { pat: '0h 0h', at: 'a1' },
-        ch: { pad: 4, at: 'f4', hi: 'f5', vel: 0.9 },
+        ch: { pad: 4, at: 'c4', hi: 'e5', vel: 0.9 },
         hp: { pat: '1 5 8 10 12 10 8 5', at: 'd3', vel: 0.7 },
         timp: '@f d2q r d2i d a2q | bb2q r bb2i bb f2q | g2q r g2i g d2q | f2q r f2i f c2q | bb2q r bb2i bb f2q | c2q r c2i c g2q | g2h a2i a a a | d2w~>',
         sn: { pat: '[X...x.x.X...x.xx]*6 X...x.x.RRRRRRRR X...............', step: 's' },
@@ -130,7 +130,7 @@ const prologue: TrackDef = {
   title: 'The Chronicle They Burned',
   desc: "The historian's narration: harp, solo cello, hushed strings.",
   bpm: 66,
-  gain: 1.41,
+  gain: 1.5,
   sig: '3/4',
   voices: {
     hp: { i: 'harp', pan: -0.3, vol: 1.2 },
@@ -501,6 +501,7 @@ const battle2: TrackDef = {
   title: 'Dark Crusade',
   desc: 'Second battle theme: galloping 6/8, low choir, darker minor.',
   bpm: 144,
+  gain: 0.95,
   sig: '6/8',
   voices: {
     hn: { i: 'horn', pan: -0.2, vol: 1 },
@@ -878,7 +879,7 @@ const finalBoss: TrackDef = {
   title: 'The Crimson Seraph',
   desc: 'Final battle: organ toccata, choir, full orchestra; the Oath theme corrupted.',
   bpm: 148,
-  gain: 0.93,
+  gain: 0.85,
   voices: {
     org: { i: 'organ', pan: -0.1, vol: 0.7 },
     ped: { i: 'organ', pan: 0.1, vol: 0.7 },
@@ -1042,7 +1043,7 @@ const defeat: TrackDef = {
   title: 'Ashes',
   desc: 'Game over: a slow lament for cello and oboe, dying away.',
   bpm: 58,
-  gain: 1.46,
+  gain: 1.6,
   loop: false,
   voices: {
     vc: { i: 'celli', pan: 0.2, vol: 1 },
@@ -1146,7 +1147,7 @@ const tension: TrackDef = {
   title: 'Whispers in the Cloister',
   desc: 'Conspiracy scenes: creeping pizzicato, sly clarinet, tremolo strings.',
   bpm: 92,
-  gain: 1.88,
+  gain: 1.95,
   voices: {
     cl: { i: 'clarinet', pan: -0.15, vol: 1.1 },
     bsn: { i: 'bassoon', pan: 0.2, vol: 1 },
@@ -1174,7 +1175,7 @@ const tension: TrackDef = {
         bpz: { pat: '1q r 1 r', at: 'b1' },
         vc: { pat: '1w', at: 'e2', vel: 0.5 },
         timp: { pat: '1i 1 rq rh', at: 'e2', vel: 0.5 },
-        str: { pad: 3, at: 'e4', hi: 'e5', vel: 0.35 },
+        str: { pad: 3, at: 'g3', hi: 'g4', vel: 0.35 },
       },
     },
     B: {
@@ -1409,7 +1410,7 @@ const campfire: TrackDef = {
   title: 'Beneath the Twelve Stars',
   desc: 'Starry night by the fire: harp, flute, oboe, celesta twinkles.',
   bpm: 84,
-  gain: 1.7,
+  gain: 1.85,
   sig: '6/8',
   voices: {
     fl: { i: 'flute', pan: -0.12, vol: 1.2 },
@@ -1465,7 +1466,7 @@ const dungeon: TrackDef = {
   title: 'The Midnight Deep',
   desc: 'Deep dungeon: whistling winds, music-box celesta, dripping pizzicato.',
   bpm: 72,
-  gain: 2.3,
+  gain: 2.5,
   voices: {
     cel: { i: 'celesta', pan: -0.2, vol: 1.4 },
     wind: { i: 'windPad', pan: 0.1, vol: 0.55 },

@@ -36,6 +36,8 @@ export interface SynthCore {
   /** shared chorus LFOs (created on first use, run forever) */
   lfos?: OscillatorNode[];
   lfoTurn?: number;
+  /** low-CPU mode: no chorus inserts (applies to channels created afterwards) */
+  lite?: boolean;
 }
 
 /** free-running LFO bank shared by every ensemble insert */
@@ -270,6 +272,7 @@ export function ensembleInsert(core: SynthCore, mix: number, tone?: Tone, preInp
   const ctx = core.ctx;
   const input = preInput ?? mkGain(ctx, 1);
   const source = preInput ? preInput : input;
+  if (core.lite) return { input, output: toneChain(ctx, tone, source), dispose: () => {} };
   const output = mkGain(ctx, 1);
   const pre = toneChain(ctx, tone, source);
   const dry = mkGain(ctx, 1 - mix * 0.45);
@@ -285,6 +288,7 @@ export function ensembleInsert(core: SynthCore, mix: number, tone?: Tone, preInp
   for (const [base, s1, d1, f1, d2, pan] of lines) {
     const dl = ctx.createDelay(0.05);
     dl.delayTime.value = base;
+    kRate(dl.delayTime);
     for (const [li, depth] of [
       [s1, d1 * (0.85 + Math.random() * 0.3)],
       [f1, d2],
@@ -692,7 +696,7 @@ const organNote: NoteFn = (core, dest, t, m, dur, vel) => {
   nz.connect(mkFilter(ctx, 'bandpass', Math.min(8000, f * 3), 2.5)).connect(cg).connect(g);
   percEnv(cg.gain, t, 0.35 * vel, 0.025, 0.005);
   lp.connect(g).connect(dest);
-  return adsr(g.gain, t, dur, 0.045, 0.1, 0.95, rel, 0.168 * velAmp(Math.max(0.5, vel)));
+  return adsr(g.gain, t, dur, 0.045, 0.1, 0.95, rel, 0.155 * velAmp(Math.max(0.5, vel)));
 };
 
 // ---- choir -----------------------------------------------------------------
@@ -705,12 +709,10 @@ function choirNote(amp: number, atkBase: number): NoteFn {
     const rel = 0.75;
     const end = t + Math.max(dur, atk) + rel * 1.3 + 0.03;
     const g = mkGain(ctx, 0);
-    const o1 = mkOsc(ctx, 'sawtooth', f, t, end, -7 + rnd(3));
-    const o2 = mkOsc(ctx, 'sawtooth', f, t, end, 7 + rnd(3));
-    const lp = mkFilter(ctx, 'lowpass', Math.min(9000, 2800 + f * 2), 0.5);
-    o1.connect(lp);
-    o2.connect(lp);
-    lp.connect(g).connect(dest);
+    // the channel's formant bank does the spectral shaping
+    mkOsc(ctx, 'sawtooth', f, t, end, -7 + rnd(3)).connect(g);
+    mkOsc(ctx, 'sawtooth', f, t, end, 7 + rnd(3)).connect(g);
+    g.connect(dest);
     return adsr(g.gain, t, dur, atk, 0.6, 0.9, rel, amp * velAmp(vel));
   };
 }
@@ -756,6 +758,7 @@ const timpaniNote: NoteFn = (core, dest, t, m, _dur, vel) => {
   const tau = 0.24 + 0.18 * Math.min(1, vel);
   const end = t + tau * 5.8 + 0.02;
   const o1 = mkOsc(ctx, 'sine', f, t, end);
+  kRate(o1.frequency);
   o1.frequency.setValueAtTime(f * 1.035, t);
   o1.frequency.exponentialRampToValueAtTime(f, t + 0.12);
   const g1 = mkGain(ctx, 0);
@@ -831,12 +834,16 @@ const snareNote: NoteFn = (core, dest, t, _m, _dur, vel) => {
   const ng = mkGain(ctx, 0);
   nz.connect(mkFilter(ctx, 'bandpass', 3800, 0.55)).connect(ng).connect(out);
   percEnv(ng.gain, t, a, tau);
-  const b = mkOsc(ctx, 'triangle', 215, t, t + 0.25);
-  b.frequency.setValueAtTime(215, t);
-  b.frequency.exponentialRampToValueAtTime(168, t + 0.04);
-  const bg = mkGain(ctx, 0);
-  percEnv(bg.gain, t, a * 0.9, 0.032);
-  b.connect(bg).connect(out);
+  if (vel >= 0.5) {
+    // drum body (skipped for ghost notes)
+    const b = mkOsc(ctx, 'triangle', 215, t, t + 0.25);
+    kRate(b.frequency);
+    b.frequency.setValueAtTime(215, t);
+    b.frequency.exponentialRampToValueAtTime(168, t + 0.04);
+    const bg = mkGain(ctx, 0);
+    percEnv(bg.gain, t, a * 0.9, 0.032);
+    b.connect(bg).connect(out);
+  }
   out.connect(dest);
   return t + tau * 5.9 + 0.01;
 };
@@ -861,6 +868,7 @@ const bassDrumNote: NoteFn = (core, dest, t, _m, _dur, vel) => {
   const out = mkGain(ctx, 1);
   const end = t + 1.6;
   const o = mkOsc(ctx, 'sine', 62, t, end);
+  kRate(o.frequency);
   o.frequency.setValueAtTime(64, t);
   o.frequency.exponentialRampToValueAtTime(41, t + 0.35);
   const og = mkGain(ctx, 0);
@@ -1014,14 +1022,14 @@ export function playRoll(inst: Instrument, core: SynthCore, dest: AudioNode, t: 
 
 // ---- instrument table ------------------------------------------------------
 
-const P_STRINGS: BowedP = { voices: 2, spread: 8, atk: 0.3, rel: 0.6, bright: 1.1, base: 450, amp: 0.24, vib: 0, vibDelay: 0 };
-const P_VIOLIN: BowedP = { voices: 3, spread: 9, atk: 0.09, rel: 0.32, bright: 1.35, base: 800, amp: 0.19, vib: 13, vibDelay: 0.22 };
-const P_CELLI: BowedP = { voices: 2, spread: 9, atk: 0.11, rel: 0.36, bright: 1.25, base: 380, amp: 0.26, vib: 11, vibDelay: 0.22 };
-const P_SPICC: BowedP = { voices: 2, spread: 8, atk: 0.012, rel: 0.1, bright: 1.6, base: 700, amp: 0.34, vib: 0, vibDelay: 0, dec: 0.13, sus: 0.35 };
-const P_CONTRABASS: BowedP = { voices: 2, spread: 7, atk: 0.07, rel: 0.3, bright: 1.3, base: 200, amp: 0.24, vib: 6, vibDelay: 0.3 };
+const P_STRINGS: BowedP = { voices: 2, spread: 8, atk: 0.3, rel: 0.6, bright: 1.1, base: 450, amp: 0.223, vib: 0, vibDelay: 0 };
+const P_VIOLIN: BowedP = { voices: 3, spread: 9, atk: 0.09, rel: 0.32, bright: 1.35, base: 800, amp: 0.177, vib: 13, vibDelay: 0.22 };
+const P_CELLI: BowedP = { voices: 2, spread: 9, atk: 0.11, rel: 0.36, bright: 1.25, base: 380, amp: 0.232, vib: 11, vibDelay: 0.22 };
+const P_SPICC: BowedP = { voices: 2, spread: 8, atk: 0.012, rel: 0.1, bright: 1.6, base: 700, amp: 0.313, vib: 0, vibDelay: 0, dec: 0.13, sus: 0.35 };
+const P_CONTRABASS: BowedP = { voices: 2, spread: 7, atk: 0.07, rel: 0.3, bright: 1.3, base: 200, amp: 0.216, vib: 6, vibDelay: 0.3 };
 const P_FIDDLE: BowedP = { voices: 2, spread: 6, atk: 0.03, rel: 0.14, bright: 1.7, base: 900, amp: 0.123, vib: 14, vibDelay: 0.14, q: 0.9 };
 
-const STR_TONE: Tone = { hp: 55, peaks: [[320, -2, 1]], shelf: [6500, -4] };
+const STR_TONE: Tone = { hp: 55, shelf: [6500, -4] };
 const BRASS_TONE: Tone = { hp: 45, shelf: [5500, -3] };
 
 const HARP: PluckSpec = { key: 'harp', decay: 2.6, bright: 0.38, pos: 0.23, len: 4.2 };
@@ -1063,7 +1071,7 @@ export const INSTRUMENTS: Record<string, Instrument> = {
   contrabass: {
     note: bowed(P_CONTRABASS),
     roll: bowedRoll(P_CONTRABASS),
-    insert: (c) => ensembleInsert(c, 0.25, { hp: 30, lp: 3500 }),
+    insert: (c) => eqInsert(c, { hp: 30, lp: 3500 }),
     rev: 0.22,
     rollRate: 11,
   },
@@ -1089,20 +1097,20 @@ export const INSTRUMENTS: Record<string, Instrument> = {
   },
   // --- brass
   horn: {
-    note: brass({ bright: 0.55, q: 0.9, amp: 0.2, atk: 0.055, scoop: 22, base: 250, rel: 0.28, voices: 1 }),
-    insert: (c) => ensembleInsert(c, 0.3, BRASS_TONE),
+    note: brass({ bright: 0.55, q: 0.9, amp: 0.172, atk: 0.055, scoop: 22, base: 250, rel: 0.28, voices: 1 }),
+    insert: (c) => eqInsert(c, BRASS_TONE),
     rev: 0.42,
     rollRate: 10,
   },
   trumpet: {
-    note: brass({ bright: 1.0, q: 1.5, amp: 0.165, atk: 0.03, scoop: 28, base: 500, rel: 0.2, voices: 1 }),
-    insert: (c) => ensembleInsert(c, 0.25, BRASS_TONE),
+    note: brass({ bright: 1.0, q: 1.5, amp: 0.147, atk: 0.03, scoop: 28, base: 500, rel: 0.2, voices: 1 }),
+    insert: (c) => eqInsert(c, BRASS_TONE),
     rev: 0.36,
     rollRate: 10,
   },
   trombone: {
-    note: brass({ bright: 0.8, q: 1.2, amp: 0.21, atk: 0.05, scoop: 18, base: 200, rel: 0.25, voices: 1 }),
-    insert: (c) => ensembleInsert(c, 0.25, BRASS_TONE),
+    note: brass({ bright: 0.8, q: 1.2, amp: 0.187, atk: 0.05, scoop: 18, base: 200, rel: 0.25, voices: 1 }),
+    insert: (c) => eqInsert(c, BRASS_TONE),
     rev: 0.36,
     rollRate: 10,
   },
@@ -1153,7 +1161,7 @@ export const INSTRUMENTS: Record<string, Instrument> = {
   // --- keyboards & tuned percussion
   organ: {
     note: organNote,
-    insert: (c) => ensembleInsert(c, 0.22, { hp: 30, shelf: [5000, -4] }),
+    insert: (c) => eqInsert(c, { hp: 30, shelf: [5000, -4] }),
     rev: 0.55,
     rollRate: 12,
   },
@@ -1311,7 +1319,7 @@ export function createMasterBus(core: SynthCore, destination: AudioNode): Master
   const pre = stereo(mkGain(ctx, 1));
   const reverbIn = stereo(mkGain(ctx, 1));
   const conv = ctx.createConvolver();
-  conv.buffer = makeImpulse(ctx);
+  conv.buffer = core.lite ? makeImpulse(ctx, 1.7, 1.5) : makeImpulse(ctx);
   const reverbOut = mkGain(ctx, 0.9);
   reverbIn.connect(mkFilter(ctx, 'highpass', 180, 0.6)).connect(conv).connect(reverbOut).connect(pre);
 

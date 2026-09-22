@@ -44,6 +44,7 @@ export async function openOptions(game: Game) {
         { label: 'Effects volume', value: 'sfx', right: pct(o.sfx) },
         { label: 'Battle speed', value: 'speed', right: `${o.battleSpeed}×` },
         { label: 'Text speed', value: 'text', right: `${o.textSpeed}×` },
+        { label: 'Difficulty', value: 'difficulty', right: { easy: 'Squire (easy)', normal: 'Knight (normal)', hard: 'Lord (hard)' }[o.difficulty ?? 'normal'], desc: 'Enemy level and vigour relative to your company.' },
         { label: 'Gentle mode', value: 'gentle', right: o.gentle ? 'On' : 'Off', desc: 'Fallen allies retreat instead of crystallizing.' },
         { label: 'Camera shake', value: 'shake', right: o.camShake ? 'On' : 'Off' },
         { label: 'Graphics quality', value: 'quality', right: `${o.quality} (${rinfo?.quality ?? ''})` },
@@ -59,6 +60,7 @@ export async function openOptions(game: Game) {
       if (pick === 'speed') o.battleSpeed = cycle([0.75, 1, 1.5, 2], o.battleSpeed);
       if (pick === 'text') o.textSpeed = cycle([0.75, 1, 1.5, 2.5], o.textSpeed);
       if (pick === 'gentle') o.gentle = !o.gentle;
+      if (pick === 'difficulty') o.difficulty = cycle(['easy', 'normal', 'hard'] as Options['difficulty'][], o.difficulty ?? 'normal');
       if (pick === 'shake') o.camShake = !o.camShake;
       if (pick === 'quality') { o.quality = cycle(['auto', 'ultra', 'high', 'medium', 'low'] as Array<Quality | 'auto'>, o.quality); if (o.quality !== 'auto') setQuality(o.quality); toast('Some quality changes apply on the next map.'); }
       if (pick === 'renderer') o.renderer = cycle(['auto', 'webgpu', 'webgl2', 'webgl1'] as Options['renderer'][], o.renderer);

@@ -592,7 +592,6 @@ function parsePattern(src: string, stepDefault: number, errors: string[], where:
   const compact = /^[xXo.\-rR|\s]+$/.test(text);
   if (compact) {
     text = text.replace(/\s+/g, '');
-    let runR = false;
     for (const c of text) {
       if (c === '|') continue;
       const t: PatToken = { kind: 'hit', deg: 0, oct: 0, dur: stepDefault, vel: 0.75, roll: 0 };
@@ -607,11 +606,9 @@ function parsePattern(src: string, stepDefault: number, errors: string[], where:
         t.roll = 2;
         t.vel = 1;
       }
-      runR = c === 'R';
       toks.push(t);
       stac.push(false);
     }
-    void runR;
     return { toks, staccato: stac };
   }
   let lastDur = stepDefault;
@@ -747,13 +744,14 @@ function genPattern(
     }
     pos += tk.dur;
   }
-  return mergeRolls(splitAtChords(out, segs, anchor));
+  return mergeRolls(splitAtChords(out, segs));
 }
 
-/** re-articulate held chord-relative notes when the harmony changes under them */
-function splitAtChords(notes: RawNote[], segs: ChordSeg[], _anchor: number): RawNote[] {
-  // Held pattern notes simply stop at a chord boundary; the pattern normally
-  // strikes again there. This avoids sustained clashes.
+/**
+ * Held chord-relative notes stop at a chord boundary (the pattern normally
+ * strikes again there), which avoids sustained clashes.
+ */
+function splitAtChords(notes: RawNote[], segs: ChordSeg[]): RawNote[] {
   const out: RawNote[] = [];
   for (const n of notes) {
     const sg = chordAt(segs, n.b);
@@ -921,7 +919,7 @@ function genPad(spec: PartObj, len: number, segs: ChordSeg[], errors: string[], 
     }
     pos += tk.dur;
   }
-  return splitAtChords(out, segs, lo);
+  return splitAtChords(out, segs);
 }
 
 // ---------------------------------------------------------------------------

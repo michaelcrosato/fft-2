@@ -7,6 +7,8 @@ import { STORY, CHARACTERS } from '../data/db';
 import type { Quality } from '../gfx/renderer';
 
 export interface Options {
+  /** enemy strength relative to the party */
+  difficulty: 'easy' | 'normal' | 'hard';
   gentle: boolean;         // fallen units never crystallize
   battleSpeed: number;     // 0.5 .. 2
   textSpeed: number;       // chars per second multiplier
@@ -20,6 +22,7 @@ export interface Options {
 }
 
 export const DEFAULT_OPTIONS: Options = {
+  difficulty: 'normal',
   gentle: false, battleSpeed: 1, textSpeed: 1, music: 0.7, sfx: 0.8, quality: 'auto', renderer: 'auto',
   confirmMoves: true, showGrid: true, camShake: true,
 };

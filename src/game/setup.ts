@@ -8,7 +8,7 @@ import { MapGrid } from '../battle/grid';
 import { BattleUnit } from '../battle/unit';
 import { Rng } from '../core/rng';
 import { createCharacter, createGeneric, createMonster, canEquip, type RosterUnit } from './roster';
-import { partyLevel, type GameState } from './state';
+import { partyLevel, loadOptions, type GameState } from './state';
 import { STATUS } from '../battle/status';
 
 export function resolveLevel(level: number | string, pl: number): number {
@@ -146,10 +146,12 @@ export function spawnRoster(sp: UnitSpawn, pl: number, tier: number, rng: Rng): 
   return r;
 }
 
-export function setupBattle(state: GameState, def: BattleDef, party: DeployChoice[], opts: { seed?: number } = {}): BattleSetup {
+export function setupBattle(state: GameState, def: BattleDef, party: DeployChoice[], opts: { seed?: number; difficulty?: 'easy' | 'normal' | 'hard' } = {}): BattleSetup {
   const rng = new Rng(opts.seed ?? state.seed + state.battlesWon * 7919 + state.day);
   const grid = new MapGrid(mapDef(def.map));
-  const pl = partyLevel(state);
+  const diff = (opts as { difficulty?: string }).difficulty ?? loadOptions().difficulty ?? 'normal';
+  const pl = Math.max(1, partyLevel(state) + (diff === 'easy' ? -2 : diff === 'hard' ? 2 : 0));
+  const hpScale = diff === 'easy' ? 0.85 : diff === 'hard' ? 1.15 : 1;
   const units: BattleUnit[] = [];
   const temp: RosterUnit[] = [];
   for (const p of party) {
@@ -170,7 +172,7 @@ export function setupBattle(state: GameState, def: BattleDef, party: DeployChoic
     bu.noLoot = !!sp.noLoot || !!sp.char;
     bu.hidden = !!sp.hidden;
     if (sp.boss) for (const s of BOSS_IMMUNE) bu.immune.add(s);
-    if (sp.hpMult) { bu.hpMult = sp.hpMult; bu.recompute(false); bu.hp = bu.maxHp; }
+    if (sp.hpMult || (hpScale !== 1 && team !== 0)) { bu.hpMult = (sp.hpMult ?? 1) * (team !== 0 ? hpScale : 1); bu.recompute(false); bu.hp = bu.maxHp; }
     for (const s of sp.statuses ?? []) bu.statuses.set(s, STATUS[s]?.ticks ?? 0);
     units.push(bu);
   }

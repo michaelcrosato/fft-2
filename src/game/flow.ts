@@ -55,7 +55,7 @@ export async function runTitle(game: Game) {
     let state: GameState | null = null;
     if (pick === 'continue') state = loadGame(latestSave()!);
     if (pick === 'load') { const s = await openSaveLoad(game, 'load'); if (!s) continue; state = s; }
-    if (pick === 'new') { state = await newGameSetup(); if (!state) continue; }
+    if (pick === 'new') { logo.style.display = 'none'; state = await newGameSetup(); logo.style.display = ''; if (!state) continue; }
     if (!state) continue;
     logo.remove(); footer.remove();
     game.state = state;
@@ -135,17 +135,24 @@ async function returnToTitle(game: Game) {
   await runTitle(game);
 }
 
+/** the next story step runs without returning to the world map */
+function nextIsImmediate(game: Game): boolean {
+  const nx = STORY[game.state.storyIndex];
+  if (!nx) return false;
+  const prev = STORY[game.state.storyIndex - 1];
+  return !nx.at || !!prev?.chain;
+}
+
 async function runImmediate(game: Game): Promise<boolean> {
-  for (;;) {
+  while (nextIsImmediate(game)) {
     const st = STORY[game.state.storyIndex];
-    if (!st) return true;
-    if (st.at && !(st.chain && prevChained(game))) return true;
+    if (st.at) game.state.location = st.at;
     const ok = await game.runStep(st);
     if (!ok) return false;
     game.autosave();
   }
+  return true;
 }
-function prevChained(game: Game) { const prev = STORY[game.state.storyIndex - 1]; return !!prev?.chain; }
 
 // ---------------------------------------------------------------- routing
 function neighbours(id: string, unlocked: Set<string>): string[] {
@@ -393,15 +400,8 @@ async function nodeMenu(game: Game, world: WorldView, nodeId: string): Promise<'
       const ok = await game.runStep(stepHere);
       game.autosave();
       if (!ok) return 'title';
-      // continue chained steps
-      for (;;) {
-        const nx = STORY[s.storyIndex];
-        if (!nx || (nx.at && !stepHere.chain && !(nx.chain && STORY[s.storyIndex - 1]?.chain))) break;
-        if (nx.at && nx.at !== s.location && !STORY[s.storyIndex - 1]?.chain) break;
-        const ok2 = await game.runStep(nx);
-        game.autosave();
-        if (!ok2) return 'title';
-      }
+      // continue chained / location-less steps
+      if (!(await runImmediate(game))) return 'title';
       return 'rebuild';
     }
     if (pick.startsWith('side:')) {

@@ -57,6 +57,7 @@ interface ActiveVoice {
 }
 
 const MAX_MUSIC_VOICES = 72;
+const MAX_MUSIC_VOICES_LOW = 44;
 const MAX_SFX_VOICES = 40;
 const TICK_MS = 40;
 const LOOKAHEAD = 0.24;
@@ -84,6 +85,16 @@ function shimConnect(ctx: BaseAudioContext): void {
     };
   } catch {
     /* ignore */
+  }
+}
+
+/** low quality on small devices (≤ 4 logical cores), high elsewhere */
+function defaultQuality(): 'high' | 'low' {
+  try {
+    const n = typeof navigator !== 'undefined' ? navigator.hardwareConcurrency : undefined;
+    return typeof n === 'number' && n > 0 && n <= 4 ? 'low' : 'high';
+  } catch {
+    return 'high';
   }
 }
 
@@ -248,6 +259,7 @@ export class AudioEngine {
   private lastSfx = new Map<string, number>();
   private duckUntil = 0;
   private duckLevel = 1;
+  private quality: 'high' | 'low' = defaultQuality();
 
   /** Web Audio is present (or unknown before unlock) and not failed */
   get available(): boolean {
@@ -343,6 +355,7 @@ export class AudioEngine {
     }
     try {
       this.core = createCore(ctx);
+      this.core.lite = this.quality === 'low';
       this.bus = createMasterBus(this.core, ctx.destination);
     } catch (e) {
       console.warn('[audio] failed to build audio graph', e);
@@ -519,7 +532,7 @@ export class AudioEngine {
     const h = inst.human ?? 0.007;
     const t = Math.max(ctx.currentTime + 0.002, time + (Math.random() * 2 - 1) * h);
     const vel = e.vel * (1 + (Math.random() * 2 - 1) * 0.06);
-    this.reserve(this.musicVoices, MAX_MUSIC_VOICES, t);
+    this.reserve(this.musicVoices, this.quality === 'low' ? MAX_MUSIC_VOICES_LOW : MAX_MUSIC_VOICES, t);
     const vg = mkGain(ctx, 1);
     vg.connect(p.channels[e.v].input);
     let end = t + e.d;
@@ -641,6 +654,24 @@ export class AudioEngine {
     set(bus.master, this.vols.master);
     for (const g of bus.musicVol) set(g, this.vols.music);
     for (const g of bus.sfxVol) set(g, this.vols.sfx);
+  }
+
+  // -------------------------------------------------------------------------
+  //  Quality
+  // -------------------------------------------------------------------------
+
+  /**
+   * 'high' (default on desktops) or 'low' (default on ≤4-core devices): low
+   * drops the ensemble chorus inserts, uses a shorter reverb and a smaller
+   * voice budget. Takes effect for the next track started.
+   */
+  setQuality(q: 'high' | 'low'): void {
+    this.quality = q === 'low' ? 'low' : 'high';
+    if (this.core) this.core.lite = this.quality === 'low';
+  }
+
+  getQuality(): 'high' | 'low' {
+    return this.quality;
   }
 
   // -------------------------------------------------------------------------
