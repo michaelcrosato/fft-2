@@ -37,10 +37,10 @@ const PI = Math.PI;
 //  sizes (geometry height above the body origin, before look.scale)
 // ---------------------------------------------------------------------------
 const SHAPE_H: Record<MonsterShape, number | ((v: number) => number)> = {
-  chocobo: 1.22, goblin: 0.78, bomb: 0.82, panther: 0.72, boar: 0.66, skeleton: 1.02, ghost: 0.78,
-  eye: 0.62, treant: 1.22, minotaur: 1.2, malboro: 0.98, behemoth: 1.04, dragon: 1.12, hydra: 1.08,
-  bird: 0.9, squid: 0.88, bull: 0.98, wolf: 0.78, golem: 1.22, demon: (v) => (v === 2 ? 1.26 : 1.34), automaton: 1.1,
-  tome: 0.5, serpent: 1.25, seraph: (v) => (v === 3 ? 1.38 : 1.12),
+  chocobo: 1.25, goblin: 0.8, bomb: 0.85, panther: 0.72, boar: 0.68, skeleton: 1.02, ghost: 0.74,
+  eye: 0.66, treant: 1.25, minotaur: 1.2, malboro: 1.02, behemoth: 0.96, dragon: 1.12, hydra: (v) => (v >= 3 ? 1.2 : 1.12),
+  bird: 0.9, squid: 0.88, bull: 0.88, wolf: 0.78, golem: 1.2, demon: (v) => [1.25, 1.25, 1.3, 1.35][Math.max(0, Math.min(3, v - 1))],
+  automaton: 1.15, tome: 0.6, serpent: 1.16, seraph: (v) => [1.2, 1.15, 1.45][Math.max(0, Math.min(2, v - 1))],
 };
 const HOVER: Partial<Record<MonsterShape, number>> = { bomb: 0.3, ghost: 0.3, eye: 0.32, tome: 0.34, seraph: 0.32 };
 
@@ -102,7 +102,7 @@ function slab(bp: Part, a: V3, b: V3, w: number, t: number, col: string, face: V
   bp.add(G.box(w, len, t), (a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2, col, e[0], e[1], e[2], 1, 1, 1, o);
 }
 /** sphere helper */
-function ball(bp: Part, p: V3, r: number, col: string, s: V3 = [1, 1, 1], o: Opt = {}, w = 8, h = 6, rot: V3 = [0, 0, 0]) {
+function ball(bp: Part, p: V3, r: number, col: string, s: V3 = [1, 1, 1], o: Opt = {}, w = 7, h = 5, rot: V3 = [0, 0, 0]) {
   bp.add(G.sph(r, w, h), p[0], p[1], p[2], col, rot[0], rot[1], rot[2], s[0], s[1], s[2], o);
 }
 
@@ -437,13 +437,13 @@ function quadLeg(bp: Part, h: number, r: number, col: string, front: boolean, fo
  * sweeping outward (+x·s) and back (-z), so an rz rotation flaps it.
  */
 function featherWing(w: Part, s: number, o: { span: number; col: string; col2: string; tip?: string; n?: number; droop?: number; arch?: number; sec?: number }) {
-  const sp = o.span, n = Math.max(3, o.n ?? 6), dr = o.droop ?? 0.18, arch = o.arch ?? 0.14;
+  const sp = o.span, n = Math.max(3, o.n ?? 6), dr = o.droop ?? -0.35, arch = o.arch ?? 0.12;
   const LE: Array<[number, number]> = [[0, 0], [0.3, -0.05], [0.6, -0.03], [0.86, 0.08], [1.04, 0.22]];
   const lev = (u: number) => {
     for (let i = 1; i < LE.length; i++) if (u <= LE[i][0]) { const [u0, v0] = LE[i - 1], [u1, v1] = LE[i]; return v0 + (v1 - v0) * ((u - u0) / (u1 - u0)); }
     return LE[LE.length - 1][1];
   };
-  const chord = (u: number) => 0.14 + 0.46 * Math.pow(Math.max(0, 1.04 - u), 0.85);
+  const chord = (u: number) => 0.18 + 0.52 * Math.pow(Math.max(0, 1.04 - u), 0.85);
   const P3 = (u: number, v: number, lift = 0): V3 => [s * u * sp, sp * (arch * Math.sin(Math.min(u, 1) * PI * 0.85) - v * dr) + lift, -v * sp];
   const layer = (depth: number, col: string, lift: number, tipOut: number) => {
     const pts: V3[] = LE.map(([u, v]) => P3(u, v, lift));
@@ -466,14 +466,14 @@ function featherWing(w: Part, s: number, o: { span: number; col: string; col2: s
 function batWing(w: Part, s: number, sp: number, bone: string, mem: string, claw = CLAW, o: Opt = {}, memPart?: Part) {
   const E: V3 = [s * sp * 0.42, sp * 0.24, -sp * 0.02];
   const W: V3 = [s * sp * 0.86, sp * 0.22, -sp * 0.16];
-  const F: V3[] = [[s * sp * 1.24, sp * 0.02, -sp * 0.44], [s * sp * 1.0, -sp * 0.06, -sp * 0.74], [s * sp * 0.6, -sp * 0.06, -sp * 0.84]];
-  const Bk: V3 = [s * sp * 0.1, -sp * 0.06, -sp * 0.52];
+  const F: V3[] = [[s * sp * 1.24, sp * 0.3, -sp * 0.42], [s * sp * 1.0, sp * 0.3, -sp * 0.7], [s * sp * 0.6, sp * 0.22, -sp * 0.8]];
+  const Bk: V3 = [s * sp * 0.1, sp * 0.06, -sp * 0.5];
   tube(w, [[0, 0, 0], E, W], [sp * 0.055, sp * 0.042, sp * 0.03], bone, 6);
   for (const f of F) tube(w, [W, f], [sp * 0.026, 0.0], bone, 5);
   spike(w, W, add3(W, [s * sp * 0.03, sp * 0.13, sp * 0.06]), sp * 0.028, claw, 4);
   const sc = (a: V3, b: V3) => lerp3(lerp3(a, b, 0.5), W, 0.26);
   const pts: V3[] = [[0, 0, 0], E, W, F[0], sc(F[0], F[1]), F[1], sc(F[1], F[2]), F[2], sc(F[2], Bk), Bk];
-  membrane(memPart ?? w, pts, mem, Math.max(0.01, sp * 0.022), [s * sp * 0.55, sp * 0.06, -sp * 0.42], o);
+  membrane(memPart ?? w, pts, mem, Math.max(0.01, sp * 0.022), [s * sp * 0.55, sp * 0.2, -sp * 0.42], o);
 }
 
 // ---------------------------------------------------------------------------
@@ -630,8 +630,8 @@ function panther(K: Kit) {
   const head = K.bone('head', neck, 0, 0.12, 0.1);
   catHead(K, head, { col: P, lite, eye: vivid(A, '#e8ff70'), fang: 0.03 + Math.max(0, K.sc - 1) * 1.1, dark: S });
   const tail = K.bone('tail', K.body, 0, 0.42, -0.36);
-  tube(tail, [[0, 0, 0.04], [0, -0.02, -0.1], [0.02, 0.0, -0.24], [0.03, 0.08, -0.34], [0.02, 0.18, -0.37]], [0.034, 0.03, 0.026, 0.022, 0.017], P, 6, {}, 2);
-  ball(tail, [0.02, 0.18, -0.37], 0.026, S, [1, 1.3, 1], {}, 6, 4);
+  tube(tail, [[0, 0, 0.04], [0, -0.06, -0.1], [0.02, -0.08, -0.24], [0.03, -0.02, -0.36], [0.02, 0.08, -0.41]], [0.034, 0.03, 0.026, 0.022, 0.017], P, 6, {}, 2);
+  ball(tail, [0.02, 0.08, -0.41], 0.026, S, [1, 1.3, 1], {}, 6, 4);
 }
 
 function wolf(K: Kit) {
@@ -697,7 +697,7 @@ function bull(K: Kit) {
   for (const [bp, , front] of quadLegs(Q)) quadLeg(bp, 0.4, 0.052, P, front, 'hoof', DARK);
   const neck = K.bone('neck', K.body, 0, 0.58, 0.32);
   ball(neck, [0, 0, 0], 0.15, P, [1, 1, 1]);
-  const head = K.bone('head', neck, 0, -0.01, 0.1);
+  const head = K.bone('head', neck, 0, 0.01, 0.1, -0.22, 0, 0);
   ball(head, [0, 0.02, 0.02], 0.14, P, [1.05, 1, 1.12], {}, 9, 7);
   ball(head, [0, -0.07, 0.13], 0.095, lite, [1.1, 0.78, 1]);
   head.add(G.torus(0.035, 0.009, 4, 10), 0, -0.1, 0.215, M, 0.2, 0, 0, 1, 1, 1, NO);
@@ -722,8 +722,8 @@ function behemoth(K: Kit) {
   const eye = vivid(A, '#ffd24a');
   const mane = mix(S, A, 0.28), mane2 = tone(mane, 0.14);
   const Q = quad(K, 0.4, 0.27, -0.3, 0.16, 0.15);
-  ball(K.body, [0, 0.52, -0.05], 0.27, P, [1, 0.95, 1.65], {}, 10, 8);
-  ball(K.body, [0, 0.58, 0.2], 0.25, P, [1.05, 1.05, 1.0], {}, 10, 8);
+  ball(K.body, [0, 0.52, -0.05], 0.27, P, [1, 0.95, 1.65], {}, 9, 7);
+  ball(K.body, [0, 0.58, 0.2], 0.25, P, [1.05, 1.05, 1.0], {}, 9, 7);
   ball(K.body, [0, 0.44, 0.02], 0.2, lite, [1, 0.7, 1.9], NO, 8, 6);
   for (let i = 0; i < 6; i++) {
     const z = 0.02 - i * 0.085;
@@ -762,20 +762,21 @@ function behemoth(K: Kit) {
   }
 }
 
-function dragonHead(K: Kit, head: Part, jaw: Part, o: { col: string; belly: string; horn: string; eye: string; frill?: string; scale?: number }) {
+function dragonHead(K: Kit, head: Part, jaw: Part, o: { col: string; belly: string; horn: string; eye: string; frill?: string }) {
   const c = o.col;
-  ball(head, [0, 0.02, 0], 0.1, c, [1.05, 0.85, 1.1], {}, 8, 6);
-  tube(head, [[0, 0.0, 0.05], [0, -0.015, 0.23]], [0.075, 0.052], c, 6);
-  head.add(G.box(0.17, 0.035, 0.06), 0, 0.075, 0.07, tone(c, -0.3), 0.3, 0, 0);
+  ball(head, [0, 0.025, -0.01], 0.1, c, [1.15, 0.8, 1.05], {}, 8, 6);
+  ball(head, [0, 0.0, 0.13], 0.075, c, [1.05, 0.6, 1.75], {}, 8, 5);
   for (const s of [-1, 1]) {
-    K.glowEye(head, [s * 0.058, 0.045, 0.085], 0.02, [s * 0.5, 0.1, 1], o.eye, 2.6, [1.3, 0.6, 0.8]);
-    head.add(G.box(0.012, 0.012, 0.01), s * 0.026, 0.012, 0.235, DARK, 0, 0, 0, 1, 1, 1, NO);
-    tube(head, [[s * 0.05, 0.06, -0.03], [s * 0.09, 0.13, -0.14], [s * 0.1, 0.17, -0.27]], [0.028, 0.02, 0.0], o.horn, 5, {}, 2);
-    if (o.frill) for (let i = 0; i < 2; i++) spike(head, [s * 0.08, 0.0 - i * 0.04, -0.04], [s * 0.18, 0.02 - i * 0.07, -0.12], 0.035, o.frill, 4, {}, [0, 0, 1], 0.4);
-    for (let i = 0; i < 3; i++) spike(head, [s * 0.04, -0.035, 0.1 + i * 0.045], [s * 0.042, -0.07, 0.1 + i * 0.045], 0.012, IVORY, 3, NO);
+    ball(head, [s * 0.032, 0.03, 0.235], 0.02, tone(c, -0.12), [1, 0.8, 1.2], {}, 5, 4);
+    head.add(G.box(0.012, 0.012, 0.01), s * 0.032, 0.036, 0.254, DARK, 0, 0, 0, 1, 1, 1, NO);
+    slab(head, [s * 0.025, 0.088, 0.1], [s * 0.1, 0.078, 0.035], 0.02, 0.025, tone(c, -0.25), [0, 1, 0.3]);
+    K.glowEye(head, [s * 0.06, 0.05, 0.075], 0.02, [s * 0.55, 0.1, 1], o.eye, 2.6, [1.3, 0.6, 0.8]);
+    tube(head, [[s * 0.05, 0.07, -0.04], [s * 0.09, 0.12, -0.15], [s * 0.1, 0.15, -0.28]], [0.028, 0.02, 0.0], o.horn, 5, {}, 2);
+    for (let i = 0; i < 2; i++) spike(head, [s * 0.085, 0.0 - i * 0.045, -0.02], [s * 0.18, 0.02 - i * 0.07, -0.1], 0.032, o.frill ?? o.horn, 4, {}, [0, 0, 1], 0.4);
+    for (let i = 0; i < 3; i++) spike(head, [s * 0.05, -0.03, 0.12 + i * 0.045], [s * 0.052, -0.065, 0.12 + i * 0.045], 0.012, IVORY, 3, NO);
   }
-  tube(jaw, [[0, 0, 0], [0, -0.02, 0.19]], [0.052, 0.036], o.belly, 6);
-  for (const s of [-1, 1]) spike(jaw, [s * 0.03, 0.0, 0.16], [s * 0.032, 0.04, 0.165], 0.012, IVORY, 3, NO);
+  ball(jaw, [0, -0.015, 0.1], 0.06, o.belly, [1.05, 0.45, 1.85], {}, 7, 5);
+  for (const s of [-1, 1]) spike(jaw, [s * 0.035, 0.0, 0.17], [s * 0.037, 0.04, 0.175], 0.012, IVORY, 3, NO);
 }
 
 function dragon(K: Kit) {
@@ -783,8 +784,8 @@ function dragon(K: Kit) {
   const horn = mix(A, IVORY, 0.3);
   const eye = vivid(A, '#ffd23a');
   const Q = quad(K, 0.33, 0.21, -0.23, 0.13);
-  ball(K.body, [0, 0.43, -0.03], 0.21, P, [1, 0.95, 1.9], {}, 10, 8);
-  ball(K.body, [0, 0.45, 0.16], 0.2, P, [1, 1.05, 1.05], {}, 10, 8);
+  ball(K.body, [0, 0.43, -0.03], 0.21, P, [1, 0.95, 1.9], {}, 9, 7);
+  ball(K.body, [0, 0.45, 0.16], 0.2, P, [1, 1.05, 1.05], {}, 9, 7);
   ball(K.body, [0, 0.37, 0.0], 0.17, S, [1, 0.75, 2.0], NO, 9, 6);
   for (let i = 0; i < 6; i++) {
     const z = 0.22 - i * 0.09;
@@ -793,9 +794,9 @@ function dragon(K: Kit) {
   }
   for (const [bp, , front] of quadLegs(Q)) quadLeg(bp, 0.33, 0.055, P, front, 'claw', CLAW);
   const neck = K.bone('neck', K.body, 0, 0.52, 0.3);
-  tube(neck, [[0, -0.08, -0.08], [0, 0.1, 0.04], [0, 0.24, 0.08], [0, 0.36, 0.14]], [0.11, 0.09, 0.078, 0.07], P, 7, {}, 2);
-  for (let i = 0; i < 3; i++) spike(neck, [0, 0.1 + i * 0.11, 0.0 + i * 0.04], [0, 0.14 + i * 0.11, -0.08 + i * 0.04], 0.03, A, 4, {}, [1, 0, 0], 0.45);
-  const head = K.bone('head', neck, 0, 0.38, 0.17);
+  tube(neck, [[0, -0.07, -0.08], [0, 0.1, 0.02], [0, 0.23, 0.1], [0, 0.31, 0.21]], [0.11, 0.09, 0.078, 0.07], P, 7, {}, 2);
+  for (let i = 0; i < 3; i++) { const p = [[0, 0.08, -0.06], [0, 0.19, 0.0], [0, 0.28, 0.08]][i] as V3; spike(neck, p, add3(p, [0, 0.07, -0.07]), 0.03, A, 4, {}, [1, 0, 0], 0.45); }
+  const head = K.bone('head', neck, 0, 0.33, 0.25, 0.18, 0, 0);
   const jaw = K.bone('jaw', head, 0, -0.05, 0.03);
   dragonHead(K, head, jaw, { col: P, belly: S, horn, eye });
   for (const s of [-1, 1]) {
@@ -816,8 +817,8 @@ function hydra(K: Kit) {
   const eye = vivid(A, '#ffe040');
   const n = Math.max(2, Math.min(3, Math.round(K.v || 2)));
   const Q = quad(K, 0.3, 0.2, -0.22, 0.16);
-  ball(K.body, [0, 0.42, 0.14], 0.25, P, [1, 0.95, 1.1], {}, 10, 8);
-  ball(K.body, [0, 0.4, -0.2], 0.24, P, [1, 0.95, 1.15], {}, 10, 8);
+  ball(K.body, [0, 0.42, 0.14], 0.25, P, [1, 0.95, 1.1], {}, 9, 7);
+  ball(K.body, [0, 0.4, -0.2], 0.24, P, [1, 0.95, 1.15], {}, 9, 7);
   tube(K.body, [[0, 0.34, -0.2], [0, 0.32, -0.02], [0, 0.35, 0.16]], [0.2, 0.2, 0.2], S, 8, NO);
   for (let i = 0; i < 5; i++) {
     const z = 0.18 - i * 0.1;
@@ -830,7 +831,7 @@ function hydra(K: Kit) {
   xs.forEach((x, i) => {
     const up = x === 0 ? 0.08 : 0;
     const pts: V3[] = [[x * 0.5, -0.06, -0.06], [x * 1.3, 0.14 + up, 0.04], [x * 2.0, 0.3 + up, 0.02], [x * 2.3, 0.44 + up, 0.1]];
-    tube(neck, pts, [0.09, 0.075, 0.066, 0.06], P, 7, {}, 2);
+    tube(neck, pts, [0.09, 0.075, 0.066, 0.06], P, 6, {}, 2);
     spike(neck, lerp3(pts[1], pts[2], 0.5), add3(lerp3(pts[1], pts[2], 0.5), [0, 0.02, -0.1]), 0.03, A, 4, {}, [1, 0, 0], 0.4);
     const tip = add3(pts[3], [0, 0.02, 0.05]);
     let head: Part, jaw: Part;
@@ -874,8 +875,8 @@ function bird(K: Kit) {
   const tail = K.bone('tail', torso, 0, 0.02, -0.13);
   for (let i = -2; i <= 2; i++) spike(tail, [i * 0.02, 0, 0], [i * 0.07, -0.14, -0.26], 0.05, i % 2 ? dark : P, 4, {}, [0, 1, 0.3], 0.3);
   for (const s of [-1, 1]) {
-    const w = K.bone(s < 0 ? 'wingR' : 'wingL', torso, s * 0.12, 0.22, -0.03, 0, 0, s * 0.35);
-    featherWing(w, s, { span: 0.62, col: P, col2: dark, n: 5, sec: 4 });
+    const w = K.bone(s < 0 ? 'wingR' : 'wingL', torso, s * 0.12, 0.22, -0.03, 0, 0, s * 0.18);
+    featherWing(w, s, { span: 0.62, col: P, col2: dark, n: 5, sec: 4, droop: 0.02, arch: 0.16 });
   }
   const neck = K.bone('neck', torso, 0, 0.28, 0.1);
   ball(neck, [0, 0, 0], 0.09, P, [1, 1.1, 1], {}, 7, 5);
@@ -923,7 +924,6 @@ function squid(K: Kit) {
     K.wiggle(wig, { rx: 0.08 * dz, rz: -0.08 * dx }, 0.45, deg * 0.05);
     const pt = (r: number, y: number): V3 => [dx * r, y, dz * r];
     tube(wig, [pt(0, 0), pt(0.16, -0.22), pt(0.34, -0.31), pt(0.5, -0.26), pt(0.53, -0.15)], [0.062, 0.045, 0.03, 0.016, 0.0], P, 5, {}, 2);
-    for (const r of [0.2, 0.3, 0.4]) ball(wig, add3(pt(r, r < 0.25 ? -0.3 : -0.33), [0, 0.02, 0]), 0.014, S, [1, 0.6, 1], NO, 4, 3);
   }
 }
 
@@ -1132,29 +1132,29 @@ function malboro(K: Kit) {
   const { P, S, A } = K;
   const lite = tone(P, 0.15), dk = tone(P, -0.2), slime = vivid(A, '#e0e060');
   const torso = K.bone('torso', K.body);
-  for (let i = 0; i < 7; i++) {
-    const a = (i / 7) * PI * 2 + 0.2;
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * PI * 2 + 0.5;
     const dx = Math.sin(a), dz = Math.cos(a);
-    tube(torso, [[dx * 0.12, 0.2, dz * 0.12], [dx * 0.3, 0.05, dz * 0.3], [dx * 0.42, 0.02, dz * 0.42], [dx * 0.5, 0.05, dz * 0.5]], [0.06, 0.045, 0.03, 0.0], dk, 5, {}, 2);
+    tube(torso, [[dx * 0.12, 0.2, dz * 0.12], [dx * 0.3, 0.05, dz * 0.3], [dx * 0.42, 0.02, dz * 0.42], [dx * 0.5, 0.05, dz * 0.5]], [0.06, 0.045, 0.03, 0.0], dk, 5);
   }
   const head = K.bone('head', torso, 0, 0.42, -0.02);
-  ball(head, [0, 0.04, -0.02], 0.34, P, [1.08, 0.95, 1], {}, 11, 9);
+  ball(head, [0, 0.04, -0.02], 0.34, P, [1.08, 0.95, 1], {}, 10, 8);
   for (const [x, y, z, r] of [[0.2, 0.22, -0.1, 0.05], [-0.22, 0.18, -0.06, 0.045], [0.05, 0.33, -0.12, 0.055], [-0.1, 0.3, 0.08, 0.04], [0.27, 0.0, -0.1, 0.04], [-0.26, -0.05, 0.02, 0.04], [0.12, -0.2, -0.2, 0.045]] as Array<[number, number, number, number]>) {
     ball(head, [x, y, z], r, S, [1, 1, 1], NO, 5, 4);
   }
   for (const [x, y, z] of [[0.24, 0.16, 0.1], [-0.22, 0.22, 0.12], [0.0, 0.3, 0.15], [0.3, -0.12, 0.06], [-0.28, -0.14, 0.1]] as V3[]) head.add(G.ico(0.03, 0), x, y, z, lite);
   ball(head, [0, -0.03, 0.2], 0.24, MOUTH, [1.15, 0.7, 0.55], NO, 9, 6);
-  head.add(G.torus(0.22, 0.045, 5, 14), 0, -0.02, 0.24, S, 0, 0, 0, 1.15, 0.72, 1);
+  head.add(G.torus(0.22, 0.045, 4, 12), 0, -0.02, 0.24, S, 0, 0, 0, 1.15, 0.72, 1);
   for (let i = 0; i < 7; i++) {
     const th = 0.25 + (i / 6) * (PI - 0.5);
     const p: V3 = [Math.cos(th) * 0.22, -0.02 + Math.sin(th) * 0.13, 0.25];
-    spike(head, p, add3(p, [0, -0.08, 0.0]), 0.022, IVORY, 4, NO);
+    spike(head, p, add3(p, [0, -0.1, 0.01]), 0.03, IVORY, 4, NO);
   }
   const jaw = K.bone('jaw', head, 0, -0.12, 0.12);
   for (let i = 0; i < 5; i++) {
     const th = PI + 0.4 + (i / 4) * (PI - 0.8);
     const p: V3 = [Math.cos(th) * 0.2, 0.1 + Math.sin(th) * 0.1, 0.13];
-    spike(jaw, p, add3(p, [0, 0.07, 0.0]), 0.02, IVORY, 4, NO);
+    spike(jaw, p, add3(p, [0, 0.09, 0.01]), 0.028, IVORY, 4, NO);
   }
   ball(jaw, [0, 0.03, 0.08], 0.12, tone(MOUTH, 0.3), [1.1, 0.35, 0.8], NO, 7, 4);
   K.glowBall(jaw, [0.07, -0.02, 0.15], 0.018, slime, [1, 1.8, 1], 1.4, 5, 4);
@@ -1187,11 +1187,11 @@ function malboro(K: Kit) {
 function golem(K: Kit) {
   const { P, S, A } = K;
   const stone = P, stone2 = tone(P, -0.15), moss = S, rune = vivid(A, '#60e0ff');
-  const B = biped(K, { hipY: 0.38, hipX: 0.13, thigh: 0.17, headY: 0.5, shX: 0.32, shY: 0.4, upper: 0.2, fore: 0.18, splay: 0.2 });
+  const B = biped(K, { hipY: 0.42, hipX: 0.13, thigh: 0.2, headY: 0.56, shX: 0.34, shY: 0.44, upper: 0.21, fore: 0.19, splay: 0.2 });
   for (const [s, arm, elbow, hand, leg, knee] of limbs(B)) {
     leg.add(G.dodec(0.1), 0, -0.08, 0, stone, 0, s, 0, 1, 1.1, 1);
     knee.add(G.dodec(0.095), 0, -0.08, 0.01, stone2, 0.4, 0, 0);
-    knee.add(G.box(0.17, 0.08, 0.22), 0, -0.17, 0.03, stone);
+    knee.add(G.box(0.17, 0.08, 0.22), 0, -0.18, 0.03, stone);
     arm.add(G.dodec(0.15), s * 0.02, 0.0, 0, stone, 0.3, s, 0);
     ball(arm, [s * 0.02, 0.1, 0], 0.1, moss, [1.2, 0.4, 1.1], NO, 6, 4);
     arm.add(G.dodec(0.1), 0, -0.12, 0, stone2, 0, 0.5, 0);
@@ -1200,11 +1200,14 @@ function golem(K: Kit) {
     K.gp(elbow, rune).add(G.box(0.02, 0.1, 0.02), s * 0.06, -0.08, 0.07, rune, 0, 0, 0, 1, 1, 1, GL);
   }
   B.hips.add(G.dodec(0.15), 0, 0.02, 0, stone2, 0, 0, 0, 1.35, 0.7, 1);
-  B.torso.add(G.dodec(0.3), 0, 0.28, 0, stone, 0.2, 0.3, 0, 1.2, 0.95, 0.85);
-  ball(B.torso, [0.1, 0.52, -0.02], 0.12, moss, [1.4, 0.45, 1.2], NO, 6, 4);
-  ball(B.torso, [-0.14, 0.48, 0.08], 0.08, moss, [1.2, 0.4, 1.2], NO, 6, 4);
-  K.gp(B.torso, rune, 2.6).add(G.oct(0.06), 0, 0.3, 0.245, rune, 0, 0, 0, 1, 1.3, 0.35, GL);
-  for (const s of [-1, 1]) K.gp(B.torso, rune, 2.6).add(G.box(0.12, 0.018, 0.02), s * 0.1, 0.3, 0.232, rune, 0, s * 0.35, s * 0.4, 1, 1, 1, GL);
+  B.torso.add(G.dodec(0.32), 0, 0.3, 0, stone, 0.2, 0.3, 0, 1.2, 0.95, 0.85);
+  B.torso.add(G.dodec(0.16), 0.08, 0.42, -0.2, stone2, 0.6, 0.2, 0);
+  B.torso.add(G.dodec(0.12), -0.12, 0.26, -0.22, stone2, 0.2, 0.9, 0);
+  ball(B.torso, [0.1, 0.56, -0.02], 0.13, moss, [1.4, 0.45, 1.2], NO, 6, 4);
+  ball(B.torso, [-0.14, 0.52, 0.08], 0.09, moss, [1.2, 0.4, 1.2], NO, 6, 4);
+  for (const [x, z, r] of [[0.2, -0.1, 0.4], [0.14, -0.18, -0.2], [-0.18, -0.14, -0.5]] as V3[]) spike(K.gp(B.torso, rune, 1.4), [x, 0.5, z], [x * 1.3, 0.68, z * 1.4], 0.035, rune, 4, GL, [0, 0, 1], 1 + r * 0);
+  K.gp(B.torso, rune, 2.6).add(G.oct(0.065), 0, 0.32, 0.262, rune, 0, 0, 0, 1, 1.3, 0.35, GL);
+  for (const s of [-1, 1]) K.gp(B.torso, rune, 2.6).add(G.box(0.13, 0.02, 0.02), s * 0.11, 0.32, 0.25, rune, 0, s * 0.35, s * 0.4, 1, 1, 1, GL);
   const h = B.head;
   h.add(G.box(0.17, 0.14, 0.16), 0, 0.03, 0.06, stone2, 0.05, 0, 0);
   h.add(G.box(0.2, 0.04, 0.06), 0, 0.09, 0.12, stone, 0.3, 0, 0);
@@ -1277,13 +1280,15 @@ function tome(K: Kit) {
     pg.add(G.box(0.25, 0.006, 0.37), 0.13, 0, 0, tone(S, 0.08), 0, 0, 0, 1, 1, 1, { outline: true });
     K.drive(pg.obj, (t, o) => { o.rz += 0.3 + ((t * 0.35 + i / 3) % 1) * (PI - 0.6); });
   }
-  const head = K.bone('head', book, 0, 0.1, 0.02, -0.5, 0, 0);
-  ball(head, [0, 0, 0], 0.095, WHITE, [1, 1, 0.9], {}, 9, 7);
-  K.glowEye(head, [0, 0.0, 0.078], 0.052, [0, 0, 1], rune, 1.6, [1, 0.3, 1]);
-  ball(head, [0, 0.0, 0.094], 0.026, DARK, [0.45, 1.1, 0.35], NO, 6, 4);
-  head.add(G.torus(0.092, 0.022, 4, 10, PI), 0, 0.006, 0.02, P, 0.4, 0, 0, 1, 1.05, 1);
+  const head = K.bone('head', book, 0, 0.17, 0.06, -0.5, 0, 0);
+  ball(head, [0, 0, 0], 0.11, WHITE, [1, 1, 0.9], {}, 9, 7);
+  K.glowEye(head, [0, 0.0, 0.09], 0.06, [0, 0, 1], rune, 1.6, [1, 0.3, 1]);
+  ball(head, [0, 0.0, 0.108], 0.03, DARK, [0.45, 1.1, 0.35], NO, 6, 4);
+  head.add(G.torus(0.106, 0.026, 4, 10, PI), 0, 0.006, 0.02, P, 0.4, 0, 0, 1, 1.05, 1);
+  for (let i = -2; i <= 2; i++) spike(head, [i * 0.035, 0.1 - Math.abs(i) * 0.012, 0.05], [i * 0.05, 0.16 - Math.abs(i) * 0.03, 0.07], 0.012, DARK, 3, NO);
   const jaw = K.bone('jaw', head, 0, 0.004, 0.02);
-  jaw.add(G.torus(0.092, 0.02, 4, 10, PI), 0, 0, 0, P, -0.35, 0, PI, 1, 0.9, 1);
+  jaw.add(G.torus(0.106, 0.024, 4, 10, PI), 0, 0, 0, P, -0.35, 0, PI, 1, 0.9, 1);
+  tube(head, [[0, -0.1, -0.02], [0, -0.17, -0.02]], [0.03, 0.04], L, 5);
   const tail = K.bone('tail', book, 0, -0.03, -0.2);
   const rib = K.node(tail);
   K.wiggle(rib, { rx: 0.15, rz: 0.12 }, 0.45);
@@ -1371,12 +1376,12 @@ function demonAries(K: Kit) {
     elbow.add(G.cyl(0.072, 0.078, 0.12, 7), 0, -0.1, 0.005, plate);
     ball(hand, [0, -0.02, 0], 0.066, plateD, [1, 1, 1], {}, 7, 5);
   }
-  B.hips.add(G.cyl(0.15, 0.21, 0.17, 8), 0, -0.05, 0, plateD, 0, 0, 0, 1, 1, 0.8);
-  B.hips.add(G.box(0.13, 0.26, 0.02), 0, -0.12, 0.15, S, 0.1, 0, 0);
+  B.hips.add(G.cyl(0.15, 0.21, 0.17, 8), 0, -0.05, 0, tone(P, -0.2), 0, 0, 0, 1, 1, 0.8);
+  for (const x of [-0.12, 0, 0.12]) B.hips.add(G.box(0.1, 0.16, 0.02), x, -0.07, 0.16, plateD, 0.15, x * -1.5, 0);
   ball(B.hips, [0, 0.03, 0.15], 0.035, A, [1, 1, 0.5], NO, 6, 4);
   ball(B.torso, [0, 0.2, 0], 0.22, plate, [1.2, 1.05, 0.85], {}, 10, 8);
-  B.torso.add(G.cyl(0.16, 0.19, 0.12, 8), 0, 0.03, 0, plateD, 0, 0, 0, 1, 1, 0.8);
-  for (let i = 0; i < 2; i++) B.torso.add(G.torus(0.2 - i * 0.02, 0.012, 3, 12), 0, 0.12 - i * 0.05, 0, tone(plate, 0.15), PI / 2, 0, 0, 1.08, 0.8, 1, NO);
+  B.torso.add(G.cyl(0.16, 0.19, 0.12, 8), 0, 0.03, 0, P, 0, 0, 0, 1, 1, 0.8);
+  for (let i = 0; i < 2; i++) B.torso.add(G.torus(0.2 - i * 0.02, 0.014, 3, 12), 0, 0.12 - i * 0.05, 0, plateD, PI / 2, 0, 0, 1.08, 0.8, 1, NO);
   K.gp(B.torso, fire, 3).add(G.oct(0.05), 0, 0.24, 0.19, fire, 0, 0, 0, 1, 1.3, 0.4, GL);
   B.torso.add(G.cyl(0.11, 0.16, 0.08, 8), 0, 0.38, 0, plateD);
   const cape = K.bone('cape', B.torso, 0, 0.36, -0.15);
@@ -1407,7 +1412,7 @@ function demonScorpio(K: Kit) {
   const { P, S, A, M } = K;
   const skin = P, robe = S, chit = M, chitD = tone(M, -0.3), glow = vivid(A, '#c0ff40');
   const hips = K.bone('hips', K.body, 0, 0.42, 0);
-  ball(hips, [0, 0.04, -0.06], 0.3, skin, [1.05, 0.9, 1.1], {}, 11, 9);
+  ball(hips, [0, 0.04, -0.06], 0.3, skin, [1.05, 0.9, 1.1], {}, 10, 8);
   ball(hips, [0, -0.03, 0.14], 0.2, tone(P, 0.12), [1.1, 0.8, 0.8], {}, 9, 6);
   for (const [x, y, z] of [[0.2, 0.0, 0.14], [-0.24, 0.06, 0.02], [0.1, -0.1, 0.2], [-0.12, -0.12, 0.16], [0.26, -0.06, -0.12]] as V3[]) K.glowBall(hips, [x, y, z], 0.022, glow, [1, 1, 1], 1.6, 5, 4);
   hips.add(G.cyl(0.25, 0.33, 0.2, 10), 0, 0.15, -0.05, robe, 0, 0, 0, 1, 1, 0.95);
@@ -1535,7 +1540,7 @@ function demonCapricorn(K: Kit) {
 
 function demonLeo(K: Kit) {
   const { P, S, A, M } = K;
-  const fur = P, mane = tone(P, -0.32), robe = S, gold = M, pale = A, eye = '#fff2b0';
+  const fur = P, mane = mix(P, '#6a2a0a', 0.55), robe = S, gold = M, pale = A, eye = '#fff2b0';
   const B = biped(K, { hipY: 0.48, hipX: 0.1, thigh: 0.22, headY: 0.44, shX: 0.25, shY: 0.36, upper: 0.18, fore: 0.17, splay: 0.22 });
   for (const [s, arm, elbow, hand, leg, knee] of limbs(B)) {
     tube(leg, [[0, 0.02, 0], [0, -0.12, 0.05], [0, -0.22, 0.03]], [0.085, 0.078, 0.062], fur, 7);
@@ -1656,14 +1661,14 @@ function seraphGemini(K: Kit) {
   const up = vec([0, 1, 0.3]).normalize();
   const top = add3([0, 0, 0.02], up, 0.86);
   tube(hRp, [add3([0, 0, 0.02], up, -0.3), top], [0.017, 0.017], tone(M, 0.2), 5);
-  const Fw = vec([0, -0.25, 1]).normalize();
+  const Fw = vec([-1, -0.2, 0.25]).normalize();
   const bp = (a: number, b: number): V3 => add3(add3(top, up, b), Fw, a);
   const steel = tone(grey, 0.4);
   membrane(hRp, [bp(-0.05, 0.03), bp(0.16, 0.08), bp(0.4, 0.0), bp(0.6, -0.18), bp(0.38, -0.08), bp(0.16, -0.045), bp(-0.04, -0.04)], steel, 0.016, bp(0.16, 0.0));
   seg(K.gp(hRp, eye, 1.8), bp(0.14, -0.045), bp(0.52, -0.15), 0.008, 0.004, eye, 4, GL);
   for (const s of [-1, 1]) {
     const w = K.bone(s < 0 ? 'wingR' : 'wingL', torso, s * 0.08, 0.2, -0.1, 0, 0, s * 0.45);
-    featherWing(w, s, { span: 0.7, col: robe, col2: tone(robe, 0.12), tip: grey, n: 6, sec: 4, droop: 0.2 });
+    featherWing(w, s, { span: 0.7, col: robe, col2: tone(robe, 0.12), tip: grey, n: 6, sec: 4 });
   }
 }
 
@@ -1714,7 +1719,7 @@ function seraphVirgo(K: Kit) {
     featherWing(w, s, { span: 0.62, col: white, col2: tone(white, -0.1), tip: crim, n: 6, sec: 4 });
     const lw = K.node(torso, s * 0.07, 0.04, -0.1, 0, 0, -s * 0.3);
     K.follow(lw, w.obj, 0.6);
-    featherWing(lw, s, { span: 0.44, col: white, col2: tone(white, -0.1), tip: crim, n: 5, sec: 3, droop: 0.25 });
+    featherWing(lw, s, { span: 0.44, col: white, col2: tone(white, -0.1), tip: crim, n: 5, sec: 3, droop: -0.1 });
   }
 }
 
@@ -1756,7 +1761,7 @@ function seraphTrue(K: Kit) {
   for (const [rx, ry, sp] of [[0, 0, 0.3], [0, PI / 2, -0.22]] as V3[]) {
     const ring = K.node(head, 0, 0.13, -0.12, rx, ry, 0);
     K.spin(ring, 'rz', sp);
-    K.gp(ring, gold, 2.2).add(G.torus(0.26, 0.012, 3, 24), 0, 0, 0, gold, 0, 0, 0, 1, 1, 1, GL);
+    K.gp(ring, gold, 2.2).add(G.torus(0.26, 0.012, 3, 18), 0, 0, 0, gold, 0, 0, 0, 1, 1, 1, GL);
     for (let i = 0; i < 6; i++) {
       const a = (i / 6) * PI * 2;
       K.gp(ring, gold, 2.2).add(G.oct(0.02), Math.sin(a) * 0.26, Math.cos(a) * 0.26, 0, gold, 0, 0, -a, 1, 2, 0.6, GL);
@@ -1782,7 +1787,7 @@ function seraphTrue(K: Kit) {
     featherWing(mw, s, { span: 0.64, col: crim, col2: deep, tip: gold, n: 5, sec: 3 });
     const lw = K.node(torso, s * 0.09, 0.04, -0.11, 0, 0, -s * 0.38);
     K.follow(lw, w.obj, 0.6);
-    featherWing(lw, s, { span: 0.5, col: crim, col2: deep, tip: gold, n: 5, sec: 3, droop: 0.25 });
+    featherWing(lw, s, { span: 0.5, col: crim, col2: deep, tip: gold, n: 4, sec: 3, droop: -0.1 });
   }
 }
 

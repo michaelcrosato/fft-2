@@ -64,6 +64,29 @@ const LOOKAHEAD_HIDDEN = 1.2;
 
 const clamp01 = (v: number) => (Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 1);
 
+/**
+ * Legacy WebKit returned `undefined` from AudioNode.connect(); the synth
+ * chains connections (`a.connect(b).connect(c)`), so patch it to return the
+ * destination like the standard does.
+ */
+function shimConnect(ctx: BaseAudioContext): void {
+  try {
+    const probe = ctx.createGain();
+    const other = ctx.createGain();
+    const ret = probe.connect(other) as unknown;
+    probe.disconnect();
+    if (ret !== undefined) return;
+    const proto = Object.getPrototypeOf(Object.getPrototypeOf(probe)) as { connect: (...a: unknown[]) => unknown };
+    const orig = proto.connect;
+    proto.connect = function (this: unknown, dest: unknown, ...rest: unknown[]) {
+      orig.call(this, dest, ...rest);
+      return dest;
+    };
+  } catch {
+    /* ignore */
+  }
+}
+
 // ---------------------------------------------------------------------------
 //  Channel: insert → volume → pan → player bus (+ reverb send)
 // ---------------------------------------------------------------------------
@@ -128,12 +151,13 @@ class MusicPlayer {
     this.dry = mkGain(ctx, 0);
     this.wet = mkGain(ctx, 0);
     const now = ctx.currentTime;
+    const level = track.gain;
     for (const g of [this.dry, this.wet]) {
       g.gain.setValueAtTime(0, now);
       if (fadeIn > 0.02) {
         g.gain.setValueAtTime(0, start);
-        g.gain.linearRampToValueAtTime(1, start + fadeIn);
-      } else g.gain.setValueAtTime(1, Math.max(now, start - 0.01));
+        g.gain.linearRampToValueAtTime(level, start + fadeIn);
+      } else g.gain.setValueAtTime(level, Math.max(now, start - 0.01));
     }
     this.dry.connect(bus.music);
     this.wet.connect(bus.musicSend);
@@ -306,6 +330,7 @@ export class AudioEngine {
         return;
       }
     }
+    shimConnect(ctx);
     try {
       // iOS: a silent buffer started inside the gesture unlocks output
       const b = ctx.createBuffer(1, 1, 22050);
@@ -343,13 +368,15 @@ export class AudioEngine {
     await resumed;
   }
 
+  /** resume the context; never waits more than ~1 s (some engines leave the promise pending) */
   private resume(): Promise<void> {
     const ctx = this.ctx;
     if (!ctx) return Promise.resolve();
     const st = ctx.state as string;
     if (st === 'running' || st === 'closed') return Promise.resolve();
     try {
-      return ctx.resume().catch(() => {});
+      const p = ctx.resume().catch(() => {});
+      return Promise.race([p, new Promise<void>((r) => setTimeout(r, 1000))]);
     } catch {
       return Promise.resolve();
     }

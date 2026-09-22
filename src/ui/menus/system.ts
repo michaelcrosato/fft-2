@@ -48,9 +48,11 @@ export async function openOptions(game: Game) {
         { label: 'Camera shake', value: 'shake', right: o.camShake ? 'On' : 'Off' },
         { label: 'Graphics quality', value: 'quality', right: `${o.quality} (${rinfo?.quality ?? ''})` },
         { label: 'Renderer', value: 'renderer', right: `${o.renderer} (${rinfo?.backend ?? ''})`, desc: 'Takes effect after reloading the page.' },
+        { label: 'How to Play', value: 'help' },
         { label: 'Back', value: 'back' },
       ], x: 16, y: 64, title: 'Options', parent: ov.root, showDesc: true }).promise;
       if (!pick || pick === 'back') return;
+      if (pick === 'help') { const { openHelp } = await import('./help'); await openHelp(); continue; }
       const cycle = <T,>(arr: T[], v: T) => arr[(arr.indexOf(v) + 1) % arr.length];
       if (pick === 'music') { o.music = cycle([0, 0.25, 0.5, 0.7, 0.85, 1], o.music); audio.setVolumes?.({ music: o.music }); }
       if (pick === 'sfx') { o.sfx = cycle([0, 0.25, 0.5, 0.8, 1], o.sfx); audio.setVolumes?.({ sfx: o.sfx }); audio.sfx('confirm'); }

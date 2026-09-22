@@ -1,7 +1,8 @@
 // Visual test bed: ?map=<id>&renderer=webgpu|webgl2|webgl1&time=<EnvTime>
-// Monster gallery: ?gallery=monsters[&only=<job ids or shapes, comma list>][&cols=n]
+// Monster gallery: ?gallery=monsters[&only=<job ids or shapes, comma list>][&cols=n][&spacing=n]
 //   [&zoom=<camera distance>][&yaw=<rad>][&pitch=<rad>][&face=<rad>][&clip=<ClipName>][&labels=0]
-//   [&target=x,y,z]
+//   [&target=x,y,z]   (shapes no job uses get stand-ins with ids x_<shape>, e.g. x_wolf)
+//   Without &clip the monsters cycle idle / walk / bite / roar / breath.
 import { initRenderer, renderer, rinfo } from './gfx/renderer';
 import { THREE } from './gfx/three';
 import { loadTSL } from './gfx/materials';

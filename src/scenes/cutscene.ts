@@ -41,7 +41,7 @@ export function fillText(t: string, host: SceneHost) { return t.replace(/\{hero\
 let skipAll = false;
 
 export async function runScene(cmds: SceneCmd[], host: SceneHost): Promise<void> {
-  skipAll = false;
+  skipAll = !!(window as any).__autoPlay;
   // skip button
   const skip = h('div.btn.ghost', { style: { position: 'absolute', right: '14px', top: '12px', color: '#efe3c6', borderColor: 'rgba(240,210,140,.4)', fontSize: '0.8em', padding: '3px 10px' }, onclick: () => { skipAll = true; input.dispatch('confirm'); } }, 'Skip ⏭');
   uiRoot().appendChild(skip);
@@ -157,6 +157,7 @@ async function runCmd(c: SceneCmd, host: SceneHost): Promise<void> {
     case 'flag': host.setFlag(c[1], c[2] ?? true); return;
     case 'choice': {
       const [, prompt, opts] = c;
+      if (skipAll) { if (opts[0]) await runCmds(opts[0][1], host); return; }
       const box = h('div.panel', { style: { left: '50%', top: '30%', transform: 'translateX(-50%)', textAlign: 'center', padding: '12px 22px' } }, h('div', { style: { fontSize: '1.15em', marginBottom: '6px' } }, fillText(prompt, host)));
       uiRoot().appendChild(box);
       const m = menu({ items: opts.map(([label], i) => ({ label: fillText(label, host), value: i })), parent: box, cancelable: false });

@@ -8,6 +8,7 @@ import { planTurn } from '../src/battle/ai';
 import { MapGrid } from '../src/battle/grid';
 import { Rng } from '../src/core/rng';
 import { joinCharacter } from '../src/game/state';
+import { setLevel } from '../src/game/roster';
 import type { Battle } from '../src/battle/battle';
 
 function run(b: Battle, maxSteps = 6000) {
@@ -37,7 +38,7 @@ describe('campaign battles', () => {
       s.tier = Math.min(8, 1 + chapter * 2);
       const lv = LEVEL_BY_CHAPTER[Math.min(4, chapter)];
       const rng = new Rng(7);
-      for (const u of s.roster) { u.level = lv; autoEquip(u, s.tier, rng); if (!u.charId) autoAbilities(u, rng, {}); }
+      for (const u of s.roster) { setLevel(u, lv); autoEquip(u, s.tier, rng); if (!u.charId) autoAbilities(u, rng, {}); }
       const grid = new MapGrid(mapDef(def!.map));
       const cells = (def!.deploy ?? grid.def.deploy).filter(([x, z]) => grid.cell(x, z)?.standable && !def!.units.some((u) => u.at[0] === x && u.at[1] === z));
       const party = s.roster.slice(0, Math.min(def!.maxDeploy ?? 5, cells.length)).map((unit, i) => ({ unit, x: cells[i][0], z: cells[i][1] }));

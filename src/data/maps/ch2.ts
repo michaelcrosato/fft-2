@@ -557,7 +557,8 @@ export const maps: MapDef[] = [
     decor: [
       { type: 'signpost', at: [4, 6], rot: 0.3 }, { type: 'brazier', at: [8, 6] }, { type: 'rock', at: [1, 6] },
       { type: 'flowers', at: [6, 6] }, { type: 'fence', at: [10, 3] }, { type: 'fence', at: [11, 3] },
-      { type: 'lamp', at: [0, 3] },
+      { type: 'lamp', at: [0, 3] }, { type: 'lamp', at: [6, 3] }, { type: 'torch', at: [3, 6] },
+      { type: 'brazier', at: [11, 6] },
     ],
     deploy: [[2, 5], [3, 5], [4, 5], [5, 5], [6, 5]],
   },

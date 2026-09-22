@@ -97,7 +97,7 @@ export class BattleController {
         const perf = u.performing ? (u.performing.anim === 'dance' ? 'dance' : 'sing') : null;
         const want: ClipName = u.has('petrify') || u.has('stop') ? 'none' : u.charging ? (perf ?? (u.charging.ability.anim === 'charge' ? 'charge' : 'cast')) : u.has('sleep') ? 'crouch' : u.critical ? 'kneel' : u.has('defending') ? 'guard' : 'idle';
         v.anim.setBase(want);
-        v.anim.hover = u.has('float') ? 0.28 : (v.model as any).hover ? 0.25 : 0;
+        v.anim.hover = u.has('float') && !(v.model as any).hover ? 0.28 : 0;
       }
       // tints & status badges
       v.setTint(u.has('petrify') ? '#9a9a9a' : u.has('stop') ? '#8ab0ff' : u.has('frog') ? '#7ad06a' : u.has('undead') && !u.job.monster ? '#b8c8a8' : u.has('invisible') ? '#d8d8ff' : null);

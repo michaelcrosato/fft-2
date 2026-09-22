@@ -6,6 +6,7 @@ import { input } from './ui/input';
 import { audio } from './audio/audio';
 import { Game } from './game/game';
 import { loadOptions, newGame } from './game/state';
+import { setLevel } from './game/roster';
 import { getTexture, type TexId } from './gfx/textures';
 import { loadMonsterBuilder } from './scenes/unitview';
 import type { Backend } from './gfx/three';
@@ -44,9 +45,19 @@ async function boot() {
 
   const test = q.get('test');
   if (q.get('auto')) (window as any).__autoBattle = true;
+  if (q.get('autoplay')) { (window as any).__autoPlay = true; (window as any).__autoBattle = true; }
+  if (test === 'campaign') {
+    // headless-ish full playthrough for integration testing
+    game.state = newGame('Rhen', [4, 12]);
+    if (q.get('lv')) game.state.roster.forEach((u) => setLevel(u, Number(q.get('lv'))));
+    if (q.get('step')) game.state.storyIndex = Number(q.get('step'));
+    const { mainLoop } = await import('./game/flow');
+    await mainLoop(game);
+    return;
+  }
   if (test === 'battle') {
     game.state = newGame('Rhen', [4, 12]);
-    game.state.roster.forEach((u) => { u.level = Number(q.get('lv') ?? 5); });
+    game.state.roster.forEach((u) => setLevel(u, Number(q.get('lv') ?? 5)));
     await game.runBattle(q.get('id') ?? 'b_galwyn');
     return;
   }

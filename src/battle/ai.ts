@@ -97,10 +97,15 @@ export function planTurn(b: Battle, u: BattleUnit): AiPlan {
   }
   const support = u.ai === 'support';
   const guard = u.ai === 'guard' || u.ai === 'defensive';
+  const want = rangedPreference(b, u);
   for (const pos of positions) {
     if (guard && manhattan(pos, { x: startX, z: startZ }) > 2 && enemies.every((e) => manhattan(e, pos) > 5)) continue;
     const ox = u.x, oz = u.z;
     u.x = pos.x; u.z = pos.z;
+    // positional pressure: close in on the enemy (or hold a healer's distance)
+    let near = 99;
+    for (const e of enemies) near = Math.min(near, manhattan(e, pos));
+    const posScore = guard ? 0 : support ? -Math.max(0, near - want - 1) * 0.9 : -Math.max(0, near - want) * 1.4;
     for (const { a, opts } of abilities) {
       let cells: Cell[];
       if (opts?.calc) cells = [pos];
@@ -117,7 +122,7 @@ export function planTurn(b: Battle, u: BattleUnit): AiPlan {
         }
         const prev = b.previewAction(u, a, c.x, c.z, opts);
         let s = scoreAction(b, u, a, prev, support);
-        if (s <= 0) continue;
+        if (s <= 0.5) continue;
         const ct = opts?.calc ? 0 : b.chargeTicks(u, a);
         if (ct > 0) s *= aoe > 1 ? 0.75 : 0.85;
         if (ct > 6) s *= 0.8;
@@ -127,6 +132,9 @@ export function planTurn(b: Battle, u: BattleUnit): AiPlan {
         if (u.critical || support) s -= threat * 3;
         // prefer attacking from behind (the evasion already reflects it) and not moving needlessly
         if (pos.x !== startX || pos.z !== startZ) s -= 0.5;
+        s += posScore;
+        // abilities that cost the caster HP
+        if (a.effects?.some((e) => e.type === 'special' && e.id === 'wish')) s -= Math.min(80, ((u.maxHp / 5) / Math.max(1, u.hp)) * 70);
         if (s > best.score) {
           best = {
             move: pos.x !== startX || pos.z !== startZ ? [pos.x, pos.z] : undefined,
@@ -201,7 +209,13 @@ function scoreAction(b: Battle, u: BattleUnit, a: AbilityDef, prev: TargetPrevie
         s += (bad === ally ? 1 : -1) * v * hit * 0.8;
       }
       for (const e of a.effects ?? []) {
-        if (e.type === 'stat') s += (ally === e.amount > 0 ? 1 : -1) * Math.min(20, Math.abs(e.amount) * (e.stat === 'brave' || e.stat === 'faith' ? 0.8 : 6)) * hit;
+        if (e.type === 'stat') {
+          // self/ally buffs have diminishing returns; debuffs on foes are worth more
+          const stacked = e.stat === 'pa' || e.stat === 'ma' || e.stat === 'speed' ? Math.abs(t.buff[e.stat]) : 0;
+          const base = e.stat === 'brave' || e.stat === 'faith' ? 0.5 : 3;
+          const v = Math.min(14, Math.abs(e.amount) * base) / (1 + stacked);
+          s += (ally === e.amount > 0 ? 1 : -1) * v * hit;
+        }
         if (e.type === 'steal' || e.type === 'breakEquip') s += (ally ? -1 : 1) * 18 * hit;
         if (e.type === 'invite') s += (ally ? 0 : 30) * hit;
         if (e.type === 'ct' && e.set !== undefined) s += (ally === e.set > 50 ? 1 : -1) * 25 * hit;

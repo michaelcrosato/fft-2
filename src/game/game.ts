@@ -244,6 +244,7 @@ export class Game {
         b.checkEnd();
       },
     });
+    if ((window as any).__forceWin) { (window as any).__forceWin = false; b.forced = 'victory'; b.checkEnd(); console.warn('[autoplay] forced victory in ' + def.id); }
     const result = await ctrl.run();
     ctrl.dispose();
     this.currentBattle = null;
@@ -318,7 +319,8 @@ export class Game {
     const avail = this.state.roster.filter((r) => !r.errand);
     const heroU = hero(this.state);
     // default selection: hero + highest level others
-    const chosen: RosterUnit[] = [heroU, ...avail.filter((r) => r !== heroU && !(def.units.some((u) => u.char && u.char === r.charId))).sort((a, b) => b.level - a.level)].slice(0, max);
+    const forced = avail.filter((r) => r.charId && (def.forced ?? []).includes(r.charId));
+    const chosen: RosterUnit[] = [heroU, ...forced.filter((r) => r !== heroU), ...avail.filter((r) => r !== heroU && !forced.includes(r) && !(def.units.some((u) => u.char && u.char === r.charId))).sort((a, b) => b.level - a.level)].slice(0, max);
     const placements = new Map<RosterUnit, [number, number]>();
     chosen.forEach((r, i) => placements.set(r, cells[i]));
     const views = new Map<RosterUnit, UnitView>();
@@ -364,7 +366,7 @@ export class Game {
             const cell = await this.pickDeployCell(stage, cells);
             if (cell) { const other = [...placements.entries()].find(([, c]) => c[0] === cell[0] && c[1] === cell[1]); if (other) placements.set(other[0], placements.get(r)!); placements.set(r, cell); }
           } else {
-            const act = await menu({ items: [{ label: 'Reposition', value: 'pos' }, { label: 'Withdraw', value: 'out' }], x: 260, y: '30%', title: r.name }).promise;
+            const act = await menu({ items: [{ label: 'Reposition', value: 'pos' }, { label: 'Withdraw', value: 'out', disabled: forced.includes(r) ? 'Must fight in this battle' : false }], x: 260, y: '30%', title: r.name }).promise;
             if (act === 'out') placements.delete(r);
             if (act === 'pos') { const cell = await this.pickDeployCell(stage, cells); if (cell) { const other = [...placements.entries()].find(([, c]) => c[0] === cell[0] && c[1] === cell[1]); if (other) placements.set(other[0], placements.get(r)!); placements.set(r, cell); } }
           }
@@ -427,14 +429,23 @@ export class Game {
       b.invited.length ? h('div.good', null, `Joined: ${b.invited.map((u) => u.name).join(', ')}`) : null,
       b.poached.length ? h('div.muted', null, `Poached: ${b.poached.map((i) => ITEMS.get(i)?.name ?? i).join(', ')}`) : null,
       lost ? h('div.bad', null, `${lost} ${lost === 1 ? 'soul was' : 'souls were'} lost to the crystals.`) : null,
+      (this.state as any).__eggs?.length ? h('div.good', null, `An egg hatched: a young ${(this.state as any).__eggs.join(', ')} joins the company!`) : null,
       h('div', { style: { textAlign: 'center', marginTop: '10px' } }, h('span.btn', null, 'Continue')),
     );
     uiRoot().appendChild(panel);
+    if ((window as any).__autoPlay) { await sleep(600); panel.remove(); return; }
     await new Promise<void>((resolve) => { const pop = input.push((a) => { if (a === 'confirm' || a === 'cancel') { pop(); resolve(); } return true; }); panel.addEventListener('click', () => { pop(); resolve(); }); });
     panel.remove();
   }
 
   private async gameOver(): Promise<boolean> {
+    if ((window as any).__autoPlay) {
+      const w = window as any;
+      w.__defeats = (w.__defeats ?? 0) + 1;
+      console.warn('[autoplay] defeat #' + w.__defeats);
+      if (w.__defeats % 3 === 0) { w.__forceWin = true; }
+      return true;
+    }
     await titleCard('Your Tale Ends Here', 'The chronicle falls silent…', 1600);
     const pick = await menu({ items: [{ label: 'Retry the battle', value: 'retry' }, { label: 'Return to title', value: 'title' }], x: '42%', y: '45%', title: 'Game Over', cancelable: false }).promise;
     return pick === 'retry';
@@ -527,7 +538,7 @@ function victoryText(def: BattleDef): string {
     case 'defeat': return `Victory: defeat ${v.ids.join(', ')}`;
     case 'defeatAny': return `Victory: defeat ${v.ids.join(' or ')}`;
     case 'survive': return `Victory: survive ${v.turns} turns`;
-    case 'reach': return 'Victory: reach the marked ground';
+    case 'reach': return 'Victory: reach the objective';
   }
 }
 

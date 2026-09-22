@@ -157,9 +157,11 @@ export class TerrainView {
       return Math.max(0.45, 1 - occ);
     };
 
+    const decorCells = new Set((g.def.decor ?? []).map((d) => d.at.join(',')));
     for (const c of g.cells) {
       if (c.hole) continue;
-      const tt = topTex(c.terrain, theme);
+      // impassable cells under props (wells, windmills) show ordinary ground
+      const tt = c.terrain === 'x' && decorCells.has(c.x + ',' + c.z) ? (theme === 'town' || theme === 'castle' || theme === 'church' ? 'cobble' : 'dirt') : topTex(c.terrain, theme);
       // --- top ---
       const corners = [0, 1, 2, 3].map((k) => {
         const [x, z] = cornerXZ(c.x, c.z, k);

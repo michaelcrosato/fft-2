@@ -85,7 +85,6 @@ export class UnitView {
     }
     this.root.add(this.model.root);
     this.anim = new Animator(this.model);
-    if ((this.model as any).hover) this.anim.hover = 0.25;
     // team marker: soft glowing ring under the feet
     const ringGeo = new THREE.RingGeometry(0.3, 0.4, 28);
     const ringMat = new THREE.MeshBasicMaterial({ color: TEAM_COLORS[spec.guest ? 2 : spec.team] ?? '#fff', transparent: true, opacity: 0.55, depthWrite: false, toneMapped: false, side: THREE.DoubleSide });

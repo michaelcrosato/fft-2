@@ -143,6 +143,8 @@ export interface TrackDef {
   body: string[];
   /** default true */
   loop?: boolean;
+  /** overall track gain (loudness matching between tracks), default 1 */
+  gain?: number;
 }
 
 export interface NoteEvent {
@@ -173,6 +175,7 @@ export interface CompiledTrack {
   /** first event index at/after loopStart */
   loopIndex: number;
   loop: boolean;
+  gain: number;
   markers: Array<{ name: string; t: number }>;
   errors: string[];
 }
@@ -845,6 +848,8 @@ export function voiceChord(ch: Chord, n: number, lo: number, hi: number, prev: n
     }
   }
   if (best) return best;
+  // range too narrow for n voices: use fewer voices inside the range
+  if (n > 1 && cand.length > 0) return voiceChord(ch, Math.min(n - 1, cand.length), lo, hi, prev && prev.length === n - 1 ? prev : null);
   // fallback: close position from the root above lo
   const r = placeAbove(ch.root, lo);
   const res: number[] = [];
@@ -1144,6 +1149,7 @@ export function compileTrack(def: TrackDef): CompiledTrack {
     length: t,
     loopIndex,
     loop: def.loop !== false,
+    gain: def.gain ?? 1,
     markers,
     errors,
   };

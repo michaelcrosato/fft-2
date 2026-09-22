@@ -278,8 +278,16 @@ export const CLIPS: Record<ClipName, Clip> = {
     },
   },
   ko: {
-    dur: 0.8, loop: false, fn: (p, t, pose) => {
+    dur: 0.8, loop: false, fn: (p, t, pose, m) => {
       const f = seg(p, 0, 0.6);
+      if (m.kind === 'monster') {
+        // beasts roll onto their side
+        set(pose, 'body', { rz: 1.35 * f, py: -0.05 * f });
+        set(pose, 'head', { rz: 0.3 * f });
+        set(pose, 'legFL', { rx: 0.5 * f }); set(pose, 'legBL', { rx: -0.4 * f });
+        set(pose, 'wingL', { rz: -0.6 * f }); set(pose, 'wingR', { rz: 0.4 * f });
+        return;
+      }
       set(pose, 'body', { rx: -1.45 * f, py: 0.14 * f * (1 - f) * 4 * 0.25 + 0.05 * f, pz: -0.2 * f });
       set(pose, 'armR', { rx: -2.6 * f, rz: -0.6 * f }); set(pose, 'armL', { rx: -2.4 * f, rz: 0.7 * f });
       set(pose, 'head', { rz: 0.4 * f });

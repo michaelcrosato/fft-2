@@ -123,9 +123,18 @@ export const battles: BattleDef[] = [
       { job: 'archer', name: 'Rampart Archer', level: '+1', at: [1, 7], facing: 'E' },
       { job: 'archer', name: 'Rampart Archer', level: '+1', at: [12, 6], facing: 'W' },
       { job: 'priest', name: 'Castle Chaplain', level: '+1', at: [7, 1], facing: 'S' },
+      // Oren fights at the company's side (guest)
+      { char: 'oren', level: '+0', at: [7, 10], facing: 'N', team: 0, ai: 'support' },
     ],
     victory: { type: 'defeatAll' },
     events: [
+      {
+        when: { turn: 2 },
+        script: [
+          ['say', 'oren', 'Captain Stane! You rode behind my father at Crane\'s Ford — does that count for nothing now?'],
+          ['say', 'stane', 'It counts for everything, boy. That\'s why I\'ll not see his name dragged about by heretics.'],
+        ],
+      },
       {
         when: { hpBelow: ['stane', 35] },
         script: [
@@ -135,7 +144,7 @@ export const battles: BattleDef[] = [
     ],
     treasure: [[11, 3, 'hiPotion', 'kotetsu'], [2, 9, 'phoenixDown', 'xPotion']],
     rewards: { gil: 4200 },
-    hint: 'Archers man the west and east ramparts. Stairs at the sides of the ward lead up to them.',
+    hint: 'Oren fights beside you. Archers man the west and east ramparts; stairs at the sides of the ward lead up to them.',
   },
 
   // --------------------------------------------------------------------------

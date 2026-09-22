@@ -157,6 +157,13 @@ export function createCharacter(charId: string, partyLevel: number, rng = new Rn
   return u;
 }
 
+/** raise a unit to `lv`, growing its hidden stats with its current job */
+export function setLevel(u: RosterUnit, lv: number) {
+  const target = Math.max(1, Math.min(99, lv));
+  if (target > u.level) levelRawTo(u.raw, u.level, target, getJob(u.job).growth);
+  u.level = target;
+}
+
 export function unitJobLevel(u: RosterUnit, jobId: string) {
   let lv = jobLevel(u.totalJp[jobId] ?? 0);
   // the hero's unique squire job counts as Squire for the job tree

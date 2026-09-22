@@ -317,6 +317,12 @@ async function worldLoop(game: Game): Promise<'title' | 'continue'> {
   // welcome: if the current story step is here, offer it immediately
   const stepHere = STORY[s.storyIndex];
   if (stepHere?.at === s.location) { busy = false; goTo(s.location); }
+  else if ((window as any).__autoPlay && stepHere?.at) {
+    if (!s.unlocked.includes(stepHere.at)) { console.warn('[autoplay] story node locked: ' + stepHere.at + ' (step ' + stepHere.id + ')'); s.unlocked.push(stepHere.at); world.setMarkerStates(markerStates(game)); }
+    const r = route(s.location, stepHere.at, new Set(s.unlocked));
+    if (!r) { console.warn('[autoplay] no route to ' + stepHere.at + ' — teleporting'); s.location = stepHere.at; world.placeParty(s.location); }
+    goTo(stepHere.at);
+  }
   while (!result) await sleep(100);
   for (const f of cleanupFns) f();
   hud.remove();
@@ -377,7 +383,10 @@ async function nodeMenu(game: Game, world: WorldView, nodeId: string): Promise<'
     const info = h('div.panel', { style: { left: '50%', top: '12px', transform: 'translateX(-50%)', maxWidth: 'min(640px, 90vw)', textAlign: 'center', padding: '6px 16px' } }, h('h2', null, node.name), h('div.muted', null, node.desc));
     uiRoot().appendChild(info);
     if (node.kind === 'town' || node.kind === 'castle') audio.playMusic('town', { fade: 1.2 });
-    const pick = await menu({ items, x: 14, y: '28%', title: node.region, cancelable: true }).promise;
+    const auto = (window as any).__autoPlay && stepHere?.at === nodeId;
+    const m = menu({ items, x: 14, y: '28%', title: node.region, cancelable: true });
+    if (auto) m.close();
+    const pick = auto ? 'story' : await m.promise;
     info.remove();
     if (pick === null || pick === 'leave') { audio.playMusic('worldmap', { fade: 1.2 }); return 'stay'; }
     if (pick === 'story' && stepHere) {

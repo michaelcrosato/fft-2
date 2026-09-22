@@ -33,6 +33,24 @@ export interface SynthCore {
   noise: AudioBuffer;
   waves: Record<string, PeriodicWave>;
   plucks: Map<string, AudioBuffer>;
+  /** shared chorus LFOs (created on first use, run forever) */
+  lfos?: OscillatorNode[];
+  lfoTurn?: number;
+}
+
+/** free-running LFO bank shared by every ensemble insert */
+function sharedLfos(core: SynthCore): OscillatorNode[] {
+  if (!core.lfos) {
+    const t = core.ctx.currentTime;
+    core.lfos = [0.53, 0.79, 0.61, 0.91, 5.1, 5.8].map((r) => {
+      const o = core.ctx.createOscillator();
+      o.frequency.value = r;
+      o.start(t);
+      return o;
+    });
+    core.lfoTurn = 0;
+  }
+  return core.lfos;
 }
 
 /** harmonic amplitudes (1st harmonic first) for PeriodicWave timbres */
@@ -170,12 +188,16 @@ export function percEnv(p: AudioParam, t: number, peak: number, tau: number, atk
   const pk = Math.max(1e-5, peak);
   p.setValueAtTime(0, t);
   p.linearRampToValueAtTime(pk, t + atk);
-  return release(p, pk, t + atk, tau * 6.9);
+  // ~-50 dB after 5.8 time-constants, then silence
+  p.exponentialRampToValueAtTime(Math.max(1e-6, pk * 0.003), t + atk + tau * 5.8);
+  p.setValueAtTime(0, t + atk + tau * 5.8 + 0.001);
+  return t + atk + tau * 5.8 + 0.01;
 }
 
 /** per-note vibrato (delayed onset) on the given detune params */
 export function vibrato(ctx: BaseAudioContext, t: number, end: number, rate: number, cents: number, delay: number, targets: AudioParam[]): void {
-  if (cents <= 0 || !targets.length) return;
+  // short notes never reach the vibrato: don't pay for an LFO
+  if (cents <= 0 || !targets.length || end - t < delay + 0.45) return;
   const lfo = ctx.createOscillator();
   lfo.frequency.value = rate;
   const g = ctx.createGain();
@@ -236,26 +258,24 @@ export function ensembleInsert(core: SynthCore, mix: number, tone?: Tone, preInp
   const pre = toneChain(ctx, tone, source);
   const dry = mkGain(ctx, 1 - mix * 0.45);
   pre.connect(dry).connect(output);
-  const lfos: OscillatorNode[] = [];
+  const lfos = sharedLfos(core);
+  const turn = (core.lfoTurn = ((core.lfoTurn ?? 0) + 1) % 2);
+  const links: Array<[OscillatorNode, GainNode]> = [];
   const lines: Array<[number, number, number, number, number, number]> = [
-    // base delay, slow rate, slow depth, fast rate, fast depth, pan
-    [0.0115, 0.53 + rnd(0.08), 0.0012, 5.1 + rnd(0.3), 0.00011, -0.75],
-    [0.0165, 0.79 + rnd(0.08), 0.0014, 5.8 + rnd(0.3), 0.0001, 0.75],
+    // base delay, slow lfo, slow depth, fast lfo, fast depth, pan
+    [0.0115, turn * 2, 0.0012, 4, 0.00011, -0.75],
+    [0.0165, turn * 2 + 1, 0.0014, 5, 0.0001, 0.75],
   ];
-  const now = ctx.currentTime;
-  for (const [base, r1, d1, r2, d2, pan] of lines) {
+  for (const [base, s1, d1, f1, d2, pan] of lines) {
     const dl = ctx.createDelay(0.05);
     dl.delayTime.value = base;
-    for (const [rate, depth] of [
-      [r1, d1],
-      [r2, d2],
+    for (const [li, depth] of [
+      [s1, d1 * (0.85 + Math.random() * 0.3)],
+      [f1, d2],
     ]) {
-      const l = ctx.createOscillator();
-      l.frequency.value = rate;
       const lg = mkGain(ctx, depth);
-      l.connect(lg).connect(dl.delayTime);
-      l.start(now);
-      lfos.push(l);
+      lfos[li].connect(lg).connect(dl.delayTime);
+      links.push([lfos[li], lg]);
     }
     const wg = mkGain(ctx, mix * 0.62);
     pre.connect(dl).connect(wg).connect(makePanner(ctx, pan)).connect(output);
@@ -264,11 +284,11 @@ export function ensembleInsert(core: SynthCore, mix: number, tone?: Tone, preInp
     input,
     output,
     dispose: () => {
-      for (const l of lfos) {
+      for (const [l, g] of links) {
         try {
-          l.stop();
+          l.disconnect(g);
         } catch {
-          /* already stopped */
+          /* older engines: leave connected */
         }
       }
     },
@@ -639,10 +659,8 @@ const organNote: NoteFn = (core, dest, t, m, dur, vel) => {
   const end = t + Math.max(dur, 0.06) + rel * 1.4 + 0.03;
   const g = mkGain(ctx, 0);
   const lp = mkFilter(ctx, 'lowpass', Math.min(9000, 2600 + f * 3), 0.5);
-  mkOsc(ctx, core.waves.organ, f, t, end, rnd(1)).connect(lp);
-  const o2 = mkOsc(ctx, core.waves.organ, f * 2, t, end, 3 + rnd(1));
-  o2.connect(mkGain(ctx, 0.22)).connect(lp);
-  if (m < 62) mkOsc(ctx, core.waves.organSub, f / 2, t, end).connect(mkGain(ctx, 0.55)).connect(lp);
+  mkOsc(ctx, core.waves.organ, f, t, end, rnd(1.5)).connect(lp);
+  if (m < 55) mkOsc(ctx, core.waves.organSub, f / 2, t, end).connect(mkGain(ctx, 0.55)).connect(lp);
   // pipe "chiff"
   const nz = mkNoise(core, t, t + 0.15);
   const cg = mkGain(ctx, 0);
@@ -708,37 +726,37 @@ function partials(list: Array<[number, number, number]>, amp: number, strike = 0
 const timpaniNote: NoteFn = (core, dest, t, m, _dur, vel) => {
   const ctx = core.ctx;
   const f = mtof(m);
-  const a = 0.32 * velAmp(vel);
+  const a = 0.42 * velAmp(vel);
   const out = mkGain(ctx, 1);
-  const tau = 0.38 + 0.25 * Math.min(1, vel);
-  const end = t + tau * 6.9 + 0.01;
+  const tau = 0.26 + 0.2 * Math.min(1, vel);
+  const end = t + tau * 5.8 + 0.02;
   const o1 = mkOsc(ctx, 'sine', f, t, end);
   o1.frequency.setValueAtTime(f * 1.035, t);
   o1.frequency.exponentialRampToValueAtTime(f, t + 0.12);
   const g1 = mkGain(ctx, 0);
   percEnv(g1.gain, t, a, tau, 0.004);
   o1.connect(g1).connect(out);
-  const o2 = mkOsc(ctx, 'sine', f * 1.505, t, t + tau * 4);
+  const o2 = mkOsc(ctx, 'sine', f * 1.505, t, t + tau * 3.3);
   const g2 = mkGain(ctx, 0);
   percEnv(g2.gain, t, a * 0.33, tau * 0.55, 0.004);
   o2.connect(g2).connect(out);
-  const nz = mkNoise(core, t, t + 0.6);
+  // mallet: one noise burst through a broad band-pass (skin + thud)
+  const nz = mkNoise(core, t, t + 0.4);
   const ng = mkGain(ctx, 0);
-  nz.connect(mkFilter(ctx, 'bandpass', f * 3.5, 0.9)).connect(ng).connect(out);
-  percEnv(ng.gain, t, a * 0.55, 0.025);
-  const ng2 = mkGain(ctx, 0);
-  nz.connect(mkFilter(ctx, 'lowpass', 220, 0.7)).connect(ng2).connect(out);
-  percEnv(ng2.gain, t, a * 0.7, 0.08);
+  nz.connect(mkFilter(ctx, 'bandpass', f * 2.2, 0.5)).connect(ng).connect(out);
+  percEnv(ng.gain, t, a * 0.8, 0.04);
   out.connect(dest);
   return end;
 };
 
 /** envelope value at the end of a roll */
-function rollEnd(kind: number, peak: number): number {
+function rollEnd(kind: number, pk: number): number {
+  const peak = Math.max(1e-4, pk);
   return kind === 2 ? peak : kind === 3 ? peak * 0.14 : peak * 0.62;
 }
 
-function rollEnvelope(p: AudioParam, t: number, dur: number, kind: number, peak: number): void {
+function rollEnvelope(p: AudioParam, t: number, dur: number, kind: number, pk: number): void {
+  const peak = Math.max(1e-4, pk);
   const lo = peak * 0.14;
   p.setValueAtTime(0, t);
   if (kind === 2) {
@@ -784,7 +802,7 @@ const snareNote: NoteFn = (core, dest, t, _m, _dur, vel) => {
   const a = 0.44 * velAmp(vel);
   const out = mkGain(ctx, 1);
   const tau = 0.05 + 0.035 * Math.min(1, vel);
-  const nz = mkNoise(core, t, t + tau * 7);
+  const nz = mkNoise(core, t, t + tau * 5.9);
   const ng = mkGain(ctx, 0);
   nz.connect(mkFilter(ctx, 'bandpass', 3800, 0.55)).connect(ng).connect(out);
   percEnv(ng.gain, t, a, tau);
@@ -795,7 +813,7 @@ const snareNote: NoteFn = (core, dest, t, _m, _dur, vel) => {
   percEnv(bg.gain, t, a * 0.9, 0.032);
   b.connect(bg).connect(out);
   out.connect(dest);
-  return t + tau * 7 + 0.01;
+  return t + tau * 5.9 + 0.01;
 };
 
 const snareRoll: RollFn = (core, dest, t, _m, dur, vel, kind) => {
@@ -816,14 +834,14 @@ const bassDrumNote: NoteFn = (core, dest, t, _m, _dur, vel) => {
   const ctx = core.ctx;
   const a = 0.8 * velAmp(vel);
   const out = mkGain(ctx, 1);
-  const end = t + 2.2;
+  const end = t + 1.6;
   const o = mkOsc(ctx, 'sine', 62, t, end);
   o.frequency.setValueAtTime(64, t);
   o.frequency.exponentialRampToValueAtTime(41, t + 0.35);
   const og = mkGain(ctx, 0);
-  percEnv(og.gain, t, a, 0.32, 0.006);
+  percEnv(og.gain, t, a, 0.26, 0.006);
   o.connect(og).connect(out);
-  const nz = mkNoise(core, t, t + 1.2);
+  const nz = mkNoise(core, t, t + 1.0);
   const ng = mkGain(ctx, 0);
   nz.connect(mkFilter(ctx, 'lowpass', 140, 0.8)).connect(ng).connect(out);
   percEnv(ng.gain, t, a * 1.2, 0.16, 0.004);
@@ -935,6 +953,21 @@ const windPadNote: NoteFn = (core, dest, t, m, dur, vel) => {
   return adsr(g.gain, t, dur, 1.1, 0.5, 0.9, 1.6, 0.45 * velAmp(vel));
 };
 
+// ---- bowed tremolo: one sustained note through an amplitude LFO -------------
+
+function bowedRoll(p: BowedP): RollFn {
+  const sustained = bowed({ ...p, atk: Math.max(p.atk, 0.04), dec: 0.2, sus: 0.9 });
+  return (core, dest, t, m, dur, vel, kind) => {
+    const ctx = core.ctx;
+    const env = mkGain(ctx, 0);
+    rollEnvelope(env.gain, t, dur, kind, 1);
+    const envEnd = release(env.gain, rollEnd(kind, 1), t + dur, 0.15);
+    const am = rollAM(ctx, t, envEnd, 11.5 + rnd(1.5), 0.45);
+    am.connect(env).connect(dest);
+    return Math.max(envEnd, sustained(core, am, t, m, dur, vel * 1.15));
+  };
+}
+
 // ---- generic roll (tremolo) -------------------------------------------------
 
 function genericRoll(inst: Instrument): RollFn {
@@ -958,6 +991,13 @@ export function playRoll(inst: Instrument, core: SynthCore, dest: AudioNode, t: 
 
 // ---- instrument table ------------------------------------------------------
 
+const P_STRINGS: BowedP = { voices: 2, spread: 8, atk: 0.3, rel: 0.6, bright: 1.1, base: 450, amp: 0.24, vib: 0, vibDelay: 0 };
+const P_VIOLIN: BowedP = { voices: 3, spread: 9, atk: 0.09, rel: 0.32, bright: 1.35, base: 800, amp: 0.19, vib: 13, vibDelay: 0.22 };
+const P_CELLI: BowedP = { voices: 2, spread: 9, atk: 0.11, rel: 0.36, bright: 1.25, base: 380, amp: 0.26, vib: 11, vibDelay: 0.22 };
+const P_SPICC: BowedP = { voices: 2, spread: 8, atk: 0.012, rel: 0.1, bright: 1.6, base: 700, amp: 0.34, vib: 0, vibDelay: 0, dec: 0.13, sus: 0.35 };
+const P_CONTRABASS: BowedP = { voices: 2, spread: 7, atk: 0.07, rel: 0.3, bright: 1.3, base: 200, amp: 0.24, vib: 6, vibDelay: 0.3 };
+const P_FIDDLE: BowedP = { voices: 2, spread: 6, atk: 0.03, rel: 0.14, bright: 1.7, base: 900, amp: 0.123, vib: 14, vibDelay: 0.14, q: 0.9 };
+
 const STR_TONE: Tone = { hp: 55, peaks: [[320, -2, 1]], shelf: [6500, -4] };
 const BRASS_TONE: Tone = { hp: 45, shelf: [5500, -3] };
 
@@ -969,38 +1009,44 @@ const BPIZZ: PluckSpec = { key: 'bpizz', decay: 1.3, bright: 0.22, pos: 0.25, le
 export const INSTRUMENTS: Record<string, Instrument> = {
   // --- strings
   strings: {
-    note: bowed({ voices: 2, spread: 8, atk: 0.3, rel: 0.6, bright: 1.1, base: 450, amp: 0.24, vib: 0, vibDelay: 0 }),
+    note: bowed(P_STRINGS),
+    roll: bowedRoll(P_STRINGS),
     insert: (c) => ensembleInsert(c, 0.6, STR_TONE),
     rev: 0.4,
     rollRate: 12,
   },
   violin: {
-    note: bowed({ voices: 3, spread: 9, atk: 0.09, rel: 0.32, bright: 1.35, base: 800, amp: 0.19, vib: 13, vibDelay: 0.22 }),
+    note: bowed(P_VIOLIN),
+    roll: bowedRoll(P_VIOLIN),
     insert: (c) => ensembleInsert(c, 0.4, STR_TONE),
     rev: 0.38,
     rollRate: 13,
   },
   celli: {
-    note: bowed({ voices: 2, spread: 9, atk: 0.11, rel: 0.36, bright: 1.25, base: 380, amp: 0.26, vib: 11, vibDelay: 0.22 }),
+    note: bowed(P_CELLI),
+    roll: bowedRoll(P_CELLI),
     insert: (c) => ensembleInsert(c, 0.45, STR_TONE),
     rev: 0.36,
     rollRate: 12,
   },
   spicc: {
-    note: bowed({ voices: 2, spread: 8, atk: 0.012, rel: 0.1, bright: 1.6, base: 700, amp: 0.34, vib: 0, vibDelay: 0, dec: 0.13, sus: 0.35 }),
+    note: bowed(P_SPICC),
+    roll: bowedRoll(P_SPICC),
     insert: (c) => ensembleInsert(c, 0.45, STR_TONE),
     rev: 0.3,
     rollRate: 14,
     human: 0.004,
   },
   contrabass: {
-    note: bowed({ voices: 2, spread: 7, atk: 0.07, rel: 0.3, bright: 1.3, base: 200, amp: 0.24, vib: 6, vibDelay: 0.3 }),
+    note: bowed(P_CONTRABASS),
+    roll: bowedRoll(P_CONTRABASS),
     insert: (c) => ensembleInsert(c, 0.25, { hp: 30, lp: 3500 }),
     rev: 0.22,
     rollRate: 11,
   },
   fiddle: {
-    note: bowed({ voices: 2, spread: 6, atk: 0.03, rel: 0.14, bright: 1.7, base: 900, amp: 0.123, vib: 14, vibDelay: 0.14, q: 0.9 }),
+    note: bowed(P_FIDDLE),
+    roll: bowedRoll(P_FIDDLE),
     insert: (c) => eqInsert(c, { hp: 180, peaks: [[2600, 3, 1.2]], shelf: [7000, -4] }),
     rev: 0.22,
     rollRate: 14,
