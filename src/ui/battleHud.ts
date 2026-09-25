@@ -11,6 +11,7 @@ import { portrait, portraitCached } from '../gfx/portraits';
 import { buildHumanoid } from '../gfx/models/humanoid';
 import type { UnitModel } from '../gfx/models/rig';
 import { ABILITIES } from '../data/db';
+import { input } from './input';
 
 import { getMonsterBuilder } from '../scenes/unitview';
 
@@ -34,11 +35,16 @@ export class BattleHud {
   private tile: HTMLElement | null = null;
   private help: HTMLElement | null = null;
   private prev: HTMLElement | null = null;
+  private helpSrc: string | (() => string) = '';
+  private back: HTMLElement | null = null;
+  private offDevice: () => void;
   showAT = true;
 
   constructor() {
     this.root = h('div.passthru', { style: { position: 'absolute', inset: '0' } });
     uiRoot().appendChild(this.root);
+    // swap keyboard ↔ gamepad hints when the player changes device mid-prompt
+    this.offDevice = input.onDevice(() => { if (typeof this.helpSrc === 'function') this.helpText(this.helpSrc); });
   }
 
   card(u: BattleUnit | null, which: 'a' | 'b', b?: Battle) {
@@ -110,11 +116,22 @@ export class BattleHud {
     this.root.appendChild(this.tile);
   }
 
-  helpText(html: string) {
+  /** help bar; pass a function to have it re-rendered when the input device changes */
+  helpText(src: string | (() => string)) {
+    this.helpSrc = src;
     this.help?.remove();
+    const html = typeof src === 'function' ? src() : src;
     if (!html) { this.help = null; return; }
     this.help = h('div.helpbar', { html });
     this.root.appendChild(this.help);
+  }
+
+  /** on-screen Back while picking a tile or surveying (mouse and touch players have no Esc key) */
+  backButton(on: boolean, label = 'Back') {
+    this.back?.remove(); this.back = null;
+    if (!on) return;
+    this.back = backBtn(label);
+    this.root.appendChild(this.back);
   }
 
   preview(b: Battle, caster: BattleUnit, abilityId: string, prevs: TargetPreview[]) {
@@ -132,7 +149,7 @@ export class BattleHud {
       );
     });
     const ct = a ? b.chargeTicks(caster, a) : 0;
-    this.prev = h('div.panel.preview', { style: { position: 'absolute', right: '14px', bottom: '150px' } },
+    this.prev = h('div.panel.preview', null,
       h('div.title-plate', null, a?.name ?? 'Action'),
       ct > 0 ? h('div.muted', null, `Charge: ${ct} ticks`) : null,
       ...lines,
@@ -141,5 +158,12 @@ export class BattleHud {
   }
   clearPreview() { this.prev?.remove(); this.prev = null; }
 
-  dispose() { this.root.remove(); }
+  dispose() { this.offDevice(); this.root.remove(); }
+}
+
+/** a Back button that sends the same 'cancel' as Esc / gamepad B to whatever is listening */
+export function backBtn(label = 'Back'): HTMLElement {
+  const b = h('button.btn.hudback', { type: 'button' }, '‹ ' + label);
+  b.addEventListener('click', (e) => { e.stopPropagation(); input.dispatch('cancel'); });
+  return b;
 }

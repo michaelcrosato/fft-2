@@ -15,6 +15,7 @@ import { BonePart, G, snapshotRest, tone, type UnitModel, type BoneName } from '
 import { propMaterial } from '../materials';
 import { mat } from '../geo';
 import type { BufferGeometry, Group, Mesh, Object3D, Vector3 } from 'three/webgpu';
+import { releaseTree } from '../dispose';
 
 type V3 = [number, number, number];
 type Part = BonePart;
@@ -371,7 +372,7 @@ class Kit {
     const root = this.root;
     const model: UnitModel = {
       root, bones: this.bones, rest: new Map(), height, kind: 'monster', meshes,
-      dispose() { root.traverse((o: any) => { if (o.geometry) o.geometry.dispose(); }); },
+      dispose() { releaseTree(root); },
     };
     if (this.hover) (model as any).hover = true;
     snapshotRest(model);

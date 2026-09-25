@@ -6,6 +6,7 @@ import { BonePart, G, snapshotRest, tone, type UnitModel, type BoneName } from '
 import { propMaterial } from '../materials';
 import type { Object3D, Mesh } from 'three/webgpu';
 import { buildWeapon, buildShield } from './weapons';
+import { releaseTree } from '../dispose';
 
 export interface HumanoidSpec {
   job: JobLook;
@@ -253,7 +254,7 @@ export function buildHumanoid(spec: HumanoidSpec): UnitModel {
   const model: UnitModel = {
     root, bones, rest: new Map(), height: 1.0 * height, kind: 'humanoid', meshes,
     weaponSocket, shieldSocket,
-    dispose() { root.traverse((o: any) => { if (o.geometry) o.geometry.dispose(); }); },
+    dispose() { releaseTree(root); },
   };
   snapshotRest(model);
   return model;

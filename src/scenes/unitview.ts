@@ -9,6 +9,7 @@ import type { TerrainView } from '../gfx/terrain';
 import { HS } from '../gfx/terrain';
 import type { Group, Mesh, Object3D, Vector3 } from 'three/webgpu';
 import { audio } from '../audio/audio';
+import { releaseTree } from '../gfx/dispose';
 
 let buildMonsterFn: ((look: any, opts?: any) => UnitModel) | null = null;
 // optional module (glob returns {} when the file doesn't exist)
@@ -310,5 +311,9 @@ export class UnitView {
     });
   }
 
-  dispose() { this.model.dispose(); }
+  dispose() {
+    for (const m of this.tintMats.values()) m.dispose();
+    this.tintMats.clear();
+    releaseTree(this.root); // model, weapons, team ring, blob shadow, badge, crystal
+  }
 }

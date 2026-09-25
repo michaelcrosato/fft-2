@@ -1,6 +1,6 @@
 // Title → new game / continue → story & world map loop.
 import type { Game } from './game';
-import { newGame, saveGame, loadGame, listSaves, latestSave, partyLevel, addItem, loadOptions, type GameState } from './state';
+import { newGame, saveGame, loadGame, listSaves, latestSave, partyLevel, addItem, loadOptions, saveOptions, type GameState } from './state';
 import { NODES, EDGES, STORY, ERRANDS, JOBS, CHARACTERS, BATTLES, ITEMS } from '../data/db';
 import type { BattleDef, UnitSpawn, WorldNode } from '../data/types';
 import { WorldView } from '../scenes/worldmap';
@@ -35,10 +35,11 @@ export async function runTitle(game: Game) {
   game.setScreen({ update: (dt) => { spin += dt * 0.03; world.camYaw = 0.35 + spin; world.update(dt); }, render: () => world.render(), resize: (w, hh) => world.resize(w, hh), dispose: () => world.dispose() });
   audio.playMusic('title', { fade: 2 });
   const logo = h('div', { style: { position: 'absolute', left: '50%', top: '14%', transform: 'translateX(-50%)', textAlign: 'center', pointerEvents: 'none', textShadow: '0 3px 12px #000, 0 0 30px rgba(0,0,0,.6)' } },
-    h('div', { style: { fontFamily: 'Cinzel, serif', fontWeight: '700', fontSize: 'min(8vw, 64px)', letterSpacing: '0.12em', color: '#f4dc98' } }, 'FINAL FEALTY'),
-    h('div', { style: { fontFamily: 'Cinzel, serif', fontWeight: '500', fontSize: 'min(4vw, 28px)', letterSpacing: '0.6em', color: '#efe3c6', marginTop: '-4px' } }, 'TACTICS'),
-    h('div', { style: { width: '360px', maxWidth: '70vw', height: '2px', margin: '14px auto', background: 'linear-gradient(90deg, transparent, #c9a24a, transparent)' } }),
-    h('div', { style: { fontFamily: 'EB Garamond, serif', fontStyle: 'italic', fontSize: 'min(4vw, 20px)', color: '#e8d8b0' } }, 'The Chronicle of the Twelve Braves'),
+    // sizes also capped by height so the logo stays clear of the menu on landscape phones
+    h('div', { style: { fontFamily: 'Cinzel, serif', fontWeight: '700', fontSize: 'min(8vw, 64px, 12vh)', letterSpacing: '0.12em', color: '#f4dc98', whiteSpace: 'nowrap' } }, 'FINAL FEALTY'),
+    h('div', { style: { fontFamily: 'Cinzel, serif', fontWeight: '500', fontSize: 'min(4vw, 28px, 6vh)', letterSpacing: '0.6em', color: '#efe3c6', marginTop: '-4px', whiteSpace: 'nowrap' } }, 'TACTICS'),
+    h('div', { style: { width: '360px', maxWidth: '70vw', height: '2px', margin: 'min(14px, 2vh) auto', background: 'linear-gradient(90deg, transparent, #c9a24a, transparent)' } }),
+    h('div', { style: { fontFamily: 'EB Garamond, serif', fontStyle: 'italic', fontSize: 'min(4vw, 20px, 4.5vh)', color: '#e8d8b0', whiteSpace: 'nowrap' } }, 'The Chronicle of the Twelve Braves'),
   );
   uiRoot().appendChild(logo);
   const footer = h('div', { style: { position: 'absolute', bottom: '10px', width: '100%', textAlign: 'center', color: 'rgba(240,225,190,.6)', fontSize: '12px', pointerEvents: 'none' } }, 'A fan-made spiritual successor · three.js WebGPU · all names, words and music original');
@@ -86,24 +87,23 @@ async function newGameSetup(): Promise<GameState | null> {
   panel.appendChild(h('div.muted', { style: { fontSize: '0.85em' } }, 'Your sign shapes your compatibility with friend and foe alike.'));
   const gentle = h('input', { type: 'checkbox' }) as HTMLInputElement;
   panel.appendChild(h('label', { style: { display: 'block', margin: '10px 0', fontSize: '0.95em' } }, gentle, ' Gentle mode — fallen allies retreat instead of turning to crystal'));
-  const ok = h('span.btn', null, 'Begin the Tale');
-  const back = h('span.btn.ghost', { style: { marginLeft: '10px' } }, 'Back');
+  // real buttons, so Tab reaches them from the name field
+  const ok = h('button.btn', { type: 'button' }, 'Begin the Tale');
+  const back = h('button.btn.ghost', { type: 'button', style: { marginLeft: '10px' } }, 'Back');
   panel.appendChild(h('div', { style: { marginTop: '10px' } }, ok, back));
   uiRoot().appendChild(panel);
   inp.focus();
   const r = await new Promise<boolean>((resolve) => {
-    ok.onclick = () => resolve(true);
-    back.onclick = () => resolve(false);
-    const pop = input.push((a, e) => { if (e && (e.target as HTMLElement)?.tagName === 'INPUT' && a !== 'confirm') return false; if (a === 'confirm') resolve(true); if (a === 'cancel') resolve(false); return true; });
-    ok.addEventListener('click', () => pop()); back.addEventListener('click', () => pop());
     const done = (v: boolean) => { pop(); resolve(v); };
-    void done;
+    ok.onclick = () => done(true);
+    back.onclick = () => done(false);
+    // (while the name field has focus, the input layer only forwards Enter/Escape)
+    const pop = input.push((a) => { if (a === 'confirm') done(true); if (a === 'cancel') done(false); return true; });
   });
   panel.remove();
   if (!r) return null;
   audio.sfx('confirm');
   const s = newGame(inp.value.trim() || 'Rhen', [+monthSel.value, +daySel.value]);
-  const { loadOptions, saveOptions } = await import('./state');
   const o = loadOptions(); o.gentle = gentle.checked; saveOptions(o);
   return s;
 }
@@ -112,12 +112,13 @@ async function newGameSetup(): Promise<GameState | null> {
 //  Main loop: story chain + world map
 // ============================================================================
 export async function mainLoop(game: Game) {
-  game.options = (await import('./state')).loadOptions();
+  game.options = loadOptions(); // New Game may have changed Gentle mode
   for (;;) {
     // run steps that trigger immediately (no location, chained)
     const ok = await runImmediate(game);
     if (!ok) { await returnToTitle(game); return; }
-    if (!STORY[game.state.storyIndex] && game.state.flags.game_complete) {
+    if (!STORY[game.state.storyIndex] && game.state.flags.game_complete && !game.state.flags.credits_seen) {
+      // once: afterwards a finished chronicle carries on at the world map (side content, the Deep)
       await credits(game);
       await returnToTitle(game);
       return;
@@ -203,8 +204,17 @@ async function worldLoop(game: Game): Promise<'title' | 'continue'> {
   world.placeParty(s.location);
   world.setMarkerStates(markerStates(game));
   game.disposeStage();
-  game.setScreen({ update: (dt) => world.update(dt), render: () => world.render(), resize: (w, hh) => world.resize(w, hh), dispose: () => world.dispose() });
-  audio.playMusic(s.chapter >= 3 ? 'worldmap' : 'worldmap', { fade: 1.5 });
+  const padCamera = (dt: number) => {
+    // gamepad: right stick turns the map, triggers zoom (discrete LB/RB turns come as actions)
+    const p = input.pad;
+    if (!p.connected) return;
+    world.camYaw += p.rx * dt * 1.6;
+    const z = p.rt - p.lt;
+    if (z) world.camDist = Math.max(14, Math.min(70, world.camDist * Math.exp(-z * dt * 1.5)));
+  };
+  input.analogCamera = true;
+  game.setScreen({ update: (dt) => { padCamera(dt); world.update(dt); }, render: () => world.render(), resize: (w, hh) => world.resize(w, hh), dispose: () => { input.analogCamera = false; world.dispose(); } });
+  audio.playMusic('worldmap', { fade: 1.5 });
   const hud = h('div.passthru', { style: { position: 'absolute', inset: '0' } });
   uiRoot().appendChild(hud);
   worldHud = hud;
@@ -229,6 +239,7 @@ async function worldLoop(game: Game): Promise<'title' | 'continue'> {
     label.textContent = NODES.get(id)?.name ?? id;
   };
   let busy = false;
+  let sel = s.location;
   let result: 'title' | 'continue' | null = null;
   const cleanupFns: Array<() => void> = [];
   const goTo = async (target: string) => {
@@ -240,6 +251,7 @@ async function worldLoop(game: Game): Promise<'title' | 'continue'> {
       if (target !== s.location) {
         const r = route(s.location, target, unlocked);
         if (!r) { toast('No known road leads there.'); return; }
+        sel = target; // keyboard selection follows mouse/tap travel
         await world.travel(r, async (nodeId) => {
           s.location = nodeId;
           advanceDay(game, 1);
@@ -283,11 +295,14 @@ async function worldLoop(game: Game): Promise<'title' | 'continue'> {
     const id = world.pickNode(e.clientX, e.clientY);
     if (id) goTo(id);
   };
-  const onWheel = (e: WheelEvent) => { world.camDist = Math.max(14, Math.min(70, world.camDist * (e.deltaY > 0 ? 1.1 : 0.9))); };
-  el.addEventListener('pointermove', onMove); el.addEventListener('pointerdown', onDown); el.addEventListener('pointerup', onUp); el.addEventListener('wheel', onWheel, { passive: true });
+  const onWheel = (e: WheelEvent) => {
+    e.preventDefault(); // ctrl+wheel (trackpad pinch) would zoom the page
+    const px = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1);
+    world.camDist = Math.max(14, Math.min(70, world.camDist * Math.exp(Math.max(-0.4, Math.min(0.4, px * (e.ctrlKey ? 0.01 : 0.0015))))));
+  };
+  el.addEventListener('pointermove', onMove); el.addEventListener('pointerdown', onDown); el.addEventListener('pointerup', onUp); el.addEventListener('wheel', onWheel, { passive: false });
   cleanupFns.push(() => { el.removeEventListener('pointermove', onMove); el.removeEventListener('pointerdown', onDown); el.removeEventListener('pointerup', onUp); el.removeEventListener('wheel', onWheel); });
   // keyboard: cycle through neighbour nodes, confirm to travel, menu key for party menu
-  let sel = s.location;
   const pop = input.push((a) => {
     if (busy) return true;
     const unlocked = new Set(s.unlocked);
@@ -333,7 +348,7 @@ async function worldLoop(game: Game): Promise<'title' | 'continue'> {
       if (pick === 'save') await openSaveLoad(game, 'save');
       if (pick === 'load') { const st = await openSaveLoad(game, 'load'); if (st) { game.state = st; result = 'continue'; } }
       if (pick === 'options') await openOptions(game);
-      if (pick === 'title' && await confirm('Return to the title screen? Unsaved progress will be lost.')) result = 'title';
+      if (pick === 'title' && await confirm('Return to the title screen? Unsaved progress will be lost.', 'Return to title', 'Stay', true)) result = 'title';
       refreshTop();
     } finally { busy = false; }
   };
@@ -424,8 +439,8 @@ async function nodeMenu(game: Game, world: WorldView, nodeId: string): Promise<'
     if (pick === 'story' && stepHere) {
       return hudHidden(async () => {
         const ok = await game.runStep(stepHere);
+        if (!ok) return 'title'; // never autosave the aftermath of a defeat
         game.autosave();
-        if (!ok) return 'title';
         // continue chained / location-less steps
         if (!(await runImmediate(game))) return 'title';
         return 'rebuild';
@@ -501,10 +516,16 @@ async function credits(game: Game) {
   ];
   const el = h('div.narration', null, h('div', { style: { whiteSpace: 'pre-line', fontStyle: 'normal', fontFamily: 'Cinzel, serif', lineHeight: '2' } }, lines.join('\n')));
   uiRoot().appendChild(el);
-  await new Promise<void>((resolve) => { const pop = input.push((a) => { if (a === 'confirm' || a === 'cancel') { pop(); resolve(); } return true; }); });
+  // any key, button or tap
+  await new Promise<void>((resolve) => {
+    const close = () => { pop(); el.removeEventListener('click', close); resolve(); };
+    const pop = input.push((a) => { if (a === 'confirm' || a === 'cancel') close(); return true; });
+    el.addEventListener('click', close);
+  });
   el.remove();
-  await titleCard('Fin', 'Your chronicle has been saved.');
-  saveGame(game.state, 0);
+  game.state.flags.credits_seen = true;
+  // the autosave slot, never one of the player's own slots
+  await titleCard('Fin', saveGame(game.state, 7) ? 'Your chronicle has been saved.' : 'The chronicle ends.');
 }
 
 export { say, CHARACTERS };

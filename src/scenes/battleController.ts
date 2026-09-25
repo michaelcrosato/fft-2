@@ -19,6 +19,7 @@ import type { ClipName } from '../gfx/models/anim';
 import { THREE } from '../gfx/three';
 import { h, uiRoot } from '../ui/dom';
 import { loadOptions } from '../game/state';
+import { CameraControls } from '../ui/cameraControls';
 
 const ANIM_MAP: Partial<Record<AnimKind, ClipName>> = {
   swing: 'swing', thrust: 'thrust', shoot: 'bow', bow: 'bow', gun: 'gun', cast: 'cast', pray: 'pray', punch: 'punch', kick: 'kick',
@@ -48,12 +49,14 @@ export class BattleController {
   private speed = 1;
   private autoAll = false;
   private goalShown = false;
+  private camUi: CameraControls;
 
   constructor(stage: Stage, b: Battle, hooks: ControllerHooks) {
     this.stage = stage;
     this.b = b;
     this.hooks = hooks;
     this.hud = new BattleHud();
+    this.camUi = new CameraControls(stage);
     this.speed = loadOptions().battleSpeed;
     if ((window as any).__autoPlay) this.speed = 8;
   }
@@ -63,6 +66,21 @@ export class BattleController {
 
   // ================================================================ main loop
   async run(): Promise<'victory' | 'defeat'> {
+    // bottom of the input stack for the whole battle: the camera stays under the player's
+    // control during enemy turns and animations (arrows / d-pad pan when no menu is open)
+    const popBase = input.push((a) => {
+      if (this.globalKeys(a)) return true;
+      const step = 1.5;
+      if (a === 'up') this.stage.cam.pan(0, step);
+      else if (a === 'down') this.stage.cam.pan(0, -step);
+      else if (a === 'left') this.stage.cam.pan(-step, 0);
+      else if (a === 'right') this.stage.cam.pan(step, 0);
+      return true;
+    });
+    try { return await this.runLoop(); } finally { popBase(); }
+  }
+
+  private async runLoop(): Promise<'victory' | 'defeat'> {
     this.syncAll();
     // opening events (start triggers)
     this.b.fireEvents();
@@ -83,7 +101,7 @@ export class BattleController {
         toast('The way onward reveals itself…', 3000);
       }
       const forcedAi = unit.has('confuse') || unit.has('berserk') || unit.has('charm') || unit.has('chicken') || unit.has('vampire');
-      if (unit.controlled && unit.team === 0 && !forcedAi && !this.autoAll && !(window as any).__autoBattle) await this.playerTurn(unit);
+      if (unit.controlled && unit.team === 0 && !unit.autoAi && !forcedAi && !this.autoAll && !(window as any).__autoBattle) await this.playerTurn(unit);
       else await this.aiTurn(unit);
       this.syncAll();
     }
@@ -127,7 +145,9 @@ export class BattleController {
     for (;;) {
       if (this.b.result) return;
       this.hud.card(u, 'a', this.b);
-      this.hud.helpText('<kbd>↑↓</kbd> choose · <kbd>Enter</kbd> confirm · <kbd>Q</kbd>/<kbd>E</kbd> rotate · <kbd>Tab</kbd> turn order');
+      this.hud.helpText(() => input.lastDevice === 'pad'
+        ? `${input.hint('confirm')} confirm · ${input.hint('rotL')}${input.hint('rotR')} rotate · <kbd>RS</kbd> orbit · ${input.hint('zoomOut')}${input.hint('zoomIn')} zoom · ${input.hint('recenter')} recenter`
+        : '<kbd>↑↓</kbd> choose · <kbd>Enter</kbd> confirm · <kbd>Q</kbd>/<kbd>E</kbd> rotate · drag/wheel camera · <kbd>F</kbd> recenter');
       const items: MenuItem<string>[] = [
         { label: 'Move', value: 'move', disabled: u.moved || !u.canMove, icon: '➤' },
         { label: 'Act', value: 'act', disabled: u.acted || !u.canAct, icon: '⚔' },
@@ -135,7 +155,7 @@ export class BattleController {
         { label: 'Status', value: 'status', icon: '☰' },
         { label: 'Auto-Battle', value: 'auto', icon: '⚙' },
       ];
-      const m = menu({ items, x: 14, bottom: 'var(--menu-bottom)', title: u.name, cancelable: true, onAction: (a) => this.globalKeys(a) });
+      const m = menu({ items, x: 14, bottom: 'var(--menu-bottom)', title: u.name, cancelable: true, closeTitle: 'Survey the field', onAction: (a) => this.globalKeys(a) });
       const choice = await m.promise;
       if (choice === null) {
         // undo move if nothing else done
@@ -165,7 +185,8 @@ export class BattleController {
       if (choice === 'status') { await this.statusView(u); continue; }
       if (choice === 'auto') {
         const all = await confirm('Let this unit act on its own for the rest of the battle?', 'This unit', 'Cancel');
-        if (all) { u.controlled = false; u.ai = 'aggressive'; await this.aiTurn(u); return; }
+        // autoAi, not controlled=false: the unit stays the player's (crystallizes, keeps Brave/Faith, player colours)
+        if (all) { u.autoAi = true; u.ai = 'aggressive'; await this.aiTurn(u); return; }
         continue;
       }
     }
@@ -178,15 +199,9 @@ export class BattleController {
   }
 
   private globalKeys(a: Action): boolean {
-    switch (a) {
-      case 'rotL': this.stage.cam.rotate(-1); return true;
-      case 'rotR': this.stage.cam.rotate(1); return true;
-      case 'tilt': this.stage.cam.togglePitch(); return true;
-      case 'zoomIn': this.stage.cam.zoom(0.85); return true;
-      case 'zoomOut': this.stage.cam.zoom(1.18); return true;
-      case 'turnList': this.hud.showAT = !this.hud.showAT; this.hud.turnList(this.b); return true;
-      default: return false;
-    }
+    if (this.stage.cameraAction(a)) return true;
+    if (a === 'turnList') { this.hud.showAT = !this.hud.showAT; this.hud.turnList(this.b); return true; }
+    return false;
   }
 
   /** returns true if an action was performed */
@@ -209,7 +224,7 @@ export class BattleController {
             const stock = a.consumes ? ` ×${this.b.inventory.get(a.consumes) ?? 0}` : '';
             return { label: a.name, value: a.id, disabled: reason ?? false, right: mp ? `${mp} MP` : stock || (a.ct ? `CT ${this.b.chargeTicks(u, a)}` : ''), desc: a.desc };
           }),
-          x: 14, bottom: 'var(--menu-bottom)', title: grp.name, showDesc: true, maxHeight: '48vh', onAction: (a) => this.globalKeys(a),
+          x: 14, bottom: 'var(--menu-bottom)', title: grp.name, showDesc: true, maxHeight: 'calc(48 * var(--vh))', onAction: (a) => this.globalKeys(a),
         }).promise;
         if (pick === null) continue;
         ability = ABILITIES.get(pick) ?? null;
@@ -218,7 +233,7 @@ export class BattleController {
       const opts: ActionOpts = {};
       // sub-choices
       if (ability.special === 'throw') {
-        const list = throwables(this.b, String(ability.params?.cat ?? 'shuriken'));
+        const list = throwables(this.b, String(ability.params?.cat ?? 'shuriken'), u);
         const it = await menu({ items: list.map((id) => ({ label: ITEMS.get(id)?.name ?? id, value: id, right: `WP ${ITEMS.get(id)?.wp ?? 0} ×${this.b.inventory.get(id)}` })), x: 14, bottom: 'var(--menu-bottom)', title: 'Throw' }).promise;
         if (!it) continue;
         opts.item = it;
@@ -240,7 +255,7 @@ export class BattleController {
     const div = await menu({ items: learned('calcDiv').map((a) => ({ label: a.name, value: String(a.params?.value) })), x: 14, bottom: 'var(--menu-bottom)', title: 'Divisor' }).promise;
     if (!div) return null;
     const spells = u.roster.learned.map((id) => ABILITIES.get(id)).filter((a): a is AbilityDef => !!a && !!a.calc);
-    const sp = await menu({ items: spells.map((a) => ({ label: a.name, value: a.id, desc: a.desc })), x: 14, bottom: 'var(--menu-bottom)', title: 'Spell', showDesc: true, maxHeight: '48vh' }).promise;
+    const sp = await menu({ items: spells.map((a) => ({ label: a.name, value: a.id, desc: a.desc })), x: 14, bottom: 'var(--menu-bottom)', title: 'Spell', showDesc: true, maxHeight: 'calc(48 * var(--vh))' }).promise;
     if (!sp) return null;
     return { attr, div, spell: sp };
   }
@@ -287,7 +302,8 @@ export class BattleController {
     let cx = o.from?.x ?? o.cells[0][0], cz = o.from?.z ?? o.cells[0][1];
     if (!valid.has(cx + ',' + cz) && o.cells.length) [cx, cz] = o.cells[0];
     const el = renderer.domElement;
-    this.hud.helpText(`${o.help ?? ''} · <kbd>Enter</kbd>/click confirm · <kbd>Esc</kbd>/right-click back`);
+    this.hud.helpText(() => `${o.help ?? ''} · ${input.lastDevice === 'pad' ? `${input.hint('confirm')} confirm · ${input.hint('cancel')} back` : '<kbd>Enter</kbd>/click confirm · <kbd>Esc</kbd>/right-click back'}`);
+    this.hud.backButton(true);
     return new Promise((resolve) => {
       const update = () => {
         st.setCursor(cx, cz);
@@ -310,6 +326,7 @@ export class BattleController {
         st.clearHighlight(o.kind); st.clearHighlight('pathLine'); st.clearHighlight('aoe');
         st.hideCursor();
         this.hud.tileInfo(null);
+        this.hud.backButton(false);
         resolve(r);
       };
       const tryConfirm = () => {
@@ -332,17 +349,19 @@ export class BattleController {
       });
       let downAt: { x: number; y: number; t: number } | null = null;
       let lastTap = '';
-      const onDown = (e: PointerEvent) => { downAt = { x: e.clientX, y: e.clientY, t: performance.now() }; if (e.button === 2) { audio.sfx('cancel'); finish(null); } };
+      const onDown = (e: PointerEvent) => { downAt = { x: e.clientX, y: e.clientY, t: performance.now() }; };
       const onMove = (e: PointerEvent) => {
         if (e.pointerType === 'touch') return;
         const c = st.pickCell(e.clientX, e.clientY);
         if (c && (c[0] !== cx || c[1] !== cz)) { cx = c[0]; cz = c[1]; st.setCursor(cx, cz); this.hud.tileInfo(st.grid.cell(cx, cz) ?? null); if (valid.has(cx + ',' + cz)) o.hover?.(cx, cz); else { st.clearHighlight('aoe'); this.hud.clearPreview(); } if (o.kind === 'move' && o.from) st.highlight('path', valid.has(cx + ',' + cz) ? this.b.pathFor(o.from, cx, cz) : [], 'pathLine'); if (!o.hover) { const t = this.b.unitAt(cx, cz); this.hud.card(t && t !== o.from ? t : null, 'b', this.b); } }
       };
       const onUp = (e: PointerEvent) => {
-        if (!downAt || e.button !== 0) return;
+        if (!downAt) return;
         const moved = Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y);
         downAt = null;
         if (moved > 10) return; // drag = camera
+        if (e.button === 2) { audio.sfx('cancel'); finish(null); return; } // right-click = back (right-drag pans)
+        if (e.button !== 0) return;
         const c = st.pickCell(e.clientX, e.clientY);
         if (!c) return;
         const key = c[0] + ',' + c[1];
@@ -364,11 +383,11 @@ export class BattleController {
     // arrow tiles around the unit
     const around = FACINGS.map((d) => { const [dx, dz] = d === 'N' ? [0, -1] : d === 'S' ? [0, 1] : d === 'E' ? [1, 0] : [-1, 0]; return { d, x: u.x + dx, z: u.z + dz }; }).filter((c) => this.stage.grid.cell(c.x, c.z));
     this.stage.highlight('move', around.map((c) => [c.x, c.z] as [number, number]), 'facing');
-    this.hud.helpText('Choose facing · <kbd>←↑→↓</kbd> or click · <kbd>Enter</kbd> end turn');
+    this.hud.helpText(() => input.lastDevice === 'pad' ? `Choose facing · ${input.hint('left')} · ${input.hint('confirm')} end turn` : 'Choose facing · <kbd>←↑→↓</kbd> or click · <kbd>Enter</kbd> end turn');
     const el = renderer.domElement;
     return new Promise((resolve) => {
       const set = (d: Facing) => { f = d; v.face(d); };
-      const finish = () => { pop(); el.removeEventListener('pointerup', onUp); el.removeEventListener('pointermove', onMove); this.stage.clearHighlight('facing'); this.hud.helpText(''); audio.sfx('confirm'); resolve(f); };
+      const finish = () => { pop(); el.removeEventListener('pointerup', onUp); el.removeEventListener('pointermove', onMove); el.removeEventListener('pointerdown', onDown); this.stage.clearHighlight('facing'); this.hud.helpText(''); audio.sfx('confirm'); resolve(f); };
       const pop = input.push((a) => {
         if (this.globalKeys(a)) return true;
         if (a === 'up' || a === 'down' || a === 'left' || a === 'right') {
@@ -386,8 +405,16 @@ export class BattleController {
         if (c[0] === u.x && c[1] === u.z) return null;
         return MapGrid.faceToward(u.x, u.z, c[0], c[1], f);
       };
-      const onMove = (e: PointerEvent) => { if (e.pointerType === 'touch') return; const d = dirAt(e); if (d && d !== f) set(d); };
-      const onUp = (e: PointerEvent) => { if (e.button !== 0) return; const d = dirAt(e); if (d) { set(d); } finish(); };
+      let downAt: { x: number; y: number } | null = null;
+      const onDown = (e: PointerEvent) => { downAt = { x: e.clientX, y: e.clientY }; };
+      const onMove = (e: PointerEvent) => { if (e.pointerType === 'touch' || e.buttons) return; const d = dirAt(e); if (d && d !== f) set(d); };
+      const onUp = (e: PointerEvent) => {
+        const moved = downAt ? Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) : 0;
+        downAt = null;
+        if (e.button !== 0 || moved > 10) return; // dragging the camera is not a choice
+        const d = dirAt(e); if (d) { set(d); } finish();
+      };
+      el.addEventListener('pointerdown', onDown);
       el.addEventListener('pointerup', onUp);
       el.addEventListener('pointermove', onMove);
     });
@@ -407,13 +434,14 @@ export class BattleController {
         if (t && t.alive && t !== u) this.stage.highlight(t.team === u.team ? 'move' : 'enemyMove', this.b.moveRange(t).map((c) => [c.x, c.z] as [number, number]), 'look');
         else this.stage.clearHighlight('look');
       };
-      this.hud.helpText('Survey the field · <kbd>Esc</kbd> return');
+      this.hud.helpText(() => `Survey the field · ${input.hint('cancel')} return`);
+      this.hud.backButton(true, 'Done');
       const el = renderer.domElement;
       const onMove = (e: PointerEvent) => { const c = this.stage.pickCell(e.clientX, e.clientY); if (c && (c[0] !== cx || c[1] !== cz)) { cx = c[0]; cz = c[1]; upd(); } };
       const pop = input.push((a) => {
         if (this.globalKeys(a)) return true;
         if (a === 'up' || a === 'down' || a === 'left' || a === 'right') { const [dx, dz] = screenDir(this.stage.cam.yaw, a); if (this.stage.grid.cell(cx + dx, cz + dz)) { cx += dx; cz += dz; upd(); } return true; }
-        if (a === 'cancel' || a === 'confirm') { pop(); el.removeEventListener('pointermove', onMove); this.stage.clearHighlight(); this.stage.hideCursor(); this.hud.card(null, 'b'); this.hud.tileInfo(null); this.stage.focusTile(u.x, u.z); resolve(); return true; }
+        if (a === 'cancel' || a === 'confirm') { pop(); el.removeEventListener('pointermove', onMove); this.stage.clearHighlight(); this.stage.hideCursor(); this.hud.card(null, 'b'); this.hud.tileInfo(null); this.hud.backButton(false); this.stage.focusTile(u.x, u.z); resolve(); return true; }
         return true;
       });
       el.addEventListener('pointermove', onMove);
@@ -614,7 +642,7 @@ export class BattleController {
       tasks.push(this.showHit(v, hInfo, delay));
       delay += 90;
     }
-    if (e.hits.some((x) => x.crit)) { audio.sfx('crit'); st.cam.shake(0.18, 0.25); }
+    if (e.hits.some((x) => x.crit)) { audio.sfx('crit'); st.shake(0.18, 0.25); }
     await Promise.all(tasks);
     await this.wait(250);
   }
@@ -656,6 +684,7 @@ export class BattleController {
     for (const s of this.auras.values()) s();
     this.auras.clear();
     this.hud.dispose();
+    this.camUi.dispose();
   }
 }
 

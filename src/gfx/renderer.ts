@@ -29,9 +29,15 @@ export interface RendererInfo {
   mobile: boolean;
 }
 
-export const isMobile = () =>
-  typeof navigator !== 'undefined' &&
-  (/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && Math.min(screen.width, screen.height) < 900));
+export const isMobile = () => {
+  if (typeof navigator === 'undefined') return false;
+  if (/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)) return true;
+  // iPadOS Safari reports a Mac user agent; real Macs have no touch points
+  if (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1) return true;
+  // touch-only devices (no mouse/trackpad at all); touch laptops keep desktop quality
+  const mm = typeof matchMedia === 'function' ? matchMedia : null;
+  return !!mm && mm('(pointer: coarse)').matches && !mm('(any-pointer: fine)').matches;
+};
 
 // The renderer is typed as the WebGPURenderer API; the legacy WebGLRenderer shares the subset we use.
 export type AnyRenderer = InstanceType<ThreeNS['WebGPURenderer']>;
@@ -39,8 +45,14 @@ export type AnyRenderer = InstanceType<ThreeNS['WebGPURenderer']>;
 export let renderer: AnyRenderer;
 export let rinfo: RendererInfo;
 
+let lostHandler: ((why: string) => void) | null = null;
+/** called once if the GPU device / GL context is lost (driver reset, tab reclaimed on mobile…) */
+export function onRendererLost(cb: (why: string) => void) { lostHandler = cb; }
+let lostFired = false;
+function fireLost(why: string) { if (lostFired) return; lostFired = true; console.error('[renderer] lost:', why); lostHandler?.(why); }
+
 function pickQuality(backend: Backend, mobile: boolean, saved?: Quality | 'auto'): Quality {
-  if (saved && saved !== 'auto') return saved;
+  if (saved && saved !== 'auto' && saved in QUALITY) return saved;
   if (backend === 'webgl1') return 'low';
   if (mobile) return backend === 'webgpu' ? 'medium' : 'low';
   const cores = navigator.hardwareConcurrency ?? 4;
@@ -69,6 +81,8 @@ export async function initRenderer(container: HTMLElement, pref: Backend | 'auto
         const ns = (await import('three/webgpu')) as unknown as ThreeNS;
         setThree(ns, b);
         const r = new ns.WebGPURenderer({ antialias: false, forceWebGL: b === 'webgl2', powerPreference: 'high-performance' } as never);
+        // three routes both a lost WebGPU device and a lost WebGL context here
+        (r as unknown as { onDeviceLost: (info: { message?: string }) => void }).onDeviceLost = (info) => fireLost(info?.message ?? 'device lost');
         await r.init();
         const be = (r as unknown as { backend: { isWebGPUBackend?: boolean } }).backend;
         if (b === 'webgpu' && !be.isWebGPUBackend) {
@@ -83,7 +97,9 @@ export async function initRenderer(container: HTMLElement, pref: Backend | 'auto
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, settings.pixelRatio));
       renderer.setSize(container.clientWidth || window.innerWidth, container.clientHeight || window.innerHeight);
       renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = backend === 'webgl1' ? THREE.PCFSoftShadowMap : THREE.PCFSoftShadowMap;
+      // the node renderer (WebGPU / WebGL2 backends) dropped PCFSoftShadowMap; the legacy one still has it
+      renderer.shadowMap.type = backend === 'webgl1' ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
+      if (backend === 'webgl1') renderer.domElement.addEventListener('webglcontextlost', (e) => { e.preventDefault(); fireLost('WebGL context lost'); });
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
       renderer.toneMappingExposure = 1.0;
       renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -103,5 +119,12 @@ export async function initRenderer(container: HTMLElement, pref: Backend | 'auto
 export function setQuality(q: Quality) {
   rinfo.quality = q;
   rinfo.settings = QUALITY[q];
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, rinfo.settings.pixelRatio));
+  refreshPixelRatio();
+}
+
+/** re-apply the pixel-ratio cap (page zoom, or the window moved to a screen with another DPR) */
+export function refreshPixelRatio() {
+  if (!renderer || !rinfo) return;
+  const pr = Math.min(window.devicePixelRatio || 1, rinfo.settings.pixelRatio);
+  if (Math.abs(renderer.getPixelRatio() - pr) > 1e-3) renderer.setPixelRatio(pr);
 }

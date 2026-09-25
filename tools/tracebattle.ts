@@ -46,7 +46,7 @@ function applyScript(b: Battle, cmds: SceneCmd[]) {
   }
 }
 function pump(b: Battle, evs: BEvent[]) {
-  for (const ev of evs) if (ev.t === 'script') { applyScript(b, b.def.events![ev.index].script); b.checkEnd(); }
+  for (const ev of evs) if (ev.t === 'script') { applyScript(b, b.def.events![ev.index].script); b.scriptDone(ev.index); b.checkEnd(); }
 }
 let turns = 0;
 for (let i = 0; i < 4000 && !b.result && turns < +(process.argv[3] ?? 400); i++) {

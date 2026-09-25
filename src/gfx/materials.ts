@@ -4,6 +4,7 @@
 import { THREE, NODES } from './three';
 import { getTexture, type TexId } from './textures';
 import type { Material, Texture } from 'three/webgpu';
+import { markShared } from './dispose';
 
 let TSL: any = null;
 export async function loadTSL() {
@@ -32,7 +33,7 @@ export function terrainMaterial(tex: TexId, opts: { roughness?: number; metal?: 
     m.emissive = new THREE.Color('#ff8a30');
     m.emissiveIntensity = 2.2;
   }
-  matCache.set(key, m);
+  matCache.set(key, markShared(m));
   return m;
 }
 
@@ -65,7 +66,7 @@ export function waterMaterial(kind: 'water' | 'poison' | 'lava' = 'water'): Mate
   } else {
     m = new THREE.MeshStandardMaterial({ color: shallow, transparent: true, opacity: 0.75, roughness: 0.15, metalness: 0.1 });
   }
-  matCache.set(key, m);
+  matCache.set(key, markShared(m));
   return m;
 }
 
@@ -91,7 +92,7 @@ export function propMaterial(opts: { sway?: number; flat?: boolean; roughness?: 
   if (opts.emissive) { m.emissive = new THREE.Color(opts.emissive); m.emissiveIntensity = opts.emissiveIntensity ?? 1; }
   if (opts.transparent) { m.transparent = true; m.opacity = opts.opacity ?? 1; m.depthWrite = false; }
   if (opts.side === 'double') m.side = THREE.DoubleSide;
-  matCache.set(key, m);
+  matCache.set(key, markShared(m));
   return m;
 }
 
@@ -111,7 +112,7 @@ export function grassMaterial(): Material {
   } else {
     m = new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.FrontSide, roughness: 0.9 });
   }
-  matCache.set(key, m);
+  matCache.set(key, markShared(m));
   return m;
 }
 
@@ -134,7 +135,7 @@ export function tileMaterial(colorHex: string, pulse = true, opacity = 0.5): Mat
     m = new THREE.MeshBasicMaterial({ color: colorHex, transparent: true, opacity, depthWrite: false });
   }
   m.polygonOffset = true; m.polygonOffsetFactor = -2; m.polygonOffsetUnits = -2;
-  matCache.set(key, m);
+  matCache.set(key, markShared(m));
   return m;
 }
 

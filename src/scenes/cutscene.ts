@@ -8,6 +8,7 @@ import { THREE } from '../gfx/three';
 import { audio } from '../audio/audio';
 import { h, uiRoot } from '../ui/dom';
 import { input } from '../ui/input';
+import { loadOptions } from '../game/state';
 
 export interface SceneHost {
   stage(): Stage;
@@ -36,7 +37,8 @@ export interface SceneHost {
 
 const EMOTE_TEXT: Record<string, string> = { '!': '!', '?': '?', '...': '…', note: '♪', anger: '💢', sweat: '💧', heart: '♥', zzz: 'z z', tear: '💧' };
 
-export function fillText(t: string, host: SceneHost) { return t.replace(/\{hero\}/g, host.heroName()); }
+// (a function replacement: a name containing "$&" or "$'" must not be read as a pattern)
+export function fillText(t: string, host: SceneHost) { return t.replace(/\{hero\}/g, () => host.heroName()); }
 
 let skipAll = false;
 
@@ -101,8 +103,9 @@ async function runCmd(c: SceneCmd, host: SceneHost): Promise<void> {
       const v = host.actor(id);
       if (v) st().cam.focus(v.root.position.clone().add(new THREE.Vector3(0, 0.6, 0)));
       if (v && v.anim.baseClip === 'idle') v.anim.setBase('talk');
-      const portrait = await host.portraitOf(id);
-      await say(host.nameOf(id), fillText(text, host), { mood: opts?.mood, pos: opts?.pos, portrait });
+      // never hold a line of dialogue for a portrait that is slow to render (it stays cached for later lines)
+      const portrait = await Promise.race([host.portraitOf(id), new Promise<null>((r) => setTimeout(() => r(null), 1200))]);
+      await say(host.nameOf(id), fillText(text, host), { mood: opts?.mood, pos: opts?.pos, portrait, speed: loadOptions().textSpeed });
       if (v && v.anim.baseClip === 'talk') v.anim.setBase('idle');
       return;
     }
@@ -114,7 +117,11 @@ async function runCmd(c: SceneCmd, host: SceneHost): Promise<void> {
       const clip = map[anim] ?? 'idle';
       const loops = ['idle', 'walk', 'kneel', 'dead', 'raise', 'point', 'laugh', 'cry', 'pray', 'sit', 'crouch', 'victory', 'guard', 'cast', 'float'];
       if (loops.includes(clip)) { v.anim.setBase(clip); if (opts?.wait) await sleep(800); }
-      else { const p = v.anim.play(clip); if (opts?.wait !== false) await p; if (clip === 'fall') v.anim.setBase('dead'); }
+      else {
+        const p = v.anim.play(clip);
+        if (opts?.wait !== false && !skipAll) await p; // skipping: let it play out in the background
+        if (clip === 'fall') { if (skipAll) void p.then(() => v.anim.setBase('dead')); else v.anim.setBase('dead'); }
+      }
       return;
     }
     case 'emote': {
@@ -153,13 +160,14 @@ async function runCmd(c: SceneCmd, host: SceneHost): Promise<void> {
       let p: import('three/webgpu').Vector3 | undefined;
       if (typeof at === 'string') p = host.actor(at)?.root.position.clone();
       else p = st().tileWorld(at[0], at[1]);
-      if (p) await st().vfx.play(id as any, p.clone().add(new THREE.Vector3(0, 0.6, 0)), p);
+      if (p) { const done = st().vfx.play(id as any, p.clone().add(new THREE.Vector3(0, 0.6, 0)), p); if (!skipAll) await done; }
       return;
     }
     case 'flag': host.setFlag(c[1], c[2] ?? true); return;
     case 'choice': {
       const [, prompt, opts] = c;
-      if (skipAll) { if (opts[0]) await runCmds(opts[0][1], host); return; }
+      if (skipAll && (window as any).__autoPlay) { if (opts[0]) await runCmds(opts[0][1], host); return; }
+      skipAll = false; // a decision is the player's: stop skipping and show it
       const box = h('div.panel', { style: { left: '50%', top: '30%', transform: 'translateX(-50%)', textAlign: 'center', padding: '12px 22px' } }, h('div', { style: { fontSize: '1.15em', marginBottom: '6px' } }, fillText(prompt, host)));
       uiRoot().appendChild(box);
       const m = menu({ items: opts.map(([label], i) => ({ label: fillText(label, host), value: i })), parent: box, cancelable: false });

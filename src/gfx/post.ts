@@ -53,6 +53,18 @@ function legacyPost(scene: Scene, camera: Camera): PostFX {
   };
 }
 
+/** walk a node graph and dispose every node that owns a render target (RTT and pass nodes) */
+function disposeRenderTargetNodes(root: unknown) {
+  const seen = new Set<unknown>();
+  const visit = (n: any) => {
+    if (!n || typeof n !== 'object' || seen.has(n) || !n.isNode) return;
+    seen.add(n);
+    for (const c of n.getChildren?.() ?? []) visit(c);
+    if (n.isRTTNode || n.isPassNode) n.dispose?.();
+  };
+  visit(root);
+}
+
 async function nodePost(scene: Scene, camera: Camera): Promise<PostFX> {
   const TSL = await import('three/tsl');
   const {
@@ -80,9 +92,12 @@ async function nodePost(scene: Scene, camera: Camera): Promise<PostFX> {
 
   // ---- scene pass (+ optional AO pre-pass) ----
   const scenePass = pass(scene, camera);
+  // every node that owns render targets; RenderPipeline.dispose() frees only its own quad
+  const owned: any[] = [scenePass];
   let aoNode: any = null;
   if (s.ao) {
     const prePass = pass(scene, camera);
+    owned.push(prePass);
     prePass.name = 'prepass';
     prePass.transparent = false;
     prePass.setMRT(mrt({ output: packNormalToRGB(normalView) }));
@@ -92,6 +107,7 @@ async function nodePost(scene: Scene, camera: Camera): Promise<PostFX> {
     const prePassDepth = prePass.getTextureNode('depth');
     const { ssao } = await import('three/addons/tsl/display/SSAONode.js' as any);
     aoNode = ssao(prePassDepth, prePassNormal, camera);
+    owned.push(aoNode);
     aoNode.resolutionScale = rinfo.quality === 'ultra' ? 1 : 0.5;
     if (aoNode.radius) aoNode.radius.value = 0.55;
     if (aoNode.intensity) aoNode.intensity.value = 1.6;
@@ -104,6 +120,7 @@ async function nodePost(scene: Scene, camera: Camera): Promise<PostFX> {
   if (s.bloom) {
     const { bloom } = await import('three/addons/tsl/display/BloomNode.js' as any);
     bloomNode = bloom(color, DEFAULT_GRADE.bloom, 0.45, 0.82);
+    owned.push(bloomNode);
     color = color.add(bloomNode);
   }
 
@@ -111,6 +128,7 @@ async function nodePost(scene: Scene, camera: Camera): Promise<PostFX> {
   if (s.dof) {
     const { dof } = await import('three/addons/tsl/display/DepthOfFieldNode.js' as any);
     color = dof(color, scenePass.getViewZNode(), u.focus, u.focalLength, u.bokeh);
+    owned.push(color);
   }
 
   // ---- tone map, then grade in display space ----
@@ -146,9 +164,11 @@ async function nodePost(scene: Scene, camera: Camera): Promise<PostFX> {
   if (s.aa === 'smaa') {
     const { smaa } = await import('three/addons/tsl/display/SMAANode.js' as any);
     out = smaa(out);
+    owned.push(out);
   } else if (s.aa === 'fxaa') {
     const { fxaa } = await import('three/addons/tsl/display/FXAANode.js' as any);
     out = fxaa(out);
+    owned.push(out);
   }
   pipeline.outputNode = out;
 
@@ -184,7 +204,13 @@ async function nodePost(scene: Scene, camera: Camera): Promise<PostFX> {
       u.flashAmt.value = flashT;
     },
     setSize() { /* pipeline tracks renderer size */ },
-    dispose() { pipeline.dispose?.(); aoNode?.dispose?.(); bloomNode?.dispose?.(); },
+    dispose() {
+      // effects like FXAA/SMAA/DOF wrap their input in hidden render-to-texture nodes with full-screen targets
+      disposeRenderTargetNodes(pipeline.outputNode);
+      pipeline.dispose?.();
+      for (const n of owned) n?.dispose?.();
+      owned.length = 0;
+    },
   };
 }
 

@@ -80,6 +80,10 @@ export class BattleUnit {
   boost = new Set<Element>();
   immune = new Set<StatusId>();
   always = new Set<StatusId>();
+  /** immunities that aren't from job or gear (boss immunities); survive recompute() */
+  extraImmune = new Set<StatusId>();
+  /** the player handed this unit to the AI for the rest of the battle (still the player's unit) */
+  autoAi = false;
 
   constructor(roster: RosterUnit, team: number, controlled: boolean, sid?: string) {
     this.roster = roster;
@@ -109,6 +113,7 @@ export class BattleUnit {
     this.equipItems = [];
     this.absorb.clear(); this.halve.clear(); this.nullify.clear(); this.weak.clear(); this.boost.clear();
     this.immune.clear(); this.always.clear();
+    for (const s of this.extraImmune) this.immune.add(s);
     for (const e of j.absorb ?? []) this.absorb.add(e);
     for (const e of j.halve ?? []) this.halve.add(e);
     for (const e of j.nullify ?? []) this.nullify.add(e);
@@ -147,7 +152,8 @@ export class BattleUnit {
     }
     const sup = this.supportAbility();
     if (sup?.id === 'maintenance') { /* handled in break/steal */ }
-    this.maxHp = this.hpMult > 1 ? Math.min(9999, Math.max(1, Math.floor(hp * this.hpMult))) : Math.min(999, Math.max(1, hp));
+    // bosses (hpMult > 1) may pass the usual 999 cap; difficulty scaling below 1 applies too
+    this.maxHp = this.hpMult !== 1 ? Math.min(this.hpMult > 1 ? 9999 : 999, Math.max(1, Math.floor(hp * this.hpMult))) : Math.min(999, Math.max(1, hp));
     this.maxMp = Math.min(999, Math.max(0, mp));
     this.baseSpeed = Math.max(1, sp);
     this.basePa = Math.max(1, pa);
@@ -204,8 +210,8 @@ export class BattleUnit {
     for (const s of this.statuses.keys()) if (STATUS[s].noTurn) return false;
     return true;
   }
-  get canMove() { return !this.has('immobilize') && !this.jumping; }
-  get canAct() { return !this.has('disable') && !this.jumping; }
+  get canMove() { return this.alive && !this.has('immobilize') && !this.jumping; }
+  get canAct() { return this.alive && !this.has('disable') && !this.jumping; }
 
   // ---- abilities ----
   knows(id: string) { return this.roster.learned.includes(id) || ABILITIES.get(id)?.jp === 0; }

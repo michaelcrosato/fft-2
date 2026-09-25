@@ -151,7 +151,8 @@ export function setupBattle(state: GameState, def: BattleDef, party: DeployChoic
   const grid = new MapGrid(mapDef(def.map));
   const diff = (opts as { difficulty?: string }).difficulty ?? loadOptions().difficulty ?? 'normal';
   const pl = Math.max(1, partyLevel(state) + (diff === 'easy' ? -3 : diff === 'hard' ? 1 : -1));
-  const hpScale: number = diff === 'easy' ? 0.8 : diff === 'hard' ? 1.1 : 0.9;
+  // (normal stays at 1.0: the campaign balance was tuned there)
+  const hpScale: number = diff === 'easy' ? 0.85 : diff === 'hard' ? 1.1 : 1;
   const units: BattleUnit[] = [];
   const temp: RosterUnit[] = [];
   for (const p of party) {
@@ -171,7 +172,7 @@ export function setupBattle(state: GameState, def: BattleDef, party: DeployChoic
     bu.vip = !!sp.vip;
     bu.noLoot = !!sp.noLoot || !!sp.char;
     bu.hidden = !!sp.hidden;
-    if (sp.boss) for (const s of BOSS_IMMUNE) bu.immune.add(s);
+    if (sp.boss) for (const s of BOSS_IMMUNE) { bu.extraImmune.add(s); bu.immune.add(s); }
     // wards the player must protect are hardier than they look, so one unlucky blow cannot end the battle
     const wardMult = team === 0 && sp.vip && !sp.hpMult ? 2 : 1;
     if (sp.hpMult || wardMult !== 1 || (hpScale !== 1 && team !== 0)) { bu.hpMult = (sp.hpMult ?? 1) * wardMult * (team !== 0 ? hpScale : 1); bu.recompute(false); bu.hp = bu.maxHp; }
@@ -210,6 +211,8 @@ export function applyResults(state: GameState, b: Battle, setup: BattleSetup) {
   }
   state.roster = state.roster.filter((r) => !lostUids.includes(r.uid));
   for (const inv of b.invited) {
+    // a recruit who fell and crystallized later in the battle doesn't join
+    if (inv.has('crystal') || inv.has('treasure')) continue;
     const r = inv.roster;
     r.errand = undefined;
     if (!state.roster.some((x) => x.uid === r.uid)) state.roster.push(r);

@@ -182,7 +182,7 @@ export class Battle {
       if (this.result) return { events: this.flush(), unit: null };
       if (this.pendingResolve.length) {
         const u = this.pendingResolve.shift()!;
-        if (u.jumping && u.alive) { this.resolveJump(u); this.checkEnd(); return { events: this.flush(), unit: null }; }
+        if (u.jumping && u.alive) { this.resolveJump(u); this.fireEvents(); this.checkEnd(); return { events: this.flush(), unit: null }; }
         if (u.charging && u.alive) {
           const ch = u.charging;
           u.charging = null; u.statuses.delete('charging');
@@ -198,6 +198,7 @@ export class Battle {
             }
             this.resolveAbility(u, ch.ability, tx, tz, { item: ch.item, calc: undefined });
           }
+          this.fireEvents(); // KO / low-HP / enemies-left triggers react to charged spells at once
           this.checkEnd();
           const ev = this.flush();
           if (ev.length) return { events: ev, unit: null };
@@ -209,6 +210,7 @@ export class Battle {
         if (u.ct < 100 || u.gone || u.has('crystal') || u.has('treasure')) continue;
         if (u.has('ko')) {
           this.koTurn(u);
+          this.fireEvents();
           this.checkEnd();
           const ev = this.flush();
           if (ev.length) return { events: ev, unit: null };
@@ -234,7 +236,8 @@ export class Battle {
       for (const u of this.units) {
         if (u.gone || u.hidden || u.has('crystal') || u.has('treasure')) continue;
         if (u.has('ko')) { u.ct += 10; continue; }        // KO counter still advances on a fixed cadence
-        if (u.has('stop') || u.has('petrify') || u.charging || u.jumping) continue;
+        // a performance (song/dance) repeats in the background: the performer still gets turns
+        if (u.has('stop') || u.has('petrify') || (u.charging && !u.performing) || u.jumping) continue;
         u.ct += u.speed;
       }
       this.pendingTurns = this.units
@@ -265,7 +268,7 @@ export class Battle {
         const n = t - 1;
         if (n <= 0) expired.push(s); else u.statuses.set(s, n);
       }
-      for (const s of expired) u.statuses.delete(s);
+      for (const s of expired) { u.statuses.delete(s); if (s === 'charm') this.unCharm(u); }
       if (expired.length) this.emit({ t: 'status', uid: u.uid, remove: expired });
     }
   }
@@ -342,7 +345,7 @@ export class Battle {
       const ready: BattleUnit[] = [];
       for (const u of this.units) {
         if (!u.canTakeTurn || u.gone || u.hidden) continue;
-        if (ch.has(u.uid)) continue;
+        if (ch.has(u.uid) && !u.performing) continue;
         if (u === this.active && t === 0) { ct.set(u.uid, 0); }
         const v = ct.get(u.uid)! + u.speed;
         ct.set(u.uid, v);
@@ -396,7 +399,7 @@ export class Battle {
 
   doMove(u: BattleUnit, x: number, z: number): BEvent[] {
     this.events = [];
-    if (u.moved) return [];
+    if (u.moved || !u.alive) return [];
     const target = this.grid.cell(x, z);
     if (!target || !target.standable) return [];
     if (u.performing) this.stopPerforming(u);
@@ -468,6 +471,8 @@ export class Battle {
   }
 
   addItem(id: string, n: number) { this.inventory.set(id, (this.inventory.get(id) ?? 0) + n); }
+  /** the party's inventory belongs to units the player commands; everyone else carries their own stock */
+  usesStock(u: BattleUnit) { return u.baseTeam === 0 && u.controlled; }
   takeItem(id: string): boolean {
     const n = this.inventory.get(id) ?? 0;
     if (n <= 0) return false;
@@ -510,8 +515,8 @@ export class Battle {
     if (u.has('frog') && a.id !== 'attack' && a.id !== 'frogSpell') return 'Toads can only croak';
     if (a.requires?.weapon && !a.requires.weapon.includes(u.weaponType())) return 'Needs ' + a.requires.weapon.join('/');
     if (a.requires?.notWeapon && a.requires.notWeapon.includes(u.weaponType())) return 'Wrong weapon';
-    if (a.consumes && !(this.inventory.get(a.consumes) ?? 0)) return 'None in stock';
-    if (a.requires?.item && !(this.inventory.get(a.requires.item) ?? 0)) return 'None in stock';
+    if (a.consumes && this.usesStock(u) && !(this.inventory.get(a.consumes) ?? 0)) return 'None in stock';
+    if (a.requires?.item && this.usesStock(u) && !(this.inventory.get(a.requires.item) ?? 0)) return 'None in stock';
     const sp = a.special ? SPECIALS[a.special] : undefined;
     if (sp?.usable) { const r = sp.usable(this, u, a); if (r) return r; }
     const c = this.cellOf(u);
@@ -664,9 +669,10 @@ export class Battle {
   // ------------------------------------------------------------------------
   doAction(u: BattleUnit, a: AbilityDef, x: number, z: number, opts: ActionOpts = {}): BEvent[] {
     this.events = [];
-    if (u.acted && !opts.mimic) return [];
+    if ((u.acted && !opts.mimic) || !u.alive) return [];
     if (u.performing) this.stopPerforming(u);
-    if (u.has('invisible') && !a.id.startsWith('wait')) { u.statuses.delete('invisible'); this.emit({ t: 'status', uid: u.uid, remove: ['invisible'] }); }
+    // acting reveals an invisible unit — after the blow lands, so the accuracy bonus applies
+    const reveal = () => { if (u.has('invisible') && !a.id.startsWith('wait')) { u.statuses.delete('invisible'); this.emit({ t: 'status', uid: u.uid, remove: ['invisible'] }); } };
     const mp = opts.noMp ? 0 : this.mpCost(u, a);
     if (u.mp < mp) return [];
     const ct = opts.calc ? 0 : this.chargeTicks(u, a);
@@ -681,6 +687,7 @@ export class Battle {
       u.mp -= mp;
       if (mp) this.emit({ t: 'mp', uid: u.uid, delta: -mp });
       sp.start(this, u, a, x, z, opts);
+      reveal();
       if (!opts.depth && !opts.mimic && a.special !== 'jump') this.triggerMimics(u, a, x, z, opts);
       this.checkEnd();
       return this.flush();
@@ -688,7 +695,8 @@ export class Battle {
     if (ct > 0) {
       u.mp -= mp;
       if (mp) this.emit({ t: 'mp', uid: u.uid, delta: -mp });
-      if (a.consumes && !a.perform) this.takeItem(a.consumes);
+      if (a.consumes && !a.perform && this.usesStock(u)) this.takeItem(a.consumes);
+      reveal();
       const tgt = this.unitAt(x, z);
       // spells aimed at a unit follow that unit only if it is a single-target spell
       const follow = (a.aoe ?? 1) <= 1 && tgt && !a.projectile ? tgt.uid : undefined;
@@ -701,8 +709,9 @@ export class Battle {
     }
     u.mp -= mp;
     if (mp) this.emit({ t: 'mp', uid: u.uid, delta: -mp });
-    if (a.consumes) this.takeItem(a.consumes);
+    if (a.consumes && this.usesStock(u)) this.takeItem(a.consumes);
     this.resolveAbility(u, a, x, z, opts);
+    reveal();
     if (!opts.depth && !opts.mimic) this.triggerMimics(u, a, x, z, opts);
     this.fireEvents();
     this.checkEnd();
@@ -957,7 +966,7 @@ export class Battle {
           if (!id) { (h.text ??= []).push('Nothing to break'); break; }
           if (t.hasSupport('maintenance')) { (h.text ??= []).push('Maintained'); break; }
           delete t.roster.equip[slot];
-          t.recompute(false);
+          this.regear(t);
           h.broke = id;
           (h.text ??= []).push(`${ITEMS.get(id)?.name ?? id} broken!`);
           break;
@@ -1075,7 +1084,7 @@ export class Battle {
     const p: TargetPreview = { uid: t.uid, hit: this.hitChance(c, t, a, wp) };
     const sp = a.special ? SPECIALS[a.special] : undefined;
     if (a.special === 'jump') {
-      let base = weaponDamage(c, c.weapon, null, { avg: true });
+      let base = weaponDamage(c, c.weapon, null, { avg: true, wp });
       if (c.weapon?.cat === 'spear') base = Math.floor(base * 1.5);
       p.dmg = this.modifyDamage(c, t, a, base, c.weapon?.element, true, this.ctx(c, t, wp).zodiac, { uid: t.uid }, true);
       p.hit = 100;
@@ -1088,9 +1097,10 @@ export class Battle {
     for (const e of a.effects ?? []) {
       switch (e.type) {
         case 'damage': {
-          this.previewRng = new Rng(777);
+          // same seed on every hover, so a random-damage skill previews the same number each time
+          ctx.rng = this.previewRng = new Rng(777);
           const el = e.element ?? a.element ?? (a.id === 'attack' ? c.weapon?.element : undefined);
-          let base = a.id === 'attack' ? weaponDamage(c, c.weapon, null, { avg: true }) : e.formula(ctx);
+          let base = a.id === 'attack' ? weaponDamage(c, c.weapon, null, { avg: true, wp }) : e.formula(ctx);
           let d = this.modifyDamage(c, t, a, base, el, physical, ctx.zodiac, dummy, true);
           if (a.id === 'attack' && c.weapon2) d += this.modifyDamage(c, t, a, weaponDamage(c, c.weapon2, null, { avg: true }), c.weapon2.element, true, ctx.zodiac, dummy, true);
           if (a.id === 'attack' && c.weapon?.healOnHit && d > 0 && !t.has('undead')) d = -d;
@@ -1465,10 +1475,19 @@ export class Battle {
     const id = t.roster.equip[s];
     if (!id) { (h.text ??= []).push('Nothing to steal'); return; }
     delete t.roster.equip[s];
-    t.recompute(false);
+    this.regear(t);
     if (c.team === 0) { this.loot.push(id); this.addItem(id, 1); }
     h.stolen = id;
     (h.text ??= []).push(`Stole ${ITEMS.get(id)?.name ?? id}!`);
+  }
+
+  /** recompute after equipment was stolen/broken; drop permanent statuses the lost gear granted */
+  private regear(t: BattleUnit) {
+    const before = new Set(t.always);
+    t.recompute(false);
+    const lost = [...before].filter((s) => !t.always.has(s) && t.statuses.get(s) === 0);
+    for (const s of lost) t.statuses.delete(s);
+    if (lost.length) this.emit({ t: 'status', uid: t.uid, remove: lost });
   }
 
   // ------------------------------------------------------------------------
@@ -1494,14 +1513,16 @@ export class Battle {
       const opts = FACINGS.map((f) => [lx + DIRS[f][0], lz + DIRS[f][1]] as [number, number])
         .filter(([x, z]) => { const c = this.grid.cell(x, z); return c && c.standable && !this.unitAt(x, z); });
       if (opts.length) [lx, lz] = opts.sort((a, b) => (Math.abs(a[0] - u.x) + Math.abs(a[1] - u.z)) - (Math.abs(b[0] - u.x) + Math.abs(b[1] - u.z)))[0];
-      else { lx = u.x; lz = u.z; }
+      else [lx, lz] = this.nearestFree(u.x, u.z, u);
+    } else if (occupant === undefined && !this.grid.cell(lx, lz)?.standable) {
+      [lx, lz] = this.nearestFree(lx, lz, u);
     }
     this.emit({ t: 'jumpDown', uid: u.uid, x: lx, z: lz });
     const hits: HitInfo[] = [];
     if (target && target.alive) {
       const a = ABILITIES.get('jump')!;
       const h: HitInfo = { uid: target.uid };
-      let base = weaponDamage(u, u.weapon, this.rng);
+      let base = weaponDamage(u, u.weapon, this.rng, { wp: this.wpFor(u, a, {}) });
       if (u.weapon?.cat === 'spear') base = Math.floor(base * 1.5);
       const ctx = this.ctx(u, target, u.weapon?.wp ?? 0);
       const dmg = this.modifyDamage(u, target, a, base, u.weapon?.element, true, ctx.zodiac, h);
@@ -1594,7 +1615,16 @@ export class Battle {
           break;
       }
     }
+    // reinforcements are on their way: a fired script that reveals units hasn't been played yet
+    if (this.result === 'victory' && this.pendingReveals > 0) this.result = null;
     if (this.result) this.emit({ t: 'end', result: this.result });
+  }
+
+  /** scripts fired whose reveals the presentation hasn't applied yet (see scriptDone) */
+  private pendingReveals = 0;
+  /** the presentation (or a simulator) finished applying script `index` */
+  scriptDone(index: number) {
+    if (this.def.events?.[index]?.script.some((c) => c[0] === 'reveal')) this.pendingReveals = Math.max(0, this.pendingReveals - 1);
   }
 
   /** evaluate mid-battle event triggers */
@@ -1615,7 +1645,11 @@ export class Battle {
       } else if ('enemiesLeft' in w) {
         hit = this.units.filter((u) => u.team !== 0 && u.active && !u.hidden).length <= w.enemiesLeft;
       }
-      if (hit) { this.firedEvents.add(i); this.emit({ t: 'script', index: i }); }
+      if (hit) {
+        this.firedEvents.add(i);
+        if (evs[i].script.some((c) => c[0] === 'reveal')) this.pendingReveals++;
+        this.emit({ t: 'script', index: i });
+      }
     }
   }
 
@@ -1626,11 +1660,19 @@ export class Battle {
     u.hidden = false;
     const c = this.grid.cell(u.x, u.z);
     if (this.unitAt(u.x, u.z) && this.unitAt(u.x, u.z) !== u || !c?.standable) {
-      // find nearest free cell
-      const free = this.grid.diamond(u.x, u.z, 4).filter((cc) => cc.standable && !this.unitAt(cc.x, cc.z));
-      if (free.length) { u.x = free[0].x; u.z = free[0].z; }
+      [u.x, u.z] = this.nearestFree(u.x, u.z, u);
     }
     u.ct = 50;
+  }
+  /** nearest standable, unoccupied tile to (x, z) (by walking distance on the grid, then row order) */
+  nearestFree(x: number, z: number, self?: BattleUnit): [number, number] {
+    for (let r = 0; r <= Math.max(this.grid.w, this.grid.d); r++) {
+      const ring = this.grid.diamond(x, z, r)
+        .filter((c) => Math.abs(c.x - x) + Math.abs(c.z - z) === r && c.standable && !c.hole)
+        .filter((c) => { const o = this.unitAt(c.x, c.z); return !o || o === self; });
+      if (ring.length) return [ring[0].x, ring[0].z];
+    }
+    return [x, z];
   }
   scriptRetreat(sid: string) {
     const u = this.bySid(sid);

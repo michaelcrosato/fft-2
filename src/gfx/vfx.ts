@@ -5,6 +5,7 @@ import { THREE } from './three';
 import type { VfxId, Weather } from '../data/types';
 import { rinfo } from './renderer';
 import type { Scene, Camera, InstancedMesh, Vector3, Object3D, Material, Texture } from 'three/webgpu';
+import { markShared, releaseTree } from './dispose';
 
 interface P {
   x: number; y: number; z: number; vx: number; vy: number; vz: number;
@@ -68,6 +69,9 @@ class Pool {
   private v = new THREE.Vector3();
   private s = new THREE.Vector3();
   private col = new THREE.Color();
+  private spinQ = new THREE.Quaternion();
+  private zAxis = new THREE.Vector3(0, 0, 1); // (THREE is only bound at runtime: no module-level three objects)
+  private lastN = -1;
   constructor(scene: Scene, cap: number, tex: Texture, additive: boolean) {
     this.cap = cap;
     const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending, toneMapped: false, side: THREE.DoubleSide, fog: false });
@@ -80,7 +84,7 @@ class Pool {
     scene.add(this.mesh);
   }
   spawn(p: Partial<P> & { x: number; y: number; z: number }) {
-    if (this.ps.length >= this.cap) this.ps.shift();
+    if (this.ps.length >= this.cap) this.ps.pop(); // full: drop one (order doesn't matter; shift() is O(n))
     this.ps.push({ vx: 0, vy: 0, vz: 0, life: 0, max: 1, s0: 0.2, s1: 0.0, r0: 1, g0: 1, b0: 1, r1: 1, g1: 1, b1: 1, grav: 0, drag: 0, stretch: 0, spin: 0, rot: 0, ...p } as P);
   }
   update(dt: number, cam: Camera) {
@@ -89,7 +93,7 @@ class Pool {
     for (let i = 0; i < this.ps.length; i++) {
       const p = this.ps[i];
       p.life += dt;
-      if (p.life >= p.max) { this.ps.splice(i, 1); i--; continue; }
+      if (p.life >= p.max) { this.ps[i] = this.ps[this.ps.length - 1]; this.ps.pop(); i--; continue; } // swap-remove
       p.vy -= p.grav * dt;
       const d = Math.max(0, 1 - p.drag * dt);
       p.vx *= d; p.vy *= d; p.vz *= d;
@@ -100,7 +104,7 @@ class Pool {
       const fadeIn = Math.min(1, t * 8), fadeOut = t > 0.7 ? (1 - t) / 0.3 : 1;
       const a = fadeIn * fadeOut;
       this.q.copy(camQ);
-      if (p.spin) this.q.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), p.rot));
+      if (p.spin) this.q.multiply(this.spinQ.setFromAxisAngle(this.zAxis, p.rot));
       let sy = size;
       if (p.stretch) {
         const sp = Math.hypot(p.vx, p.vy, p.vz);
@@ -115,9 +119,17 @@ class Pool {
       n++;
     }
     this.mesh.count = n;
-    this.mesh.instanceMatrix.needsUpdate = true;
-    if (this.mesh.instanceColor) this.mesh.instanceColor.needsUpdate = true;
+    this.mesh.visible = n > 0;
+    // idle pools upload nothing; busy ones only their live range
+    if (n === 0 && this.lastN === 0) return;
+    this.lastN = n;
+    const im = this.mesh.instanceMatrix as typeof this.mesh.instanceMatrix & { clearUpdateRanges?: () => void; addUpdateRange?: (s: number, c: number) => void };
+    im.clearUpdateRanges?.(); if (n) im.addUpdateRange?.(0, n * 16);
+    im.needsUpdate = true;
+    const ic = this.mesh.instanceColor as (typeof im) | null;
+    if (ic) { ic.clearUpdateRanges?.(); if (n) ic.addUpdateRange?.(0, n * 3); ic.needsUpdate = true; }
   }
+  dispose() { this.mesh.removeFromParent(); releaseTree(this.mesh); }
 }
 
 interface Transient { obj: Object3D; life: number; max: number; tick: (t: number, dt: number, o: Object3D) => void }
@@ -147,18 +159,21 @@ export class Vfx {
     this.scene = scene;
     this.budget = rinfo?.settings.particles ?? 1;
     const cap = (n: number) => Math.max(64, Math.floor(n * this.budget));
-    this.tex.soft = softTexture('soft');
-    this.tex.spark = softTexture('spark');
-    this.tex.ring = softTexture('ring');
-    this.tex.glyph = softTexture('glyph');
-    this.tex.streak = softTexture('streak');
+    // owned by this Vfx (freed in dispose); flagged shared so short-lived effects using them don't free them
+    const own = (t: Texture) => { this.ownTex.push(t); return markShared(t); };
+    this.tex.soft = own(softTexture('soft'));
+    this.tex.spark = own(softTexture('spark'));
+    this.tex.ring = own(softTexture('ring'));
+    this.tex.glyph = own(softTexture('glyph'));
+    this.tex.streak = own(softTexture('streak'));
     this.add = new Pool(scene, cap(3000), this.tex.soft, true);
     this.sparks = new Pool(scene, cap(1200), this.tex.spark, true);
-    this.notes = new Pool(scene, cap(120), softTexture('note'), true);
-    this.flakes = new Pool(scene, cap(900), softTexture('flake'), true);
-    this.leaves = new Pool(scene, cap(300), softTexture('leaf'), false);
+    this.notes = new Pool(scene, cap(120), own(softTexture('note')), true);
+    this.flakes = new Pool(scene, cap(900), own(softTexture('flake')), true);
+    this.leaves = new Pool(scene, cap(300), own(softTexture('leaf')), false);
     this.dust = new Pool(scene, cap(1400), this.tex.streak, true);
   }
+  private ownTex: Texture[] = [];
 
   setBounds(w: number, d: number, top: number) { this.bounds = { w, d, top }; }
   setWeather(w: Weather) { this.weather = w; }
@@ -173,7 +188,7 @@ export class Vfx {
       tr.tick(t, dt, tr.obj);
       if (tr.life >= tr.max) {
         this.scene.remove(tr.obj);
-        tr.obj.traverse((o: any) => { o.geometry?.dispose?.(); if (o.material && !o.material.userData?.shared) o.material.dispose?.(); });
+        releaseTree(tr.obj);
         this.transients.splice(i, 1); i--;
       }
     }
@@ -605,8 +620,11 @@ export class Vfx {
   sparkle(at: Vector3, color = '#fff0a0') { this.rise(at, color, 30, 1.5, 0.35, 1.2, 0.12); }
 
   dispose() {
-    for (const tr of this.transients) this.scene.remove(tr.obj);
+    for (const tr of this.transients) { this.scene.remove(tr.obj); releaseTree(tr.obj); }
     this.transients = [];
+    for (const p of [this.add, this.sparks, this.notes, this.flakes, this.leaves, this.dust]) p.dispose();
+    for (const t of this.ownTex) t.dispose();
+    this.ownTex = [];
   }
 }
 

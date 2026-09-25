@@ -15,6 +15,8 @@ import type { Scene, Mesh, Group, Vector3, Raycaster, Material } from 'three/web
 import { UnitView, type UnitViewSpec } from './unitview';
 import { GeoBuilder } from '../gfx/geo';
 import { loadOptions } from '../game/state';
+import { input, type Action } from '../ui/input';
+import { releaseTree } from '../gfx/dispose';
 
 export type HighlightKind = 'move' | 'target' | 'aoe' | 'deploy' | 'cursor' | 'enemyMove' | 'path' | 'charge';
 const HL_COLORS: Record<HighlightKind, string> = {
@@ -50,13 +52,15 @@ export class Stage {
     const el = renderer.domElement;
     this.cam = new TacticsCamera(el.clientWidth / Math.max(1, el.clientHeight));
     const span = Math.max(this.grid.w, this.grid.d);
-    this.cam.minDist = span * 0.9;
-    this.cam.maxDist = span * 4;
+    // close enough to read a single unit, far enough to see the largest maps whole
+    this.cam.minDist = Math.min(7, span * 0.9);
+    this.cam.maxDist = Math.max(span * 4, 30);
+    this.cam.bounds = { minX: -this.grid.w / 2 - 1, maxX: this.grid.w / 2 + 1, minZ: -this.grid.d / 2 - 1, maxZ: this.grid.d / 2 + 1 };
     this.cam.snap(this.terrain.center, span * 2.3);
     this.vfx = new Vfx(this.scene);
     this.vfx.setBounds(this.grid.w, this.grid.d, this.grid.maxHeight() * HS + 3);
     this.vfx.setWeather(opts.weather ?? this.def.weather ?? 'none');
-    this.vfx.onShake = (a, t) => { if (loadOptions().camShake) this.cam.shake(a * 0.6, t); };
+    this.vfx.onShake = (a, t) => this.shake(a * 0.6, t);
     this.ray = new THREE.Raycaster();
     // cursor: a bright frame
     this.cursorMesh = this.makeTileMesh([[0, 0]], tileMaterial('#ffffff', true, 0.9), 0.05);
@@ -73,31 +77,114 @@ export class Stage {
   }
 
   private unbind: Array<() => void> = [];
-  /** drag = orbit (snaps to 90° on release), wheel/pinch = zoom */
+  /** player camera control (drag, wheel, pinch, gamepad sticks/triggers); off for cinematic-only stages */
+  userCamera = true;
+  private stickOrbit = false;
+
+  /**
+   * Pointer camera controls on the canvas:
+   *  - left-drag / one-finger drag: orbit (snaps to the nearest 45° diagonal on release)
+   *  - right- or middle-drag, Shift+drag, two-finger drag: pan
+   *  - wheel, trackpad pinch, two-finger pinch: zoom
+   * Short clicks/taps are left alone for tile picking.
+   */
   private bindCameraControls() {
     const el = renderer.domElement;
-    const pts = new Map<number, { x: number; y: number }>();
-    let dragging = false;
-    let pinch0 = 0;
-    const down = (e: PointerEvent) => { pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); dragging = false; if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch0 = Math.hypot(a.x - b.x, a.y - b.y); } };
+    const pts = new Map<number, { x: number; y: number; sx: number; sy: number }>();
+    let mode: 'none' | 'orbit' | 'pan' | 'pinch' = 'none';
+    let button = 0;
+    let pinchD = 0, midX = 0, midY = 0;
+    const two = () => { const [a, b] = [...pts.values()]; return { d: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 }; };
+    const down = (e: PointerEvent) => {
+      if (!this.userCamera) return;
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY });
+      // keep receiving moves/ups if the pointer leaves the canvas mid-drag
+      if (e.pointerType === 'mouse') { try { el.setPointerCapture(e.pointerId); } catch { /* not capturable */ } }
+      if (pts.size === 1) { mode = 'none'; button = e.shiftKey ? 2 : e.button; }
+      if (pts.size === 2) { if (mode === 'orbit') this.cam.settleYaw(); mode = 'pinch'; const t = two(); pinchD = t.d; midX = t.mx; midY = t.my; }
+    };
     const move = (e: PointerEvent) => {
       const p = pts.get(e.pointerId);
       if (!p) return;
       const dx = e.clientX - p.x, dy = e.clientY - p.y;
-      if (pts.size === 1) {
-        if (!dragging && Math.hypot(dx, dy) > 10) dragging = true;
-        if (dragging && (e.buttons & 1 || e.pointerType === 'touch')) { this.cam.orbitFree(-dx * 0.006, dy * 0.004); p.x = e.clientX; p.y = e.clientY; }
-      } else if (pts.size === 2) {
-        p.x = e.clientX; p.y = e.clientY;
-        const [a, b] = [...pts.values()];
-        const d = Math.hypot(a.x - b.x, a.y - b.y);
-        if (pinch0 > 0) { this.cam.zoom(pinch0 / d); pinch0 = d; }
+      p.x = e.clientX; p.y = e.clientY;
+      if (mode === 'pinch') {
+        if (pts.size < 2) return;
+        const t = two();
+        if (pinchD > 0 && t.d > 0) this.cam.zoom(pinchD / t.d);
+        this.cam.panPixels(t.mx - midX, t.my - midY, el.clientHeight);
+        pinchD = t.d; midX = t.mx; midY = t.my;
+        return;
       }
+      if (mode === 'none') {
+        if (Math.hypot(e.clientX - p.sx, e.clientY - p.sy) < 10) return;
+        mode = button === 1 || button === 2 ? 'pan' : 'orbit';
+      }
+      if (mode === 'orbit') this.cam.orbitFree(-dx * 0.006, dy * 0.004);
+      else if (mode === 'pan') this.cam.panPixels(dx, dy, el.clientHeight);
     };
-    const up = (e: PointerEvent) => { pts.delete(e.pointerId); if (dragging && pts.size === 0) { this.cam.settleYaw(); dragging = false; } };
-    const wheel = (e: WheelEvent) => { this.cam.zoom(e.deltaY > 0 ? 1.1 : 0.9); };
-    el.addEventListener('pointerdown', down); el.addEventListener('pointermove', move); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up); el.addEventListener('wheel', wheel, { passive: true });
-    this.unbind.push(() => { el.removeEventListener('pointerdown', down); el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up); el.removeEventListener('wheel', wheel); });
+    const up = (e: PointerEvent) => {
+      if (!pts.delete(e.pointerId)) return;
+      if (mode === 'orbit') this.cam.settleYaw();
+      if (pts.size === 1) {
+        // the finger left on the glass must travel again before it orbits
+        const [p] = [...pts.values()]; p.sx = p.x; p.sy = p.y;
+      }
+      mode = pts.size === 0 ? 'none' : mode === 'pinch' ? 'none' : mode;
+    };
+    const wheel = (e: WheelEvent) => {
+      e.preventDefault(); // ctrl+wheel (trackpad pinch) would zoom the whole page
+      if (!this.userCamera) return;
+      const px = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1);
+      const k = e.ctrlKey ? 0.01 : 0.0015;
+      this.cam.zoom(Math.exp(Math.max(-0.4, Math.min(0.4, px * k))));
+    };
+    // desktop Safari reports trackpad pinch as gesture events instead of ctrl+wheel
+    let gScale = 1;
+    const gStart = (e: Event) => { e.preventDefault(); gScale = 1; };
+    const gChange = (e: Event) => {
+      e.preventDefault();
+      const sc = (e as Event & { scale?: number }).scale ?? 1;
+      if (this.userCamera && pts.size < 2 && sc > 0) this.cam.zoom(gScale / sc);
+      gScale = sc;
+    };
+    el.addEventListener('pointerdown', down); el.addEventListener('pointermove', move); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+    el.addEventListener('wheel', wheel, { passive: false });
+    el.addEventListener('gesturestart', gStart); el.addEventListener('gesturechange', gChange);
+    this.unbind.push(() => {
+      el.removeEventListener('pointerdown', down); el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up);
+      el.removeEventListener('wheel', wheel); el.removeEventListener('gesturestart', gStart); el.removeEventListener('gesturechange', gChange);
+      input.analogCamera = false;
+    });
+  }
+
+  /** gamepad: right stick orbits/tilts, triggers zoom (read every frame) */
+  private analogCamera(dt: number) {
+    const p = input.pad;
+    if (!this.userCamera || !p.connected || this.cam.animating) return;
+    if (p.rx || p.ry) { this.cam.orbitFree(p.rx * dt * 2.4, p.ry * dt * 1.3); this.stickOrbit = this.stickOrbit || Math.abs(p.rx) > 0.05; }
+    else if (this.stickOrbit) { this.stickOrbit = false; this.cam.settleYaw(); }
+    const z = p.rt - p.lt;
+    if (z) this.cam.zoom(Math.exp(-z * dt * 1.8));
+  }
+
+  /** shared camera keys/buttons: rotate, tilt, zoom, recenter. True if handled. */
+  cameraAction(a: Action): boolean {
+    switch (a) {
+      case 'rotL': this.cam.rotate(-1); return true;
+      case 'rotR': this.cam.rotate(1); return true;
+      case 'tilt': this.cam.togglePitch(); return true;
+      case 'zoomIn': this.cam.zoom(0.85); return true;
+      case 'zoomOut': this.cam.zoom(1.18); return true;
+      case 'recenter': this.cam.recenter(); return true;
+      default: return false;
+    }
+  }
+
+  /** screen shake (respects the option) plus a controller rumble */
+  shake(amp: number, time: number) {
+    if (loadOptions().camShake) this.cam.shake(amp, time);
+    input.rumble(Math.min(1, amp * 2.2), Math.min(400, time * 700));
   }
 
   // ------------------------------------------------------------ units
@@ -148,7 +235,7 @@ export class Stage {
     this.hl.set(id, g);
   }
   clearHighlight(id?: string) {
-    if (id) { const g = this.hl.get(id); if (g) { this.scene.remove(g); g.traverse((o: any) => o.geometry?.dispose?.()); this.hl.delete(id); } return; }
+    if (id) { const g = this.hl.get(id); if (g) { this.scene.remove(g); releaseTree(g); this.hl.delete(id); } return; }
     for (const k of [...this.hl.keys()]) this.clearHighlight(k);
   }
 
@@ -157,7 +244,7 @@ export class Stage {
     const c = this.grid.cell(x, z);
     if (!c) { this.cursorMesh.visible = false; return; }
     this.scene.remove(this.cursorMesh);
-    this.cursorMesh.geometry.dispose();
+    releaseTree(this.cursorMesh);
     this.cursorMesh = this.makeTileMesh([[x, z]], tileMaterial('#ffffff', true, 0.9), 0.06);
     this.cursorMesh.visible = visible;
     this.scene.add(this.cursorMesh);
@@ -179,7 +266,7 @@ export class Stage {
     this.scene.add(g);
     this.chargeMarks.set(uid, g);
   }
-  unmarkCharge(uid: number) { const g = this.chargeMarks.get(uid); if (g) { this.scene.remove(g); this.chargeMarks.delete(uid); } }
+  unmarkCharge(uid: number) { const g = this.chargeMarks.get(uid); if (g) { this.scene.remove(g); releaseTree(g); this.chargeMarks.delete(uid); } }
 
   // ------------------------------------------------------------ picking & projection
   pickCell(clientX: number, clientY: number): [number, number] | null {
@@ -216,6 +303,9 @@ export class Stage {
     const sdt = dt * this.timeScale;
     for (const v of this.views.values()) v.update(sdt);
     this.env.update(sdt);
+    // set every frame: when stages swap, the old one's dispose() runs after the new one's init()
+    input.analogCamera = this.userCamera;
+    this.analogCamera(dt);
     this.cam.update(dt);
     this.vfx.update(sdt, this.cam.cam);
     // storms: distant lightning
@@ -242,6 +332,6 @@ export class Stage {
     this.post.dispose();
     for (const k of [...this.views.keys()]) this.removeUnit(k);
     this.terrain.dispose();
-    this.scene.traverse((o: any) => { o.geometry?.dispose?.(); });
+    releaseTree(this.scene); // highlights, goal markers, environment, lights' shadow maps
   }
 }

@@ -1,7 +1,7 @@
 {
   "name": "final-fealty-tactics",
   "version": "1.0.0",
-  "description": "Final Fealty Tactics — a low-poly tactical RPG inspired by classic isometric tactics games. three.js WebGPU.",
+  "description": "Final Fealty Tactics \u2014 a low-poly tactical RPG inspired by classic isometric tactics games. three.js WebGPU.",
   "private": true,
   "type": "module",
   "engines": {
@@ -13,7 +13,10 @@
     "preview": "vite preview --host",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "validate": "vite-node tools/validate.ts"
+    "validate": "vite-node tools/validate.ts",
+    "test:e2e": "vite build --logLevel warn && playwright test",
+    "test:e2e:desktop": "vite build --logLevel warn && playwright test --project=chromium --project=firefox --project=webkit",
+    "test:e2e:mobile": "vite build --logLevel warn && playwright test --project=mobile-chrome --project=mobile-safari --project=small-phone --project=phone-landscape --project=tablet"
   },
   "dependencies": {
     "@fontsource/cinzel": "^5.3.0",
@@ -23,6 +26,7 @@
     "three-legacy": "npm:three@0.162.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@types/node": "^26.6.2",
     "@types/three": "^0.186.0",
     "playwright": "^1.63.0",

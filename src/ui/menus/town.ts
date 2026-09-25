@@ -49,7 +49,7 @@ export async function openShop(game: Game, node: WorldNode) {
             let info: HTMLElement | null = null;
             const pick = await menu({
               items: list.map((it) => ({ label: it.name, value: it.id, right: `${it.price} · own ${s.inventory[it.id] ?? 0}`, disabled: it.price > s.gil ? 'Not enough gil' : false, desc: it.desc })),
-              x: 16, y: 64, title: cat, parent: ov.root, showDesc: true, maxHeight: '62vh',
+              x: 16, y: 64, title: cat, parent: ov.root, showDesc: true, maxHeight: 'calc(62 * var(--vh))',
               onHover: (id) => { info?.remove(); const it = id ? ITEMS.get(id as string) : undefined; if (it) { info = itemPanel(game, it); ov.root.appendChild(info); } },
             }).promise;
             (info as HTMLElement | null)?.remove();
@@ -64,7 +64,8 @@ export async function openShop(game: Game, node: WorldNode) {
       if (mode === 'sell') {
         for (;;) {
           const own = Object.entries(s.inventory).filter(([id, n]) => n > 0 && ITEMS.get(id)).map(([id, n]) => ({ it: ITEMS.get(id)!, n }));
-          const pick = await menu({ items: own.map(({ it, n }) => ({ label: it.name, value: it.id, right: `×${n} · ${Math.floor(it.price / 2)}` })), x: 16, y: 64, title: 'Sell', parent: ov.root, maxHeight: '62vh' }).promise;
+          if (!own.length) { toast('Nothing to sell.'); break; }
+          const pick = await menu({ items: own.map(({ it, n }) => ({ label: it.name, value: it.id, right: `×${n} · ${Math.floor(it.price / 2)}` })), x: 16, y: 64, title: 'Sell', parent: ov.root, maxHeight: 'calc(62 * var(--vh))' }).promise;
           if (!pick) break;
           const it = ITEMS.get(pick)!;
           const n = await quantity(ov.root, it.name, s.inventory[pick], Math.floor(it.price / 2));
@@ -112,7 +113,7 @@ function itemPanel(game: Game, it: ItemDef): HTMLElement {
     return cur?.id === it.id ? 'equipped' : '';
   };
   const kindName = it.cat ? it.cat.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase()) : it.kind === 'consumable' ? 'Consumable' : it.kind === 'throwable' ? 'Throwing weapon' : it.kind.replace(/^./, (c) => c.toUpperCase());
-  return h('div.panel', { style: { right: '16px', top: '64px', width: 'min(420px, 44vw)', maxHeight: '78vh', overflowY: 'auto' } },
+  return h('div.panel.detail', { style: { right: '16px', top: '64px', width: 'min(420px, 44vw)', maxHeight: 'calc(78 * var(--vh))', overflowY: 'auto' } },
     h('div', { style: { fontFamily: 'Cinzel, serif', fontWeight: '700', fontSize: '1.15em' } }, it.name),
     h('div.muted', { style: { margin: '0 0 6px' } }, `${kindName} · ${it.price.toLocaleString()} gil`),
     ...rows.map(([k, v]) => h('div', { style: { display: 'flex', justifyContent: 'space-between', gap: '12px' } }, h('span', null, k), h('b', null, v))),
@@ -131,15 +132,18 @@ async function quantity(parent: HTMLElement, name: string, max: number, unit: nu
   upd();
   box.appendChild(h('div.title-plate', null, 'Quantity'));
   box.appendChild(txt);
-  box.appendChild(h('div.muted', null, '←→ ±1 · ↑↓ ±10 · Enter confirm'));
+  box.appendChild(h('div.muted', null, '←→ ±1 · ↑↓ ±10 · Enter confirm · Esc cancel'));
   const minus = h('span.btn', { style: { margin: '6px' } }, '−'), plus = h('span.btn', { style: { margin: '6px' } }, '+'), ok = h('span.btn', { style: { margin: '6px' } }, 'OK');
+  const cancel = h('span.btn.ghost', { style: { margin: '6px' } }, 'Cancel');
   box.appendChild(h('div', null, minus, ok, plus));
+  box.appendChild(h('div', null, cancel));
   parent.appendChild(box);
   return new Promise((resolve) => {
     const done = (v: number) => { pop(); box.remove(); resolve(v); };
     minus.onclick = () => { n = Math.max(1, n - 1); upd(); };
     plus.onclick = () => { n = Math.min(max, n + 1); upd(); };
     ok.onclick = () => done(n);
+    cancel.onclick = () => done(0);
     const pop = input.push((a) => {
       if (a === 'left') { n = Math.max(1, n - 1); upd(); }
       if (a === 'right') { n = Math.min(max, n + 1); upd(); }
@@ -192,7 +196,7 @@ export async function openTavern(game: Game, node: WorldNode) {
         for (;;) {
           const list = RUMORS.filter((r) => r.towns.includes(node.id) || r.towns.includes('*') || !r.towns.length).filter((r) => s.chapter >= r.chapterMin && (r.chapterMax === undefined || s.chapter <= r.chapterMax) && (r.needs ?? []).every((f) => s.flags[f]));
           if (!list.length) { toast('The tavern is quiet tonight.'); break; }
-          const r = await menu({ items: list.map((x) => ({ label: (s.rumorsRead.includes(x.id) ? '' : '• ') + x.title, value: x.id })), x: 16, y: 64, title: 'Rumours', parent: ov.root, maxHeight: '62vh' }).promise;
+          const r = await menu({ items: list.map((x) => ({ label: (s.rumorsRead.includes(x.id) ? '' : '• ') + x.title, value: x.id })), x: 16, y: 64, title: 'Rumours', parent: ov.root, maxHeight: 'calc(62 * var(--vh))' }).promise;
           if (!r) break;
           const rm = list.find((x) => x.id === r)!;
           if (!s.rumorsRead.includes(rm.id)) s.rumorsRead.push(rm.id);
@@ -203,7 +207,7 @@ export async function openTavern(game: Game, node: WorldNode) {
       if (pick === 'errands') {
         const list = [...ERRANDS.values()].filter((e) => e.towns.includes(node.id) && s.chapter >= e.chapterMin && (e.chapterMax === undefined || s.chapter <= e.chapterMax) && (e.needs ?? []).every((f) => s.flags[f]) && !s.errandsDone.includes(e.id) && !s.errands.some((r) => r.id === e.id));
         if (!list.length) { toast('No errands posted here now.'); continue; }
-        const eid = await menu({ items: list.map((e) => ({ label: e.title, value: e.id, right: `${e.fee} gil · ${e.days}d`, desc: `${e.desc}  (Reward ~${e.reward.gil} gil${e.reward.jp ? `, ${e.reward.jp} JP` : ''})` })), x: 16, y: 64, title: 'Errands', parent: ov.root, showDesc: true, maxHeight: '60vh' }).promise;
+        const eid = await menu({ items: list.map((e) => ({ label: e.title, value: e.id, right: `${e.fee} gil · ${e.days}d`, desc: `${e.desc}  (Reward ~${e.reward.gil} gil${e.reward.jp ? `, ${e.reward.jp} JP` : ''})` })), x: 16, y: 64, title: 'Errands', parent: ov.root, showDesc: true, maxHeight: 'calc(60 * var(--vh))' }).promise;
         if (!eid) continue;
         const e = ERRANDS.get(eid)!;
         if (s.gil < e.fee) { toast('You cannot afford the fee.'); continue; }
@@ -211,7 +215,7 @@ export async function openTavern(game: Game, node: WorldNode) {
         if (!avail.length) { toast('No free generic soldiers to send (story characters must stay).'); continue; }
         const chosen: string[] = [];
         for (;;) {
-          const u = await menu({ items: [...avail.map((x) => ({ label: (chosen.includes(x.uid) ? '◆ ' : '◇ ') + x.name, value: x.uid, right: `${JOBS.get(x.job)?.name} Br${x.brave} Fa${x.faith}` })), { label: `Send ${chosen.length} (fee ${e.fee})`, value: '__go', disabled: !chosen.length }], x: 16, y: 64, title: `Send on: ${e.title}`, parent: ov.root, maxHeight: '60vh' }).promise;
+          const u = await menu({ items: [...avail.map((x) => ({ label: (chosen.includes(x.uid) ? '◆ ' : '◇ ') + x.name, value: x.uid, right: `${JOBS.get(x.job)?.name} Br${x.brave} Fa${x.faith}` })), { label: `Send ${chosen.length} (fee ${e.fee})`, value: '__go', disabled: !chosen.length }], x: 16, y: 64, title: `Send on: ${e.title}`, parent: ov.root, maxHeight: 'calc(60 * var(--vh))' }).promise;
           if (!u) break;
           if (u === '__go') {
             s.gil -= e.fee;
@@ -232,7 +236,7 @@ export async function openTavern(game: Game, node: WorldNode) {
 }
 
 async function readText(parent: HTMLElement, title: string, text: string) {
-  const box = h('div.panel', { style: { left: '50%', top: '50%', transform: 'translate(-50%,-50%)', width: 'min(640px, 92vw)', maxHeight: '70vh', overflowY: 'auto' } },
+  const box = h('div.panel', { style: { left: '50%', top: '50%', transform: 'translate(-50%,-50%)', width: 'min(640px, 92vw)', maxHeight: 'calc(70 * var(--vh))', overflowY: 'auto' } },
     h('div.title-plate', null, title), h('div', { style: { whiteSpace: 'pre-wrap', lineHeight: '1.5', fontSize: '1.05em', marginTop: '6px' } }, text));
   parent.appendChild(box);
   await new Promise<void>((resolve) => { const pop = input.push((a) => { if (a === 'confirm' || a === 'cancel') { pop(); resolve(); } return true; }); box.addEventListener('click', () => input.dispatch('confirm')); });

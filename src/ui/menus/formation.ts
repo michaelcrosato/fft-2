@@ -13,12 +13,14 @@ import { BattleUnit } from '../../battle/unit';
 export async function openFormation(game: Game, focus?: RosterUnit) {
   const s = game.state;
   const ov = overlay('Formation');
+  const prevMusic = audio.currentMusic;
   audio.playMusic('formation', { fade: 1 });
   let detail = null as HTMLElement | null;
   const showDetail = (u: RosterUnit | null) => {
     detail?.remove();
     if (!u) return;
     detail = unitPanel(u);
+    detail.classList.add('detail');
     detail.style.position = 'absolute'; detail.style.right = '16px'; detail.style.top = '64px';
     ov.root.appendChild(detail);
   };
@@ -26,7 +28,7 @@ export async function openFormation(game: Game, focus?: RosterUnit) {
     let last: string | undefined = focus?.uid;
     for (;;) {
       const items = s.roster.map((u) => ({ label: u.name, value: u.uid, right: `${JOBS.get(u.job)?.name ?? u.job} Lv${u.level}${u.errand ? ' (away)' : ''}` }));
-      const pick = await menu({ items, x: 16, y: 64, title: `Party ${s.roster.length}`, parent: ov.root, maxHeight: '70vh', initial: last, onHover: (uid) => showDetail(s.roster.find((r) => r.uid === uid) ?? null) }).promise;
+      const pick = await menu({ items, x: 16, y: 64, title: `Party ${s.roster.length}`, parent: ov.root, maxHeight: 'calc(70 * var(--vh))', initial: last, onHover: (uid) => showDetail(s.roster.find((r) => r.uid === uid) ?? null) }).promise;
       if (!pick) break;
       last = pick;
       const u = s.roster.find((r) => r.uid === pick)!;
@@ -35,6 +37,8 @@ export async function openFormation(game: Game, focus?: RosterUnit) {
   } finally {
     detail?.remove();
     ov.close();
+    // back to whatever was playing (world map / town)
+    if (prevMusic && prevMusic !== 'formation') audio.playMusic(prevMusic, { fade: 1 });
   }
 }
 
@@ -62,9 +66,12 @@ async function unitMenu(game: Game, u: RosterUnit, parent: HTMLElement, refresh:
       if (n && n.trim()) { u.name = n.trim().slice(0, 14); if (u.charId === 'rhen') s.heroName = u.name; }
     }
     if (pick === 'dismiss') {
-      if (await confirm(`Dismiss ${u.name}? They will leave the company forever.`)) {
+      if (await confirm(`Dismiss ${u.name}? They will leave the company forever.`, 'Dismiss', 'Keep', true)) {
         for (const id of Object.values(u.equip)) if (id) addItem(s, id, 1);
         s.roster = s.roster.filter((r) => r !== u);
+        // an errand party no longer counts someone who has left
+        for (const run of s.errands) run.units = run.units.filter((id) => id !== u.uid);
+        s.errands = s.errands.filter((run) => run.units.length > 0);
         return;
       }
     }
@@ -81,7 +88,7 @@ async function jobMenu(game: Game, u: RosterUnit, parent: HTMLElement, refresh: 
     const req = (j.requires ?? []).map((r) => `${JOBS.get(r.job)?.name ?? r.job} ${r.level}`).join(', ');
     return { label: j.name, value: j.id, disabled: ok ? false : j.gender && j.gender !== u.gender ? `${j.gender === 'm' ? 'Men' : 'Women'} only` : `Requires ${req}`, right: ok ? `Lv${unitJobLevel(u, j.id)} ${u.jp[j.id] ?? 0}JP` : '🔒', desc: j.desc };
   });
-  const pick = await menu({ items, x: 16, y: 64, title: 'Jobs', parent, showDesc: true, maxHeight: '62vh', initial: u.job, onHover: (jid) => {
+  const pick = await menu({ items, x: 16, y: 64, title: 'Jobs', parent, showDesc: true, maxHeight: 'calc(62 * var(--vh))', initial: u.job, onHover: (jid) => {
     if (!jid) return;
     const panel = parent.querySelector('.job-delta');
     panel?.remove();
@@ -103,7 +110,7 @@ async function jobMenu(game: Game, u: RosterUnit, parent: HTMLElement, refresh: 
 async function learnMenu(u: RosterUnit, parent: HTMLElement, refresh: () => void) {
   for (;;) {
     const jobs = availableJobs(u).filter((j) => j.abilities.length);
-    const jid = await menu({ items: jobs.map((j) => ({ label: j.name, value: j.id, right: `${u.jp[j.id] ?? 0} JP` })), x: 16, y: 64, title: 'Learn from…', parent, initial: u.job, maxHeight: '62vh' }).promise;
+    const jid = await menu({ items: jobs.map((j) => ({ label: j.name, value: j.id, right: `${u.jp[j.id] ?? 0} JP` })), x: 16, y: 64, title: 'Learn from…', parent, initial: u.job, maxHeight: 'calc(62 * var(--vh))' }).promise;
     if (!jid) return;
     for (;;) {
       const j = JOBS.get(jid)!;
@@ -113,7 +120,7 @@ async function learnMenu(u: RosterUnit, parent: HTMLElement, refresh: () => void
         const kind = a.kind === 'action' ? '' : a.kind === 'reaction' ? 'R · ' : a.kind === 'support' ? 'S · ' : 'M · ';
         return { label: (known ? '✓ ' : '') + kind + a.name, value: a.id, right: known ? 'Learned' : `${a.jp} JP`, disabled: known ? 'Already learned' : (u.jp[jid] ?? 0) < a.jp ? 'Not enough JP' : false, desc: a.desc };
       });
-      const pick = await menu({ items, x: 16, y: 64, title: `${j.skillset.name} — ${u.jp[jid] ?? 0} JP`, parent, showDesc: true, maxHeight: '60vh' }).promise;
+      const pick = await menu({ items, x: 16, y: 64, title: `${j.skillset.name} — ${u.jp[jid] ?? 0} JP`, parent, showDesc: true, maxHeight: 'calc(60 * var(--vh))' }).promise;
       if (!pick) break;
       if (learnAbility(u, jid, pick)) { audio.sfx('learn'); toast(`Learned ${ABILITIES.get(pick)?.name}`); refresh(); }
     }
@@ -134,12 +141,12 @@ async function setAbilities(game: Game, u: RosterUnit, parent: HTMLElement, refr
     if (slot === 'secondary') {
       const bu = new BattleUnit(u, 0, true);
       const opts = [...JOBS.values()].filter((j) => j.id !== u.job && !j.monster && bu.skillsetActions(j.id).some((a) => u.learned.includes(a.id)));
-      const pick = await menu({ items: [{ label: '— None —', value: '' }, ...opts.map((j) => ({ label: j.skillset.name, value: j.id, right: `${bu.skillsetActions(j.id).filter((a) => u.learned.includes(a.id)).length} skills` }))], x: 16, y: 64, title: 'Secondary', parent, maxHeight: '60vh' }).promise;
+      const pick = await menu({ items: [{ label: '— None —', value: '' }, ...opts.map((j) => ({ label: j.skillset.name, value: j.id, right: `${bu.skillsetActions(j.id).filter((a) => u.learned.includes(a.id)).length} skills` }))], x: 16, y: 64, title: 'Secondary', parent, maxHeight: 'calc(60 * var(--vh))' }).promise;
       if (pick !== null) u.secondary = pick || undefined;
     } else {
       const kind = slot as 'reaction' | 'support' | 'movement';
       const opts = u.learned.map((id) => ABILITIES.get(id)).filter((a) => a && a.kind === kind) as NonNullable<ReturnType<typeof ABILITIES.get>>[];
-      const pick = await menu({ items: [{ label: '— None —', value: '' }, ...opts.map((a) => ({ label: a.name, value: a.id, desc: a.desc }))], x: 16, y: 64, title: slot[0].toUpperCase() + slot.slice(1), parent, showDesc: true, maxHeight: '60vh' }).promise;
+      const pick = await menu({ items: [{ label: '— None —', value: '' }, ...opts.map((a) => ({ label: a.name, value: a.id, desc: a.desc }))], x: 16, y: 64, title: slot[0].toUpperCase() + slot.slice(1), parent, showDesc: true, maxHeight: 'calc(60 * var(--vh))' }).promise;
       if (pick !== null) {
         u[kind] = pick || undefined;
         const removed = validateEquipment(u);
@@ -178,12 +185,14 @@ export async function equipMenu(game: Game, u: RosterUnit, parent: HTMLElement, 
     const slot = await menu({ items: (Object.keys(SLOT_NAMES) as EquipSlot[]).map((k) => ({ label: SLOT_NAMES[k], value: k, right: u.equip[k] ? ITEMS.get(u.equip[k]!)?.name ?? '' : '—' })), x: 16, y: 64, title: 'Equipment', parent }).promise;
     if (!slot) return;
     const sl = slot as EquipSlot;
-    const cands = Object.entries(s.inventory).filter(([id, n]) => n > 0 && ITEMS.get(id) && canEquip(u, ITEMS.get(id)!, sl)).map(([id]) => ITEMS.get(id)!);
+    // nothing goes in the off hand while the main hand grips a two-handed weapon
+    const twoHanded = sl === 'lhand' && !!(u.equip.rhand && ITEMS.get(u.equip.rhand)?.twoHanded);
+    const cands = twoHanded ? [] : Object.entries(s.inventory).filter(([id, n]) => n > 0 && ITEMS.get(id) && canEquip(u, ITEMS.get(id)!, sl)).map(([id]) => ITEMS.get(id)!);
     cands.sort((a, b) => itemScore(b) - itemScore(a));
     const pick = await menu({ items: [
       { label: '— Remove —', value: '__none', disabled: !u.equip[sl] },
       ...cands.map((it) => ({ label: it.name, value: it.id, right: `×${s.inventory[it.id]}`, desc: `${describe(it)} — ${it.desc}` })),
-    ], x: 16, y: 64, title: SLOT_NAMES[sl], parent, showDesc: true, maxHeight: '60vh' }).promise;
+    ], x: 16, y: 64, title: SLOT_NAMES[sl], parent, showDesc: true, maxHeight: 'calc(60 * var(--vh))' }).promise;
     if (!pick) continue;
     const old = u.equip[sl];
     if (old) addItem(s, old, 1);
@@ -194,6 +203,7 @@ export async function equipMenu(game: Game, u: RosterUnit, parent: HTMLElement, 
       const it = ITEMS.get(pick)!;
       if (it.twoHanded && sl === 'rhand' && u.equip.lhand) { addItem(s, u.equip.lhand, 1); delete u.equip.lhand; }
     }
+    for (const id of validateEquipment(u)) addItem(s, id, 1);
     audio.sfx('item');
   }
 }
@@ -215,4 +225,6 @@ export function optimize(game: Game, u: RosterUnit) {
       u.equip[sl] = best.id;
     }
   }
+  // e.g. a new two-handed weapon and the old shield: hand back whatever no longer fits
+  for (const id of validateEquipment(u)) addItem(s, id, 1);
 }

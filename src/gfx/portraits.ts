@@ -67,10 +67,20 @@ async function render(key: string, build: () => UnitModel, bg: string): Promise<
   renderer.clear();
   renderer.render(scene, cam);
   let pixels: Uint8Array;
-  if ((renderer as any).readRenderTargetPixelsAsync) pixels = new Uint8Array(await (renderer as any).readRenderTargetPixelsAsync(rt, 0, 0, W, H));
-  else { pixels = new Uint8Array(W * H * 4); (renderer as any).readRenderTargetPixels(rt, 0, 0, W, H, pixels); }
-  renderer.setRenderTarget(prevTarget);
-  renderer.toneMapping = prevTone;
+  if ((renderer as any).readRenderTargetPixelsAsync) {
+    // start the readback, then hand the canvas back to the main loop *before* awaiting:
+    // otherwise every frame until the GPU answers is drawn into this little target (black screen)
+    const read = (renderer as any).readRenderTargetPixelsAsync(rt, 0, 0, W, H) as Promise<ArrayBufferView>;
+    renderer.setRenderTarget(prevTarget);
+    renderer.toneMapping = prevTone;
+    const buf = (await read) as ArrayBufferView | ArrayBuffer;
+    pixels = buf instanceof ArrayBuffer ? new Uint8Array(buf) : new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
+  } else {
+    pixels = new Uint8Array(W * H * 4);
+    (renderer as any).readRenderTargetPixels(rt, 0, 0, W, H, pixels);
+    renderer.setRenderTarget(prevTarget);
+    renderer.toneMapping = prevTone;
+  }
   scene.remove(model.root);
   model.dispose();
 

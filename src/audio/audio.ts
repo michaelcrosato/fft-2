@@ -379,7 +379,9 @@ export class AudioEngine {
     this.applyVolumes(0);
     if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
       document.addEventListener('visibilitychange', () => {
-        if (!document.hidden) void this.resume();
+        // silence (and stop scheduling) while the tab is in the background
+        if (document.hidden) { try { void ctx.suspend().catch(() => {}); } catch { /* ignore */ } }
+        else void this.resume();
       });
     }
     const resumed = this.resume();

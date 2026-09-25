@@ -8,9 +8,10 @@ import type { Rng } from '../core/rng';
 type Fx = (x: FormulaCtx) => number;
 
 /** Base physical damage for a weapon (FFT-style weapon formulas). */
-export function weaponDamage(c: BattleUnit, w: ItemDef | null, rng: Rng | null, opts: { avg?: boolean } = {}): number {
+export function weaponDamage(c: BattleUnit, w: ItemDef | null, rng: Rng | null, opts: { avg?: boolean; wp?: number } = {}): number {
   const type: WeaponType = (w?.cat as WeaponType) ?? 'fist';
-  const wp = w?.wp ?? 0;
+  // effective weapon power (e.g. doubled by Two Hands) when the caller knows it
+  const wp = opts.wp ?? w?.wp ?? 0;
   const pa = c.pa;
   const br = c.brave;
   const rnd = (n: number) => (opts.avg || !rng ? Math.max(1, Math.round((n + 1) / 2)) : rng.int(1, Math.max(1, n)));
@@ -43,7 +44,7 @@ export function weaponDamage(c: BattleUnit, w: ItemDef | null, rng: Rng | null, 
 
 export const F = {
   /** attack with the equipped weapon (or thrown item's WP via x.wp) */
-  weapon: (mult = 1): Fx => (x) => Math.floor(weaponDamage(x.c, x.c.weapon, x.rng) * mult),
+  weapon: (mult = 1): Fx => (x) => Math.floor(weaponDamage(x.c, x.c.weapon, x.rng, { wp: x.c.weapon ? x.wp : undefined }) * mult),
   /** PA * WP style for skills that use weapon power */
   paWp: (mult = 1): Fx => (x) => Math.floor(x.c.pa * x.wp * mult),
   /** (PA + k) * WP — archer's Aim */

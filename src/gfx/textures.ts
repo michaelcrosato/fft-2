@@ -3,6 +3,7 @@
 import { THREE } from './three';
 import { hash2 } from '../core/rng';
 import type { Texture } from 'three/webgpu';
+import { markShared } from './dispose';
 
 export type TexId =
   | 'grass' | 'dirt' | 'cobble' | 'rock' | 'brick' | 'planks' | 'roof' | 'carpet' | 'moss'
@@ -348,6 +349,7 @@ export function getTexture(id: TexId): { map: Texture; normal: Texture; emissive
     emissive.wrapS = emissive.wrapT = THREE.RepeatWrapping;
   }
   const res = { map, normal, emissive };
+  for (const t of [map, normal, emissive]) if (t) markShared(t);
   cache.set(id, res);
   return res;
 }

@@ -2,7 +2,7 @@
 // roads, forests, sea, miniature towns/castles, node markers and a walking
 // party token.
 import { THREE } from '../gfx/three';
-import { renderer } from '../gfx/renderer';
+import { renderer, rinfo } from '../gfx/renderer';
 import { createPost, type PostFX } from '../gfx/post';
 import { GeoBuilder, hexRgb, mat } from '../gfx/geo';
 import { propMaterial, waterMaterial } from '../gfx/materials';
@@ -14,6 +14,8 @@ import type { Scene, PerspectiveCamera, Group, Mesh, Vector3, Raycaster, Object3
 import { buildHumanoid } from '../gfx/models/humanoid';
 import { Animator } from '../gfx/models/anim';
 import type { UnitModel } from '../gfx/models/rig';
+import { releaseTree } from '../gfx/dispose';
+import { fovFor } from '../gfx/camera';
 
 const S = 0.6;            // world units per map unit
 const SIZE = 110;         // map extent in map units (0..100 + margin)
@@ -243,7 +245,8 @@ export class WorldView {
     const sun = new THREE.DirectionalLight('#fff0d8', 3.0);
     sun.position.set(30, 45, 25);
     sun.castShadow = true;
-    sun.shadow.mapSize.set(4096, 4096);
+    const sz = rinfo?.settings.shadowSize ?? 2048; // follows the quality preset (4096 costs ~64 MB)
+    sun.shadow.mapSize.set(sz, sz);
     const c = sun.shadow.camera;
     c.left = -40; c.right = 40; c.top = 40; c.bottom = -40; c.near = 1; c.far = 150;
     sun.shadow.bias = -0.0005;
@@ -354,15 +357,16 @@ export class WorldView {
       const s = (pulse ? 1 + Math.sin(this.t * 4) * 0.18 : 1) * (id === this.hoverNode ? 1.3 : 1);
       m.ring.scale.set(s, s, s);
     }
-    const clouds = this.scene.getObjectByName('clouds');
-    if (clouds) { clouds.position.x = ((this.t * 0.6) % 60) - 30; }
+    this.clouds ??= this.scene.getObjectByName('clouds') ?? null;
+    if (this.clouds) { this.clouds.position.x = ((this.t * 0.6) % 60) - 30; }
     if (this.party) this.party.anim.update(dt);
     this.vfx.update(dt, this.cam);
     this.post.setFocus(this.camDist, this.camDist * 0.7);
   }
   render() { this.post.render(); }
-  resize(w: number, h: number) { this.cam.aspect = w / Math.max(1, h); this.cam.updateProjectionMatrix(); }
-  dispose() { this.post.dispose(); this.vfx.dispose(); this.scene.traverse((o: any) => o.geometry?.dispose?.()); }
+  resize(w: number, h: number) { this.cam.aspect = w / Math.max(1, h); this.cam.fov = fovFor(this.cam.aspect, 32); this.cam.updateProjectionMatrix(); }
+  private clouds: Object3D | null = null;
+  dispose() { this.post.dispose(); this.vfx.dispose(); releaseTree(this.scene); }
 }
 
 function avg(a: number[], b: number[], c: number[]): [number, number, number] {

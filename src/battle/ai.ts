@@ -28,6 +28,17 @@ const GOOD_VALUE: Partial<Record<StatusId, number>> = {
 
 function manhattan(a: { x: number; z: number }, b: { x: number; z: number }) { return Math.abs(a.x - b.x) + Math.abs(a.z - b.z); }
 
+/** path cost from every reachable cell to the nearest goal cell, for this unit's jump & terrain abilities */
+function goalDistances(b: Battle, u: BattleUnit, goals: Array<[number, number]>): Map<number, number> {
+  const out = new Map<number, number>();
+  const p = { ...b.moveParams(u), move: 999, occupant: () => 0 as const };
+  for (const [gx, gz] of goals) {
+    // climbing is symmetric enough for a heuristic: search outward from the goal
+    for (const [idx, n] of b.grid.moveRange(gx, gz, p)) if (!out.has(idx) || out.get(idx)! > n.cost) out.set(idx, n.cost);
+  }
+  return out;
+}
+
 export function planTurn(b: Battle, u: BattleUnit): AiPlan {
   const enemies = b.units.filter((o) => o.team !== u.team && o.active && !o.hidden && !o.gone && !o.jumping);
   const allies = b.units.filter((o) => o.team === u.team && !o.gone && !o.hidden);
@@ -48,8 +59,13 @@ export function planTurn(b: Battle, u: BattleUnit): AiPlan {
     const onGoal = cells.find((c) => vic.cells.some(([x, z]) => x === c.x && z === c.z));
     if (onGoal) return { move: [onGoal.x, onGoal.z], facing: u.facing, score: 999 };
     if (!enemies.length) {
+      // walking distance to the goal (walls, cliffs and water make straight-line distance a trap)
+      const dist = goalDistances(b, u, vic.cells);
       let best = cells[0], bd = 1e9;
-      for (const c of cells) for (const [x, z] of vic.cells) { const d = Math.abs(c.x - x) + Math.abs(c.z - z); if (d < bd) { bd = d; best = c; } }
+      for (const c of cells) {
+        const d = dist.get(b.grid.idx(c.x, c.z)) ?? 1e6 + Math.min(...vic.cells.map(([x, z]) => Math.abs(c.x - x) + Math.abs(c.z - z)));
+        if (d < bd) { bd = d; best = c; }
+      }
       if (best) return { move: [best.x, best.z], facing: u.facing, score: 1 };
     }
   }
@@ -69,7 +85,7 @@ export function planTurn(b: Battle, u: BattleUnit): AiPlan {
         if (a.special === 'calc') continue; // arithmancy handled below
         if (berserk && a.id !== 'attack') continue;
         if (a.special === 'throw') {
-          const list = throwables(b, String(a.params?.cat ?? 'shuriken'));
+          const list = throwables(b, String(a.params?.cat ?? 'shuriken'), u);
           const best = list.sort((p, q) => (ITEMS.get(q)?.wp ?? 0) - (ITEMS.get(p)?.wp ?? 0))[0];
           if (best) abilities.push({ a, opts: { item: best } });
           continue;
@@ -87,13 +103,14 @@ export function planTurn(b: Battle, u: BattleUnit): AiPlan {
     }
   }
   if (confused) {
-    // random act on random nearby unit
-    const pool = b.units.filter((o) => o.alive && !o.gone && !o.hidden && manhattan(o, u) <= 2 && o !== u);
+    // strike at whoever is in weapon reach (friend or foe), then stagger somewhere at random
     const atk = ABILITIES.get('attack');
     const mv = b.rng.pick(moveCells);
+    const reach = atk && !u.acted && u.canAct ? new Set(b.targetCells(u, atk).map((c) => b.grid.idx(c.x, c.z))) : new Set<number>();
+    const pool = b.units.filter((o) => o.alive && !o.gone && !o.hidden && o !== u && reach.has(b.grid.idx(o.x, o.z)));
     if (pool.length && atk && b.rng.pct(60)) {
       const t = b.rng.pick(pool);
-      return { move: [mv.x, mv.z], act: { ability: atk, x: t.x, z: t.z }, facing: u.facing, score: 0 };
+      return { move: [mv.x, mv.z], act: { ability: atk, x: t.x, z: t.z }, actFirst: true, facing: u.facing, score: 0 };
     }
     return { move: [mv.x, mv.z], facing: b.rng.pick(['N', 'E', 'S', 'W'] as Facing[]), score: 0 };
   }

@@ -40,6 +40,9 @@ export class Environment {
   private points: Array<{ light: PointLight; base: number; flicker: boolean; seed: number }> = [];
   private spinners: Object3D[] = [];
   private t = 0;
+  /** lightning light: always in the scene (intensity 0 at rest) — adding/removing lights recompiles every lit shader */
+  private flashLight: import('three/webgpu').DirectionalLight | null = null;
+  private flashT = 0;
 
   constructor(scene: Scene, terrain: TerrainView, def: MapDef, time?: EnvTime) {
     this.scene = scene;
@@ -68,6 +71,7 @@ export class Environment {
     sun.shadow.normalBias = 0.025;
     (sun.shadow as any).radius = 3;
     scene.add(sun, sun.target);
+    if (this.time === 'storm') this.addFlashLight();
     // fill
     this.hemi = new THREE.HemisphereLight(m.hemiSky, m.hemiGround, m.hemiI);
     scene.add(this.hemi);
@@ -240,6 +244,7 @@ export class Environment {
 
   update(dt: number) {
     this.t += dt;
+    if (this.flashT > 0) { this.flashT -= dt; if (this.flashT <= 0 && this.flashLight) this.flashLight.intensity = 0; }
     for (const p of this.points) {
       if (!p.flicker) continue;
       const f = 0.85 + Math.sin(this.t * 13 + p.seed) * 0.06 + Math.sin(this.t * 23.7 + p.seed * 2) * 0.05 + (Math.random() - 0.5) * 0.06;
@@ -252,10 +257,15 @@ export class Environment {
 
   /** brief lightning / spell flash light */
   lightning() {
-    const l = new THREE.DirectionalLight('#dfe8ff', 6);
-    l.position.set(Math.random() * 20 - 10, 30, Math.random() * 20 - 10);
-    this.scene.add(l);
-    setTimeout(() => this.scene.remove(l), 90);
+    if (!this.flashLight) this.addFlashLight();
+    this.flashLight!.position.set(Math.random() * 20 - 10, 30, Math.random() * 20 - 10);
+    this.flashLight!.intensity = 6;
+    this.flashT = 0.09;
+  }
+  private addFlashLight() {
+    this.flashLight = new THREE.DirectionalLight('#dfe8ff', 0);
+    this.flashLight.position.set(0, 30, 0);
+    this.scene.add(this.flashLight);
   }
 }
 

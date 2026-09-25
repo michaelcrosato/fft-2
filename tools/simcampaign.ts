@@ -31,7 +31,7 @@ function applyScript(b: Battle, cmds: SceneCmd[]) {
   }
 }
 function pump(b: Battle, evs: BEvent[]) {
-  for (const ev of evs) if (ev.t === 'script') { applyScript(b, b.def.events![ev.index].script); b.checkEnd(); }
+  for (const ev of evs) if (ev.t === 'script') { applyScript(b, b.def.events![ev.index].script); b.scriptDone(ev.index); b.checkEnd(); }
 }
 function run(b: Battle) {
   let turns = 0;

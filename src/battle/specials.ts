@@ -30,17 +30,25 @@ function learnedMax(u: BattleUnit, prefix: string, def: number) {
   return best;
 }
 
-/** inventory items of a throwable category */
-export function throwables(b: Battle, cat: string): string[] {
-  const out: string[] = [];
-  for (const [id, n] of b.inventory) {
-    if (n <= 0) continue;
-    const it = ITEMS.get(id);
-    if (!it) continue;
-    if (cat === 'shuriken' && it.kind === 'throwable' && it.look?.model?.includes('shuriken')) out.push(id);
-    else if (cat === 'ball' && it.kind === 'throwable' && !it.look?.model?.includes('shuriken')) out.push(id);
-    else if (it.kind === 'weapon' && it.cat === cat) out.push(id);
+const throwCat = (id: string, cat: string) => {
+  const it = ITEMS.get(id);
+  if (!it) return false;
+  if (cat === 'shuriken') return it.kind === 'throwable' && !!it.look?.model?.includes('shuriken');
+  if (cat === 'ball') return it.kind === 'throwable' && !it.look?.model?.includes('shuriken');
+  return it.kind === 'weapon' && it.cat === cat;
+};
+
+/**
+ * Items a unit can throw from a category. The player's units throw from the party
+ * inventory; enemies and guests carry their own supply (the cheapest item of the kind).
+ */
+export function throwables(b: Battle, cat: string, u?: BattleUnit): string[] {
+  if (u && !b.usesStock(u)) {
+    const own = [...ITEMS.values()].filter((it) => it.price > 0 && throwCat(it.id, cat)).sort((p, q) => p.price - q.price)[0];
+    return own ? [own.id] : [];
   }
+  const out: string[] = [];
+  for (const [id, n] of b.inventory) if (n > 0 && throwCat(id, cat)) out.push(id);
   return out;
 }
 
@@ -61,13 +69,13 @@ export const SPECIALS: Record<string, Special> = {
 
   /** Ninja throw — item chosen by UI/AI (opts.item) */
   throw: {
-    usable: (b, u, a) => (throwables(b, String(a.params?.cat ?? 'shuriken')).length ? undefined : 'Nothing to throw'),
+    usable: (b, u, a) => (throwables(b, String(a.params?.cat ?? 'shuriken'), u).length ? undefined : 'Nothing to throw'),
     range: (b, u) => ({ r: Math.max(1, u.move), min: 1, v: 99, line: false }),
     start: (b, u, a, x, z, opts) => {
-      const list = throwables(b, String(a.params?.cat ?? 'shuriken'));
+      const list = throwables(b, String(a.params?.cat ?? 'shuriken'), u);
       const item = opts.item && list.includes(opts.item) ? opts.item : list.sort((p, q) => (ITEMS.get(q)?.wp ?? 0) - (ITEMS.get(p)?.wp ?? 0))[0];
       if (!item) return;
-      b.takeItem(item);
+      if (b.usesStock(u)) b.takeItem(item);
       b.resolveAbility(u, a, x, z, { ...opts, item });
     },
   },
@@ -77,7 +85,7 @@ export const SPECIALS: Record<string, Special> = {
     start: (b, u, a, x, z, opts) => {
       b.resolveAbility(u, a, x, z, opts);
       const kat = a.requires?.item;
-      if (kat && b.rng.pct(12)) {
+      if (kat && b.usesStock(u) && b.rng.pct(12)) {
         b.takeItem(kat);
         b.emit({ t: 'text', uid: u.uid, text: `${ITEMS.get(kat)?.name ?? 'Katana'} shattered!`, color: '#faa' });
       }

@@ -10,6 +10,7 @@ import { hash2 } from '../core/rng';
 import { buildProp, PropBuckets } from './props';
 import type { Group, Mesh, Vector3 } from 'three/webgpu';
 import { rinfo } from './renderer';
+import { releaseTree } from './dispose';
 
 export const HS = 0.4;        // world units per height step (h)
 export const LIP = 0.09;       // grass lip thickness
@@ -397,9 +398,7 @@ export class TerrainView {
     for (const m of buckets.meshes()) this.group.add(m);
   }
 
-  dispose() {
-    this.group.traverse((o: any) => { if (o.geometry) o.geometry.dispose(); });
-  }
+  dispose() { releaseTree(this.group); }
 }
 
 export function nodesAvailable() { return NODES; }

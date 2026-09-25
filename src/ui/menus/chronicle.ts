@@ -14,9 +14,18 @@ export async function openChronicle(game: Game) {
   let body = null as HTMLElement | null;
   const show = (title: string, text: string) => {
     body?.remove();
-    body = h('div.panel', { style: { right: '16px', top: '64px', width: 'min(620px, 58vw)', maxHeight: '78vh', overflowY: 'auto' } },
+    body = h('div.panel.detail', { style: { right: '16px', top: '64px', width: 'min(620px, 58vw)', maxHeight: 'calc(78 * var(--vh))', overflowY: 'auto' } },
       h('div.title-plate', null, title), h('div', { style: { whiteSpace: 'pre-wrap', lineHeight: '1.55', marginTop: '6px', fontSize: '1.02em' } }, text));
     ov.root.appendChild(body);
+  };
+  /** a browsable list: entries show on hover/choose; only Back returns to the sections */
+  const browse = async (o: Parameters<typeof menu<string>>[0]) => {
+    let last: string | undefined;
+    for (;;) {
+      const p = await menu({ ...o, initial: last }).promise;
+      if (p === null) return;
+      last = p;
+    }
   };
   try {
     for (;;) {
@@ -24,37 +33,42 @@ export async function openChronicle(game: Game) {
       if (!sec) return;
       if (sec === 'events') {
         const list = [...CHRONICLE.values()].filter((e) => s.chronicle.includes(e.id) || s.flags[e.id]).sort((a, b) => a.chapter - b.chapter);
-        await menu({ items: list.length ? list.map((e) => ({ label: e.title, value: e.id })) : [{ label: 'Nothing recorded yet', value: '', disabled: true }], x: 16, y: 64, title: 'Events', parent: ov.root, maxHeight: '70vh', onHover: (id) => { const e = CHRONICLE.get(id as string); if (e) show(e.title, e.text); } }).promise;
+        await browse({ items: list.length ? list.map((e) => ({ label: e.title, value: e.id })) : [{ label: 'Nothing recorded yet', value: '', disabled: true }], x: 16, y: 64, title: 'Events', parent: ov.root, maxHeight: 'calc(70 * var(--vh))', onHover: (id) => { const e = CHRONICLE.get(id as string); if (e) show(e.title, e.text); } });
       }
       if (sec === 'persons') {
         const met = new Set([...s.met, ...s.roster.filter((r) => r.charId).map((r) => r.charId!)]);
         const list = [...CHARACTERS.values()].filter((c) => met.has(c.id) || c.bio.some(([f]) => f && s.flags[f]));
-        await menu({ items: list.map((c) => ({ label: c.id === 'rhen' ? s.heroName : c.name, value: c.id })), x: 16, y: 64, title: 'Persons', parent: ov.root, maxHeight: '70vh', onHover: (id) => {
+        await browse({ items: list.map((c) => ({ label: c.id === 'rhen' ? s.heroName : c.name, value: c.id })), x: 16, y: 64, title: 'Persons', parent: ov.root, maxHeight: 'calc(70 * var(--vh))', onHover: (id) => {
           const c = CHARACTERS.get(id as string);
           if (!c) return;
-          const bio = c.bio.filter(([f]) => !f || s.flags[f]).map(([, t]) => t.replace(/\{hero\}/g, s.heroName)).join('\n\n');
+          const bio = c.bio.filter(([f]) => !f || s.flags[f]).map(([, t]) => t.replace(/\{hero\}/g, () => s.heroName)).join('\n\n');
           show(`${c.id === 'rhen' ? s.heroName : c.fullName ?? c.name}${c.title ? ' — ' + c.title : ''}`, `${JOBS.get(c.job)?.name ?? ''}\n\n${bio || '…'}`);
-        } }).promise;
+        } });
       }
       if (sec === 'artefacts') {
         const list = s.artefacts.map((id) => ARTEFACTS.get(id)).filter(Boolean) as NonNullable<ReturnType<typeof ARTEFACTS.get>>[];
-        await menu({ items: list.length ? list.map((a) => ({ label: a.name, value: a.id })) : [{ label: 'None found — send parties on errands', value: '', disabled: true }], x: 16, y: 64, title: 'Artefacts', parent: ov.root, maxHeight: '70vh', onHover: (id) => { const a = ARTEFACTS.get(id as string); if (a) show(a.name, a.desc); } }).promise;
+        await browse({ items: list.length ? list.map((a) => ({ label: a.name, value: a.id })) : [{ label: 'None found — send parties on errands', value: '', disabled: true }], x: 16, y: 64, title: 'Artefacts', parent: ov.root, maxHeight: 'calc(70 * var(--vh))', onHover: (id) => { const a = ARTEFACTS.get(id as string); if (a) show(a.name, a.desc); } });
       }
       if (sec === 'stones') {
-        await menu({
+        await browse({
           items: ZODIAC_STONES.map((z) => ({ label: `${ZODIAC_GLYPH[z.sign]}  ${s.flags[z.flag] ? ZODIAC_NAMES[z.sign] : '— unknown —'}`, value: z.sign, disabled: !s.flags[z.flag] })),
-          x: 16, y: 64, title: 'Zodiac Stones', parent: ov.root, maxHeight: '70vh',
+          x: 16, y: 64, title: 'Zodiac Stones', parent: ov.root, maxHeight: 'calc(70 * var(--vh))',
           onHover: (id) => { const z = ZODIAC_STONES.find((q) => q.sign === id); if (z && s.flags[z.flag]) show(`${ZODIAC_GLYPH[z.sign]} The Stone of ${ZODIAC_NAMES[z.sign]}`, `${z.lore}\n\nFound: ${z.where}.`); },
-        }).promise;
+        });
       }
       if (sec === 'errands') {
         const list = s.errandsDone.map((id) => ERRANDS.get(id)).filter(Boolean) as NonNullable<ReturnType<typeof ERRANDS.get>>[];
-        await menu({ items: list.length ? list.map((e) => ({ label: e.title, value: e.id })) : [{ label: 'No errands completed', value: '', disabled: true }], x: 16, y: 64, title: 'Errands', parent: ov.root, maxHeight: '70vh', onHover: (id) => { const e = ERRANDS.get(id as string); if (e) show(e.title, e.report); } }).promise;
+        await browse({ items: list.length ? list.map((e) => ({ label: e.title, value: e.id })) : [{ label: 'No errands completed', value: '', disabled: true }], x: 16, y: 64, title: 'Errands', parent: ov.root, maxHeight: 'calc(70 * var(--vh))', onHover: (id) => { const e = ERRANDS.get(id as string); if (e) show(e.title, e.report); } });
       }
       if (sec === 'records') {
         const hrs = Math.floor(s.playtime / 3600), mins = Math.floor((s.playtime % 3600) / 60);
         show('Records', `Play time: ${hrs}h ${mins}m\nDays travelled: ${s.day}\nBattles won: ${s.battlesWon}\nCompany size: ${s.roster.length}\nErrands completed: ${s.errandsDone.length}\nArtefacts found: ${s.artefacts.length}\nRumours heard: ${s.rumorsRead.length}`);
-        await new Promise<void>((resolve) => { const pop = input.push((a) => { if (a === 'confirm' || a === 'cancel') { pop(); resolve(); } return true; }); });
+        // closes on a key/button or a tap anywhere
+        await new Promise<void>((resolve) => {
+          const close = () => { pop(); ov.root.removeEventListener('click', close); resolve(); };
+          const pop = input.push((a) => { if (a === 'confirm' || a === 'cancel') close(); return true; });
+          setTimeout(() => ov.root.addEventListener('click', close), 0);
+        });
       }
       body?.remove(); body = null;
     }

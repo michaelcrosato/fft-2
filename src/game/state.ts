@@ -222,8 +222,16 @@ function migrate(s: GameState): GameState {
 }
 
 const OPT_KEY = 'fft-fealty-options';
+/** in-memory copy: options keep working when storage is blocked, and hot paths don't re-parse localStorage */
+let optCache: Options | null = null;
 export function loadOptions(): Options {
-  try { const raw = storage()?.getItem(OPT_KEY); if (raw) return { ...DEFAULT_OPTIONS, ...JSON.parse(raw) }; } catch { /* ignore */ }
-  return { ...DEFAULT_OPTIONS };
+  if (!optCache) {
+    try { const raw = storage()?.getItem(OPT_KEY); if (raw) optCache = { ...DEFAULT_OPTIONS, ...JSON.parse(raw) }; } catch { /* ignore */ }
+    optCache ??= { ...DEFAULT_OPTIONS };
+  }
+  return { ...optCache };
 }
-export function saveOptions(o: Options) { try { storage()?.setItem(OPT_KEY, JSON.stringify(o)); } catch { /* ignore */ } }
+export function saveOptions(o: Options) {
+  optCache = { ...o };
+  try { storage()?.setItem(OPT_KEY, JSON.stringify(o)); } catch { /* ignore */ }
+}

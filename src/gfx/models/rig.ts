@@ -4,6 +4,7 @@ import { THREE } from '../three';
 import { GeoBuilder, mat } from '../geo';
 import type { BufferGeometry, Group, Material, Mesh, Object3D } from 'three/webgpu';
 import { propMaterial } from '../materials';
+import { markShared } from '../dispose';
 
 export type BoneName =
   | 'root' | 'body' | 'hips' | 'torso' | 'head' | 'armL' | 'armR' | 'elbowL' | 'elbowR' | 'handL' | 'handR'
@@ -29,7 +30,7 @@ let outlineMat: Material | null = null;
 export function getOutlineMaterial(): Material {
   if (!outlineMat) {
     const m = new THREE.MeshBasicMaterial({ color: '#141018', side: THREE.BackSide });
-    outlineMat = m;
+    outlineMat = markShared(m);
   }
   return outlineMat;
 }

@@ -1,5 +1,5 @@
 // Tactical diorama camera: orbits a target in 90° steps (smoothly), two pitch
-// presets, zoom, follow, cinematic moves and screen shake.
+// presets, free orbit, pan, zoom, follow, cinematic moves and screen shake.
 import { THREE } from './three';
 import type { PerspectiveCamera, Vector3 } from 'three/webgpu';
 
@@ -20,6 +20,10 @@ export class TacticsCamera {
   /** discrete rotation index 0..3 */
   rotIndex = 0;
   highAngle = false;
+  /** pan limits for the look-at point (world x/z), set from the map size */
+  bounds: { minX: number; maxX: number; minZ: number; maxZ: number } | null = null;
+  /** where recenter() returns to: the last point the game focused on, at the default distance */
+  private home = { target: null as Vector3 | null, dist: 30 };
 
   constructor(aspect: number) {
     this.cam = new THREE.PerspectiveCamera(fovFor(aspect), aspect, 0.5, 400);
@@ -34,12 +38,16 @@ export class TacticsCamera {
   snap(target: Vector3, dist?: number) {
     this.target.copy(target);
     this.goal.target = target.clone();
-    if (dist) { this.dist = dist; this.goal.dist = dist; }
+    this.home.target = target.clone();
+    if (dist) { this.dist = dist; this.goal.dist = dist; this.home.dist = dist; }
     this.apply();
   }
 
-  focus(target: Vector3) { this.goal.target = target.clone(); }
+  focus(target: Vector3) { this.goal.target = target.clone(); this.home.target = target.clone(); }
+  /** true while a scripted cinematic move is playing */
+  get animating() { return this.anim !== null; }
   rotate(dir: 1 | -1) {
+    this.settleYaw(); // a half-finished free orbit snaps first, so presets stay on the 45° diagonals
     this.rotIndex = (this.rotIndex + dir + 4) % 4;
     this.goal.yaw += (dir * Math.PI) / 2;
   }
@@ -47,10 +55,34 @@ export class TacticsCamera {
     this.highAngle = !this.highAngle;
     this.goal.pitch = this.highAngle ? 1.05 : 0.62;
   }
-  zoom(f: number) { this.goal.dist = Math.max(this.minDist, Math.min(this.maxDist, this.goal.dist * f)); }
+  zoom(f: number) { if (isFinite(f) && f > 0) this.goal.dist = Math.max(this.minDist, Math.min(this.maxDist, this.goal.dist * f)); }
   orbitFree(dYaw: number, dPitch: number) {
     this.goal.yaw += dYaw;
-    this.goal.pitch = Math.max(0.25, Math.min(1.35, this.goal.pitch + dPitch));
+    this.goal.pitch = Math.max(0.3, Math.min(1.35, this.goal.pitch + dPitch));
+    this.highAngle = this.goal.pitch > 0.85;
+  }
+  /** move the look-at point in screen terms: +right = screen right, +fwd = into the screen (world units on the ground) */
+  pan(right: number, fwd: number) {
+    const s = Math.sin(this.yaw), c = Math.cos(this.yaw);
+    const t = (this.goal.target ??= this.target.clone());
+    t.x += c * right - s * fwd;
+    t.z += -s * right - c * fwd;
+    if (this.bounds) {
+      t.x = Math.max(this.bounds.minX, Math.min(this.bounds.maxX, t.x));
+      t.z = Math.max(this.bounds.minZ, Math.min(this.bounds.maxZ, t.z));
+    }
+  }
+  /** pan by a screen-space drag in pixels (the ground follows the pointer) */
+  panPixels(dx: number, dy: number, viewH: number) {
+    const perPx = (2 * this.dist * Math.tan((this.cam.fov * Math.PI) / 360)) / Math.max(1, viewH);
+    this.pan(-dx * perPx, (dy * perPx) / Math.max(0.35, Math.sin(this.pitch)));
+  }
+  /** back to the last focused point at the default distance and pitch preset */
+  recenter() {
+    if (this.home.target) this.goal.target = this.home.target.clone();
+    this.goal.dist = Math.max(this.minDist, Math.min(this.maxDist, this.home.dist));
+    this.goal.pitch = this.highAngle ? 1.05 : 0.62;
+    this.settleYaw();
   }
   /** nearest 90° snap after free orbit */
   settleYaw() {
@@ -125,8 +157,7 @@ export class TacticsCamera {
 }
 
 /** vertical FOV that keeps at least the landscape horizontal view on tall (portrait) screens */
-function fovFor(aspect: number) {
-  const BASE = 24, REF = 1.5;
+export function fovFor(aspect: number, BASE = 24, REF = 1.5) {
   if (aspect >= REF) return BASE;
   const half = Math.atan(Math.tan((BASE * Math.PI) / 360) * REF);
   return Math.min(62, (Math.atan(Math.tan(half) / aspect) * 360) / Math.PI);

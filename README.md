@@ -20,7 +20,9 @@ npm run preview    # serve dist/ at http://localhost:4173
 Renderer selection is automatic: **WebGPU → WebGL 2 → WebGL 1**. Force one with
 `?renderer=webgpu|webgl2|webgl1`, and quality with `?quality=ultra|high|medium|low`
 (or in Options). Desktop class GPUs default to *ultra* (SSAO, bloom, depth of field, SMAA,
-4K shadow maps); phones default to *medium/low*.
+4K shadow maps); phones default to *medium/low*. With quality on *Auto*, the game steps the preset down if frames
+stay slow. If the GPU device is lost (driver reset, mobile tab reclaimed) the game offers a reload, and falls back to
+WebGL 2 for the rest of the session if it happens twice.
 
 ## What's in the game
 
@@ -40,16 +42,23 @@ Renderer selection is automatic: **WebGPU → WebGL 2 → WebGL 1**. Force one w
 
 ## Controls
 
-| | Keyboard | Mouse / Touch | Gamepad |
+| | Keyboard | Mouse / Touch | Gamepad (Xbox layout) |
 |---|---|---|---|
-| Move cursor | Arrows / WASD | hover / tap | D-pad / stick |
-| Confirm | Enter / Space / Z | click / tap again | A |
-| Back | Esc / Backspace / X | right-click | B |
-| Rotate camera | Q / E | drag | LB / RB |
-| Zoom | + / − | wheel / pinch | LT / RT |
-| High angle | R | | |
-| Turn order | Tab | | Select |
-| Fast-forward | hold Shift | | |
+| Move cursor | Arrows / WASD | hover / tap | D-pad / left stick |
+| Confirm | Enter / Space / Z | click / tap (info lists: tap to select, tap again to choose) | A |
+| Back | Esc / Backspace / X | right-click, the ✕ on menus, the **‹ Back** button | B |
+| Menu | M | ☰ Menu button | Start / Y |
+| Orbit camera | Q / E (90° steps) | drag (settles on a corner) · ⟲ ⟳ buttons | right stick (free) · LB / RB (90°) |
+| Tilt | R (high angle) | drag up/down · tilt button | right stick up/down · L3 |
+| Zoom | + / − | wheel · trackpad pinch · two-finger pinch · hold 🔍 buttons | LT / RT (analog) |
+| Pan | arrows when no menu is open (enemy turns) | right-drag · Shift+drag · two-finger drag | — (follows the cursor) |
+| Recenter | F / Home | ◎ button | R3 |
+| Turn order | Tab | | View / Back |
+| Fast-forward | hold Shift | | hold X |
+
+The round camera buttons sit at the bottom of the battlefield (right edge on phones). The camera stays under your
+control for the whole battle, including enemy turns. Controllers are detected on connect (standard mapping; PlayStation
+and Switch pads work in the equivalent positions) and rumble on heavy hits where the browser supports it.
 
 ## Project layout
 
@@ -67,6 +76,22 @@ tools/          content validator, campaign simulator, screenshot helpers
 
 Checks: `npm run typecheck`, `npm test`, `npm run validate` (content cross-references),
 `npx vite-node tools/simcampaign.ts` (AI-vs-AI simulation of every battle, including scripted events).
+
+Cross-browser / mobile end-to-end tests (Playwright; builds, then serves `dist/` on port 4173):
+
+```bash
+npm run test:e2e           # everything: desktop Chromium, Firefox, WebKit (Safari's engine) + phones/tablet
+npm run test:e2e:desktop   # chromium, firefox, webkit at 1280×720
+npm run test:e2e:mobile    # Pixel 10 (Chromium), iPhone 17 Pro, iPhone SE, landscape iPhone, iPad Pro (WebKit)
+npx playwright test --project=mobile-safari -g gamepad    # one project / one test
+npx playwright show-report e2e-report                     # screenshots, traces of failures
+```
+
+They cover boot and rendering, the new-game flow, battle camera controls (buttons, mouse, a simulated gamepad),
+the HUD layout on every screen size (no overlaps, nothing off-screen, no sideways scrolling), and console errors.
+Headless Chromium renders WebGL 2 with software GL (set `E2E_RENDERER=webgpu` on a machine whose headless Chrome has a
+working GPU). Real iOS Safari can't run on Linux/Windows: the WebKit iPhone/iPad profiles are the closest automated
+check; use a real device for the final word.
 
 Debug URLs. The `?test=`, `auto`, `autoplay` and `quickwin` hooks start throwaway parties that overwrite the
 autosave, so they only work on the dev server or a local `npm run preview` (localhost); a deployed site ignores

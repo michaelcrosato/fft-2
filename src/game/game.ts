@@ -1,6 +1,6 @@
 // Top-level game orchestration: render loop, stage lifecycle, story steps,
 // scenes, battles, deployment and results.
-import { renderer, rinfo } from '../gfx/renderer';
+import { renderer, rinfo, refreshPixelRatio, setQuality, type Quality } from '../gfx/renderer';
 import { THREE } from '../gfx/three';
 import { Stage } from '../scenes/stage';
 import { BattleController, preloadPortraits } from '../scenes/battleController';
@@ -22,6 +22,8 @@ import { BattleUnit } from '../battle/unit';
 import { screenDir } from '../scenes/battleController';
 import { Rng, hashStr } from '../core/rng';
 import { randomLook } from './roster';
+import { CameraControls } from '../ui/cameraControls';
+import { backBtn, portraitFor } from '../ui/battleHud';
 
 export interface Screen {
   update(dt: number): void;
@@ -45,12 +47,45 @@ export class Game {
     this.options = loadOptions();
     renderer.setAnimationLoop(() => this.frame());
     window.addEventListener('resize', () => this.onResize());
+    // the canvas can change size without a window resize (mobile toolbars, split view, rotation)
+    const host = renderer.domElement.parentElement;
+    if (host && typeof ResizeObserver === 'function') new ResizeObserver(() => this.onResize()).observe(host);
+    this.watchDpr();
+  }
+
+  /** page zoom or a move to another monitor changes devicePixelRatio */
+  private watchDpr() {
+    if (typeof matchMedia !== 'function') return;
+    const mq = matchMedia(`(resolution: ${window.devicePixelRatio || 1}dppx)`);
+    mq.addEventListener?.('change', () => { refreshPixelRatio(); this.onResize(); this.watchDpr(); }, { once: true });
+  }
+
+  // automatic quality: if frames stay slow, step the preset down (only when the option is Auto)
+  private perf = { t: 0, n: 0, slow: 0, steps: 0 };
+  private autoQuality(rawDt: number) {
+    if (this.options.quality !== 'auto' || this.perf.steps >= 2 || rawDt > 0.25 || document.hidden) return; // ignore loading hitches
+    const p = this.perf;
+    p.t += rawDt; p.n++;
+    if (p.t < 4) return;
+    const avg = p.t / p.n;
+    p.t = 0; p.n = 0;
+    p.slow = avg > 1 / 26 ? p.slow + 1 : 0;
+    if (p.slow < 2) return; // ~8 s of sub-26 fps
+    const order: Quality[] = ['ultra', 'high', 'medium', 'low'];
+    const i = order.indexOf(rinfo.quality);
+    if (i < 0 || i >= order.length - 1) { p.steps = 2; return; }
+    p.slow = 0; p.steps++;
+    setQuality(order[i + 1]);
+    this.onResize();
+    console.info(`[renderer] slow frames (${Math.round(1 / avg)} fps): quality → ${order[i + 1]}`);
   }
 
   private frame() {
     const now = performance.now();
-    const dt = Math.min(0.05, (now - this.last) / 1000);
+    const rawDt = (now - this.last) / 1000;
+    const dt = Math.min(0.05, rawDt);
     this.last = now;
+    this.autoQuality(rawDt);
     if (this.state) this.state.playtime += dt;
     if (this.screen) { this.screen.update(dt); this.screen.render(); }
     (window as any).__frames = ((window as any).__frames ?? 0) + 1;
@@ -165,7 +200,6 @@ export class Game {
         const bu = game.currentBattle?.bySid(aid);
         if (charId) return game.charPortrait(charId, a?.job);
         if (bu) {
-          const { portraitFor } = await import('../ui/battleHud');
           return portraitFor(bu);
         }
         // generic actor: portrait from its job's outfit
@@ -218,8 +252,12 @@ export class Game {
     if (!def) { console.warn('missing battle', battleId); return 'victory'; }
     await loadMonsterBuilder();
     for (;;) {
+      // the engine writes EXP, JP, learned abilities and stolen/broken gear straight into the
+      // roster; a lost attempt must not keep them (inventory and gil are only applied on victory)
+      const snapshot = JSON.stringify(this.state.roster);
       const res = await this.battleOnce(def);
       if (res === 'victory') return res;
+      this.state.roster = JSON.parse(snapshot);
       // defeat → game over prompt
       const retry = await this.gameOver();
       if (!retry) return 'defeat';
@@ -248,7 +286,7 @@ export class Game {
     const ctrl = new BattleController(stage, b, {
       runScript: async (index) => {
         const ev = def.events?.[index];
-        if (!ev) return;
+        if (!ev) { b.scriptDone(index); return; }
         const hooks: SceneHost['battle'] = {
           reveal: async (sid) => { const u = b.units.find((o) => o.sid === sid && o.hidden); if (!u) return; b.scriptReveal(sid); const v = stage.views.get(u.uid); if (v) { v.place(u.x, u.z, u.facing); v.root.visible = true; await stage.vfx.play('teleport', v.chest, v.root.position.clone(), '#ffffff'); } },
           retreat: async (sid) => { const u = b.bySid(sid); if (!u) return; b.scriptRetreat(sid); const v = stage.views.get(u.uid); if (v) { await stage.vfx.play('teleport', v.chest, v.root.position.clone(), '#c8c0ff'); v.root.visible = false; } },
@@ -260,7 +298,7 @@ export class Game {
           status: (sid, s, on) => { const u = b.bySid(sid); if (!u) return; if (on) b.addStatus(u, s); else u.statuses.delete(s); },
         };
         // map battle unit sids to their views for the script
-        await this.playBattleScript(ev.script, b, stage, hooks);
+        try { await this.playBattleScript(ev.script, b, stage, hooks); } finally { b.scriptDone(index); }
         b.checkEnd();
       },
     });
@@ -310,7 +348,7 @@ export class Game {
       portraitOf: async (aid) => {
         const u = b.bySid(aid) ?? b.units.find((o) => o.roster.charId === aid);
         if (u?.roster.charId) return game.charPortrait(u.roster.charId, u.roster.job);
-        if (u) { const { portraitFor } = await import('../ui/battleHud'); return portraitFor(u); }
+        if (u) return portraitFor(u);
         return CHARACTERS.has(aid) ? game.charPortrait(aid) : null;
       },
       setFlag: (f, v) => { game.state.flags[f] = v; },
@@ -376,6 +414,7 @@ export class Game {
     const briefing = h('div.panel', { style: { left: '50%', top: '10px', transform: 'translateX(-50%)', textAlign: 'center', padding: '6px 18px' } },
       h('h2', null, def.name), h('div.muted', null, victoryText(def)));
     uiRoot().appendChild(briefing);
+    const camUi = new CameraControls(stage);
     let lastPick: string | undefined;
     try {
       for (;;) {
@@ -385,7 +424,7 @@ export class Game {
           { label: '', value: 'sep', sep: true },
           { label: 'Begin Battle', value: 'go' },
         ];
-        const pick = await menu({ items, x: 14, y: '12%', title: `Deploy ${placements.size}/${max}`, maxHeight: '60vh', cancelable: false, initial: lastPick ?? 'go', onAction: (a) => stageKeys(stage, a) }).promise;
+        const pick = await menu({ items, x: 14, y: '12%', title: `Deploy ${placements.size}/${max}`, maxHeight: 'calc(60 * var(--vh))', cancelable: false, initial: lastPick ?? 'go', onAction: (a) => stageKeys(stage, a) }).promise;
         lastPick = pick ?? undefined;
         if (pick === 'go') {
           if (!placements.has(heroU)) { toast(`${heroU.name} must lead the battle.`); continue; }
@@ -412,6 +451,7 @@ export class Game {
       }
     } finally {
       briefing.remove();
+      camUi.dispose();
       stage.clearHighlight();
     }
     const out: DeployChoice[] = [...placements.entries()].map(([unit, [x, z]]) => ({ unit, x, z }));
@@ -424,9 +464,18 @@ export class Game {
       let i = 0;
       const set = () => { stage.setCursor(cells[i][0], cells[i][1]); stage.focusTile(cells[i][0], cells[i][1]); };
       set();
+      const back = backBtn();
+      uiRoot().appendChild(back);
       const el = renderer.domElement;
       const valid = new Set(cells.map((c) => c.join(',')));
-      const onUp = (e: PointerEvent) => { const c = stage.pickCell(e.clientX, e.clientY); if (c && valid.has(c.join(','))) { done(c); } };
+      let downAt: { x: number; y: number } | null = null;
+      const onDown = (e: PointerEvent) => { downAt = { x: e.clientX, y: e.clientY }; };
+      const onUp = (e: PointerEvent) => {
+        const moved = downAt ? Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) : 0;
+        downAt = null;
+        if (e.button !== 0 || moved > 10) return; // a drag moves the camera
+        const c = stage.pickCell(e.clientX, e.clientY); if (c && valid.has(c.join(','))) { done(c); }
+      };
       const pop = input.push((a) => {
         if (stageKeys(stage, a)) return true;
         if (a === 'up' || a === 'down' || a === 'left' || a === 'right') {
@@ -440,7 +489,8 @@ export class Game {
         if (a === 'cancel') { done(null); return true; }
         return true;
       });
-      function done(c: [number, number] | null) { pop(); el.removeEventListener('pointerup', onUp); stage.hideCursor(); resolve(c); }
+      function done(c: [number, number] | null) { pop(); back.remove(); el.removeEventListener('pointerup', onUp); el.removeEventListener('pointerdown', onDown); stage.hideCursor(); resolve(c); }
+      el.addEventListener('pointerdown', onDown);
       el.addEventListener('pointerup', onUp);
     });
   }
@@ -576,14 +626,7 @@ function victoryText(def: BattleDef): string {
 }
 
 function stageKeys(stage: Stage, a: import('../ui/input').Action): boolean {
-  switch (a) {
-    case 'rotL': stage.cam.rotate(-1); return true;
-    case 'rotR': stage.cam.rotate(1); return true;
-    case 'tilt': stage.cam.togglePitch(); return true;
-    case 'zoomIn': stage.cam.zoom(0.85); return true;
-    case 'zoomOut': stage.cam.zoom(1.18); return true;
-    default: return false;
-  }
+  return stage.cameraAction(a);
 }
 
 async function titleCardQuick(text: string) {

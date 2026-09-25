@@ -30,6 +30,8 @@ export interface MenuOpts<T> {
   showDesc?: boolean;
   parent?: HTMLElement;
   maxHeight?: string;
+  /** tooltip for the corner close button of a cancelable menu (default "Back") */
+  closeTitle?: string;
 }
 
 export interface MenuHandle<T> { promise: Promise<T | null>; close: () => void; el: HTMLElement; refresh: (items: MenuItem<T>[]) => void; }
@@ -40,13 +42,23 @@ export function menu<T = string>(o: MenuOpts<T>): MenuHandle<T> {
   const pos = (k: string, v: number | string | undefined) => { if (v !== undefined) (el.style as any)[k] = typeof v === 'number' ? v + 'px' : v; };
   pos('left', o.x); pos('top', o.y); pos('right', o.right); pos('bottom', o.bottom);
   if (o.title) el.appendChild(h('div.title-plate', null, o.title));
+  if (o.cancelable !== false) {
+    // mouse and touch players need a visible way back (keyboard/gamepad use Esc / B)
+    const close = h('button.mclose', { type: 'button', title: o.closeTitle ?? 'Back', 'aria-label': o.closeTitle ?? 'Back' }, '✕');
+    close.addEventListener('click', (e) => { e.stopPropagation(); audio.sfx('cancel'); finish(null); });
+    el.appendChild(close);
+    el.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); audio.sfx('cancel'); finish(null); });
+  }
   const list = h('div.scroll');
   if (o.maxHeight) list.style.maxHeight = o.maxHeight;
   el.appendChild(list);
   const desc = h('div.desc');
   if (o.showDesc) el.appendChild(desc);
-  let sel = 0;
+  let sel = -1;
   let rows: HTMLElement[] = [];
+  // on touch, menus whose rows show details (hover panels, descriptions) select on the first tap and choose on the second
+  const infoMenu = !!(o.onHover || o.showDesc);
+  let lastPointer = '';
   let resolve!: (v: T | null) => void;
   const promise = new Promise<T | null>((r) => (resolve = r));
   let closed = false;
@@ -56,15 +68,22 @@ export function menu<T = string>(o: MenuOpts<T>): MenuHandle<T> {
     rows = items.map((it, i) => {
       if (it.sep) return list.appendChild(h('div.sep')) as HTMLElement;
       const row = h('div.item' + (it.disabled ? '.disabled' : ''), {
-        onmouseenter: () => { setSel(i, false); },
-        onclick: (e: MouseEvent) => { e.stopPropagation(); setSel(i, false); choose(); },
+        // pointerenter, not mouseenter: a tap fires compatibility mouse events that would select + choose in one go
+        onpointerenter: (e: PointerEvent) => { if (e.pointerType === 'mouse') setSel(i, false); },
+        onpointerdown: (e: PointerEvent) => { lastPointer = e.pointerType; },
+        onclick: (e: MouseEvent) => {
+          e.stopPropagation();
+          if (lastPointer === 'touch' && infoMenu && i !== sel) { setSel(i); return; }
+          setSel(i, false); choose();
+        },
       }, it.icon ? h('span.ico', null, it.icon) : null, h('span.l', null, it.label), it.right ? h('span.r', null, it.right) : null);
       list.appendChild(row);
       return row;
     });
   };
-  const setSel = (i: number, sound = true) => {
+  const setSel = (i: number, sound = true, force = false) => {
     if (!selectable(i)) return;
+    if (i === sel && !force) return; // re-hovering the same row must not re-run onHover
     if (i !== sel && sound) audio.sfx('cursor');
     rows[sel]?.classList.remove('sel');
     sel = i;
@@ -95,10 +114,12 @@ export function menu<T = string>(o: MenuOpts<T>): MenuHandle<T> {
   while (init < items.length && !selectable(init)) init++;
   // prefer an enabled entry when the requested one is disabled
   if (items[init]?.disabled) { const e = items.findIndex((it, i) => selectable(i) && !it.disabled); if (e >= 0) init = e; }
-  setSel(Math.min(init, items.length - 1), false);
+  setSel(Math.min(init, items.length - 1), false, true);
+  if (sel < 0) sel = 0;
   const pop = input.push((a) => {
     if (o.onAction && o.onAction(a, items[sel]?.value ?? null)) return true;
     const n = items.length;
+    if (!n && (a === 'up' || a === 'down' || a === 'confirm')) return true; // empty list (e.g. nothing to sell)
     switch (a) {
       case 'up': { let i = sel; do { i = (i - 1 + n) % n; } while (!selectable(i) && i !== sel); setSel(i); return true; }
       case 'down': { let i = sel; do { i = (i + 1) % n; } while (!selectable(i) && i !== sel); setSel(i); return true; }
@@ -112,14 +133,15 @@ export function menu<T = string>(o: MenuOpts<T>): MenuHandle<T> {
   rows[sel]?.scrollIntoView?.({ block: 'nearest' });
   return {
     promise, el, close: () => finish(null),
-    refresh: (ni) => { items = ni; render(); setSel(Math.min(sel, items.length - 1), false); },
+    refresh: (ni) => { items = ni; render(); setSel(Math.max(0, Math.min(sel, items.length - 1)), false, true); },
   };
 }
 
-export async function confirm(text: string, yes = 'Yes', no = 'No'): Promise<boolean> {
+/** yes/no prompt; `defaultNo` preselects No (for destructive choices) */
+export async function confirm(text: string, yes = 'Yes', no = 'No', defaultNo = false): Promise<boolean> {
   const wrap = h('div.panel', { style: { left: '50%', top: '40%', transform: 'translate(-50%,-50%)', maxWidth: '520px', textAlign: 'center', padding: '16px 22px 8px' } }, h('div', { style: { marginBottom: '10px', fontSize: '1.1em' } }, text));
   uiRoot().appendChild(wrap);
-  const m = menu({ items: [{ label: yes, value: true }, { label: no, value: false }], parent: wrap, className: 'inline' });
+  const m = menu({ items: [{ label: yes, value: true }, { label: no, value: false }], parent: wrap, className: 'inline', initial: !defaultNo });
   m.el.style.position = 'relative'; m.el.style.display = 'inline-block'; m.el.style.margin = '6px auto';
   const r = await m.promise;
   wrap.remove();
@@ -169,7 +191,7 @@ export function say(speaker: string, text: string, o: SayOpts = {}): Promise<voi
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
-    const finish = () => { pop(); box.removeEventListener('click', onClick); cancelAnimationFrame(raf); resolve(); };
+    const finish = () => { pop(); box.removeEventListener('click', onClick); gl?.removeEventListener('pointerdown', onDown); gl?.removeEventListener('pointerup', onUp); cancelAnimationFrame(raf); resolve(); };
     const advance = () => {
       if (!done) { shown = text.length; txt.textContent = text; done = true; next.style.visibility = 'visible'; cancelAnimationFrame(raf); return; }
       audio.sfx('cursor', { volume: 0.5 });
@@ -177,6 +199,12 @@ export function say(speaker: string, text: string, o: SayOpts = {}): Promise<voi
     };
     const onClick = () => advance();
     box.addEventListener('click', onClick);
+    // a tap or click on the scene advances too (a drag still moves the camera)
+    const gl = document.getElementById('gl');
+    let downAt: { x: number; y: number } | null = null;
+    const onDown = (e: PointerEvent) => { downAt = { x: e.clientX, y: e.clientY }; };
+    const onUp = (e: PointerEvent) => { if (downAt && e.button === 0 && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 10) advance(); downAt = null; };
+    gl?.addEventListener('pointerdown', onDown); gl?.addEventListener('pointerup', onUp);
     // allow clicking anywhere to advance
     const pop = input.push((a) => { if (a === 'confirm' || a === 'cancel') advance(); return true; });
     if (input.fast) setTimeout(() => { if (!done) advance(); }, 250);

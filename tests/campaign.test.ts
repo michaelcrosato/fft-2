@@ -12,13 +12,16 @@ import { setLevel } from '../src/game/roster';
 import type { Battle } from '../src/battle/battle';
 
 function run(b: Battle, maxSteps = 6000) {
+  // scripts aren't played here: report them done so victories aren't held for reinforcements
+  const d = (evs: ReturnType<Battle['doMove']>) => { for (const e of evs) if (e.t === 'script') { b.scriptDone(e.index); b.checkEnd(); } };
   for (let i = 0; i < maxSteps && !b.result; i++) {
-    const { unit } = b.advance();
+    const { unit, events } = b.advance();
+    d(events);
     if (!unit) continue;
     const plan = planTurn(b, unit);
-    if (plan.actFirst && plan.act) { b.doAction(unit, plan.act.ability, plan.act.x, plan.act.z, plan.act.opts); if (plan.move && !b.result) b.doMove(unit, plan.move[0], plan.move[1]); }
-    else { if (plan.move) b.doMove(unit, plan.move[0], plan.move[1]); if (plan.act && !b.result) b.doAction(unit, plan.act.ability, plan.act.x, plan.act.z, plan.act.opts); }
-    if (!b.result) b.endTurn(unit, plan.facing);
+    if (plan.actFirst && plan.act) { d(b.doAction(unit, plan.act.ability, plan.act.x, plan.act.z, plan.act.opts)); if (plan.move && !b.result) d(b.doMove(unit, plan.move[0], plan.move[1])); }
+    else { if (plan.move) d(b.doMove(unit, plan.move[0], plan.move[1])); if (plan.act && !b.result) d(b.doAction(unit, plan.act.ability, plan.act.x, plan.act.z, plan.act.opts)); }
+    if (!b.result) d(b.endTurn(unit, plan.facing));
   }
   return b.result ?? 'timeout';
 }

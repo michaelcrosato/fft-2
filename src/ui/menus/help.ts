@@ -4,13 +4,13 @@ import { h } from '../dom';
 import { overlay } from './common';
 
 const TOPICS: Array<[string, string]> = [
-  ['Controls', `Keyboard: arrows/WASD move the cursor, Enter/Space confirm, Esc/Backspace go back. Q/E rotate the camera, R toggles a high angle, +/- zoom, Tab shows the turn order, Shift fast-forwards animations and text.
+  ['Controls', `Keyboard: arrows/WASD move the cursor, Enter/Space confirm, Esc/Backspace go back. Camera: Q/E rotate, R toggles a high angle, +/- zoom, F recenters. When no menu is open in battle (for example during an enemy turn) the arrows pan the camera. Tab shows the turn order; hold Shift to fast-forward animations and text.
 
-Mouse: hover a tile to inspect it, click to confirm, right-click to go back, drag to orbit the camera (it snaps to the nearest corner), wheel to zoom.
+Mouse: hover a tile to inspect it, click to confirm, right-click to go back. Drag to orbit the camera (it settles on the nearest corner), right-drag or Shift+drag to pan, wheel or trackpad pinch to zoom.
 
-Touch: tap a tile to select it and tap again to confirm. Drag with one finger to orbit, pinch to zoom. All menus are tappable.
+Touch: tap a tile to select it and tap again to confirm. Drag with one finger to orbit; pinch to zoom and drag two fingers to pan. The round buttons at the bottom of the battlefield rotate, zoom (hold), tilt and recenter the camera.
 
-Gamepad: D-pad/stick to move, A confirm, B back, Y menu, X info, LB/RB rotate, LT/RT zoom.`],
+Gamepad (Xbox layout; on PlayStation A=✕ B=○ X=□ Y=△): D-pad or left stick move, A confirm, B back, Start/Y menu, View turn order. Camera: right stick orbits and tilts, LT/RT zoom, LB/RB rotate 90°, L3 high angle, R3 recenter. Hold X to fast-forward.`],
   ['Turns & CT', `Every unit has a Charge Time (CT) gauge. Each clocktick it fills by the unit's Speed; at 100 the unit acts.
 
 On your turn you may Move and Act once each, in either order, then choose a facing. Moving and acting costs the full 100 CT; doing only one leaves 20 CT in reserve, and simply Waiting leaves 40 — so waiting brings your next turn sooner.
@@ -45,10 +45,16 @@ export async function openHelp() {
   const show = (i: number) => {
     body?.remove();
     const [title, text] = TOPICS[i];
-    body = h('div.panel', { style: { right: '16px', top: '64px', width: 'min(620px, 60vw)', maxHeight: '78vh', overflowY: 'auto' } }, h('div.title-plate', null, title), h('div', { style: { whiteSpace: 'pre-wrap', lineHeight: '1.55', marginTop: '6px' } }, text));
+    body = h('div.panel.detail', { style: { right: '16px', top: '64px', width: 'min(620px, 60vw)', maxHeight: 'calc(78 * var(--vh))', overflowY: 'auto' } }, h('div.title-plate', null, title), h('div', { style: { whiteSpace: 'pre-wrap', lineHeight: '1.55', marginTop: '6px' } }, text));
     ov.root.appendChild(body);
   };
   try {
-    await menu({ items: TOPICS.map(([t], i) => ({ label: t, value: i })), x: 16, y: 64, title: 'Topics', parent: ov.root, onHover: (i) => show(i as number) }).promise;
+    // choosing a topic keeps it open (on touch the first tap selects, the second chooses); Back leaves
+    let last = 0;
+    for (;;) {
+      const pick = await menu({ items: TOPICS.map(([t], i) => ({ label: t, value: i })), x: 16, y: 64, title: 'Topics', parent: ov.root, initial: last, onHover: (i) => { if (i !== null) show(i as number); } }).promise;
+      if (pick === null) break;
+      last = pick;
+    }
   } finally { body?.remove(); ov.close(); }
 }
