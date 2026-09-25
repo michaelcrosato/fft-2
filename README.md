@@ -68,7 +68,9 @@ tools/          content validator, campaign simulator, screenshot helpers
 Checks: `npm run typecheck`, `npm test`, `npm run validate` (content cross-references),
 `npx vite-node tools/simcampaign.ts` (AI-vs-AI simulation of every battle, including scripted events).
 
-Debug URLs (append to the game URL):
+Debug URLs. The `?test=`, `auto`, `autoplay` and `quickwin` hooks start throwaway parties that overwrite the
+autosave, so they only work on the dev server or a local `npm run preview` (localhost); a deployed site ignores
+them. `dev.html` and `audio-test.html` are dev-server pages and are not part of the production build.
 
 | Parameter | Effect |
 |---|---|
@@ -78,3 +80,4 @@ Debug URLs (append to the game URL):
 | `?test=side&id=sq_rare_monks&lv=38` | play one side-quest step |
 | `?test=campaign&autoplay=1&quickwin=1` | run the whole story unattended (quickwin skips the fighting) |
 | `dev.html?map=orvelle_court&jobs=knight,wizard` | map / model viewer |
+| `audio-test.html` | audition every music track and sound effect |

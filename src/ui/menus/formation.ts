@@ -54,7 +54,7 @@ async function unitMenu(game: Game, u: RosterUnit, parent: HTMLElement, refresh:
     if (!pick) return;
     if (pick === 'job') await jobMenu(game, u, parent, refresh);
     if (pick === 'learn') await learnMenu(u, parent, refresh);
-    if (pick === 'set') await setAbilities(u, parent, refresh);
+    if (pick === 'set') await setAbilities(game, u, parent, refresh);
     if (pick === 'equip') await equipMenu(game, u, parent, refresh);
     if (pick === 'optimize') { optimize(game, u); audio.sfx('confirm'); toast('Equipment optimized'); }
     if (pick === 'rename') {
@@ -120,7 +120,7 @@ async function learnMenu(u: RosterUnit, parent: HTMLElement, refresh: () => void
   }
 }
 
-async function setAbilities(u: RosterUnit, parent: HTMLElement, refresh: () => void) {
+async function setAbilities(game: Game, u: RosterUnit, parent: HTMLElement, refresh: () => void) {
   for (;;) {
     refresh();
     const ab = (id?: string) => (id ? ABILITIES.get(id)?.name ?? id : '—');
@@ -143,7 +143,7 @@ async function setAbilities(u: RosterUnit, parent: HTMLElement, refresh: () => v
       if (pick !== null) {
         u[kind] = pick || undefined;
         const removed = validateEquipment(u);
-        for (const id of removed) addItem((window as any).__game.state, id, 1);
+        for (const id of removed) addItem(game.state, id, 1);
       }
     }
     audio.sfx('confirm');

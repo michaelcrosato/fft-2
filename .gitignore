@@ -4,4 +4,6 @@ dist
 .vite
 tools/out
 .vercel
-.env*
+.env
+.env.*
+!.env.example

@@ -1,0 +1,7 @@
+# `vercel deploy` uploads the folder and does not read .gitignore.
+# tools/ and tests/ are type-checked by the build, so only their outputs are skipped.
+tools/out
+dist
+.vite
+*.log
+.env*
