@@ -473,6 +473,21 @@ export class Battle {
   addItem(id: string, n: number) { this.inventory.set(id, (this.inventory.get(id) ?? 0) + n); }
   /** the party's inventory belongs to units the player commands; everyone else carries their own stock */
   usesStock(u: BattleUnit) { return u.baseTeam === 0 && u.controlled; }
+  /** enemies and guests carry a few of each item (not an endless supply of Phoenix Downs) */
+  private ownStock = new Map<number, Map<string, number>>();
+  static readonly OWN_STOCK = 3;
+  /** how many of `id` the unit can use: party inventory, or its own pouch */
+  stockOf(u: BattleUnit, id: string): number {
+    if (this.usesStock(u)) return this.inventory.get(id) ?? 0;
+    return this.ownStock.get(u.uid)?.get(id) ?? Battle.OWN_STOCK;
+  }
+  /** use up one `id` from whichever supply the unit draws on */
+  spendItem(u: BattleUnit, id: string) {
+    if (this.usesStock(u)) { this.takeItem(id); return; }
+    let m = this.ownStock.get(u.uid);
+    if (!m) this.ownStock.set(u.uid, (m = new Map()));
+    m.set(id, Math.max(0, (m.get(id) ?? Battle.OWN_STOCK) - 1));
+  }
   takeItem(id: string): boolean {
     const n = this.inventory.get(id) ?? 0;
     if (n <= 0) return false;
@@ -515,7 +530,7 @@ export class Battle {
     if (u.has('frog') && a.id !== 'attack' && a.id !== 'frogSpell') return 'Toads can only croak';
     if (a.requires?.weapon && !a.requires.weapon.includes(u.weaponType())) return 'Needs ' + a.requires.weapon.join('/');
     if (a.requires?.notWeapon && a.requires.notWeapon.includes(u.weaponType())) return 'Wrong weapon';
-    if (a.consumes && this.usesStock(u) && !(this.inventory.get(a.consumes) ?? 0)) return 'None in stock';
+    if (a.consumes && !this.stockOf(u, a.consumes)) return 'None in stock';
     if (a.requires?.item && this.usesStock(u) && !(this.inventory.get(a.requires.item) ?? 0)) return 'None in stock';
     const sp = a.special ? SPECIALS[a.special] : undefined;
     if (sp?.usable) { const r = sp.usable(this, u, a); if (r) return r; }
@@ -689,13 +704,14 @@ export class Battle {
       sp.start(this, u, a, x, z, opts);
       reveal();
       if (!opts.depth && !opts.mimic && a.special !== 'jump') this.triggerMimics(u, a, x, z, opts);
+      this.fireEvents(); // a Throw / Iaido kill must still trigger reinforcements and last words
       this.checkEnd();
       return this.flush();
     }
     if (ct > 0) {
       u.mp -= mp;
       if (mp) this.emit({ t: 'mp', uid: u.uid, delta: -mp });
-      if (a.consumes && !a.perform && this.usesStock(u)) this.takeItem(a.consumes);
+      if (a.consumes && !a.perform) this.spendItem(u, a.consumes);
       reveal();
       const tgt = this.unitAt(x, z);
       // spells aimed at a unit follow that unit only if it is a single-target spell
@@ -709,7 +725,7 @@ export class Battle {
     }
     u.mp -= mp;
     if (mp) this.emit({ t: 'mp', uid: u.uid, delta: -mp });
-    if (a.consumes && this.usesStock(u)) this.takeItem(a.consumes);
+    if (a.consumes) this.spendItem(u, a.consumes);
     this.resolveAbility(u, a, x, z, opts);
     reveal();
     if (!opts.depth && !opts.mimic) this.triggerMimics(u, a, x, z, opts);
@@ -1181,10 +1197,11 @@ export class Battle {
         break;
       case 'autoPotion':
         if (dealt > 0 && t.alive && brave()) {
-          const pot = ['xPotion', 'hiPotion', 'potion'].find((p) => (this.inventory.get(p) ?? 0) > 0 && t.team === 0) ?? (t.team !== 0 ? 'potion' : undefined);
+          // the player's units drink the party's best potion; others use their own pouch of plain potions
+          const pot = this.usesStock(t) ? ['xPotion', 'hiPotion', 'potion'].find((p) => (this.inventory.get(p) ?? 0) > 0) : this.stockOf(t, 'potion') > 0 ? 'potion' : undefined;
           if (pot) {
             say();
-            if (t.team === 0) this.takeItem(pot);
+            this.spendItem(t, pot);
             const amt = pot === 'xPotion' ? 150 : pot === 'hiPotion' ? 70 : 30;
             this.heal(t, amt, ITEMS.get(pot)?.name);
           }

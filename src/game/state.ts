@@ -65,8 +65,9 @@ export interface GameState {
   savedAt?: number;
 }
 
-export function newGame(heroName: string, birthday: [number, number]): GameState {
-  const rng = new Rng();
+/** `seed` makes the starting company reproducible (simulations, tests); players get a random one */
+export function newGame(heroName: string, birthday: [number, number], seed?: number): GameState {
+  const rng = new Rng(seed);
   const hero = createCharacter('rhen', 1, rng);
   hero.name = heroName || 'Rhen';
   hero.zodiac = zodiacFromDate(birthday[0], birthday[1]);

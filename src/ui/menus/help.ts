@@ -45,7 +45,7 @@ export async function openHelp() {
   const show = (i: number) => {
     body?.remove();
     const [title, text] = TOPICS[i];
-    body = h('div.panel.detail', { style: { right: '16px', top: '64px', width: 'min(620px, 60vw)', maxHeight: 'calc(78 * var(--vh))', overflowY: 'auto' } }, h('div.title-plate', null, title), h('div', { style: { whiteSpace: 'pre-wrap', lineHeight: '1.55', marginTop: '6px' } }, text));
+    body = h('div.panel.detail.titled', { style: { right: '16px', top: '64px', width: 'min(620px, 60vw)', maxHeight: 'calc(78 * var(--vh))', display: 'flex', flexDirection: 'column' } }, h('div.title-plate', null, title), h('div', { style: { whiteSpace: 'pre-wrap', lineHeight: '1.55', marginTop: '6px', overflowY: 'auto', minHeight: '0' } }, text));
     ov.root.appendChild(body);
   };
   try {

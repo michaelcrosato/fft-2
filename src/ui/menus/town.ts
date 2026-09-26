@@ -65,7 +65,8 @@ export async function openShop(game: Game, node: WorldNode) {
         for (;;) {
           const own = Object.entries(s.inventory).filter(([id, n]) => n > 0 && ITEMS.get(id)).map(([id, n]) => ({ it: ITEMS.get(id)!, n }));
           if (!own.length) { toast('Nothing to sell.'); break; }
-          const pick = await menu({ items: own.map(({ it, n }) => ({ label: it.name, value: it.id, right: `×${n} · ${Math.floor(it.price / 2)}` })), x: 16, y: 64, title: 'Sell', parent: ov.root, maxHeight: 'calc(62 * var(--vh))' }).promise;
+          // priceless rarities (quest rewards, artefact-grade gear) can't be sold off for nothing by accident
+          const pick = await menu({ items: own.map(({ it, n }) => ({ label: it.name, value: it.id, right: it.price > 0 ? `×${n} · ${Math.floor(it.price / 2)}` : `×${n} · —`, disabled: it.price > 0 ? false : 'Too rare to sell' })), x: 16, y: 64, title: 'Sell', parent: ov.root, maxHeight: 'calc(62 * var(--vh))' }).promise;
           if (!pick) break;
           const it = ITEMS.get(pick)!;
           const n = await quantity(ov.root, it.name, s.inventory[pick], Math.floor(it.price / 2));
@@ -132,7 +133,7 @@ async function quantity(parent: HTMLElement, name: string, max: number, unit: nu
   upd();
   box.appendChild(h('div.title-plate', null, 'Quantity'));
   box.appendChild(txt);
-  box.appendChild(h('div.muted', null, '←→ ±1 · ↑↓ ±10 · Enter confirm · Esc cancel'));
+  box.appendChild(h('div.muted', null, input.lastDevice === 'pad' ? 'D-pad ←→ ±1 · ↑↓ ±10 · A confirm · B cancel' : input.lastDevice === 'touch' ? '' : '←→ ±1 · ↑↓ ±10 · Enter confirm · Esc cancel'));
   const minus = h('span.btn', { style: { margin: '6px' } }, '−'), plus = h('span.btn', { style: { margin: '6px' } }, '+'), ok = h('span.btn', { style: { margin: '6px' } }, 'OK');
   const cancel = h('span.btn.ghost', { style: { margin: '6px' } }, 'Cancel');
   box.appendChild(h('div', null, minus, ok, plus));
@@ -161,7 +162,7 @@ export async function openRecruit(game: Game, node: WorldNode) {
   const ov = overlay(`${node.name} Soldier Office`);
   const rng = new Rng(s.seed + s.day * 17 + node.pos[0]);
   const lv = Math.max(1, partyLevel(s) - 2);
-  const cands = Array.from({ length: 4 }, (_, i) => createGeneric({ gender: i % 2 ? 'f' : 'm', level: lv + rng.int(-1, 1), rng, job: i % 3 === 2 ? 'chemist' : 'squire' }));
+  const cands = Array.from({ length: 4 }, (_, i) => createGeneric({ gender: i % 2 ? 'f' : 'm', level: Math.max(1, lv + rng.int(-1, 1)), rng, job: i % 3 === 2 ? 'chemist' : 'squire' }));
   for (const c of cands) { c.equip = c.job === 'chemist' ? { rhand: 'dagger', body: 'clothes' } : { rhand: 'broadsword', body: 'clothes' }; }
   const cost = 600 + lv * 150;
   let detail = null as HTMLElement | null;
@@ -171,7 +172,7 @@ export async function openRecruit(game: Game, node: WorldNode) {
       const pick = await menu({
         items: cands.map((c) => ({ label: c.name, value: c.uid, right: `${c.gender === 'm' ? '♂' : '♀'} Lv${c.level} Br${c.brave} Fa${c.faith}`, disabled: s.gil < cost ? `Costs ${cost} gil` : false })),
         x: 16, y: 64, title: `Recruit — ${cost} gil`, parent: ov.root,
-        onHover: (uid) => { detail?.remove(); const c = cands.find((x) => x.uid === uid); if (c) { detail = unitPanel(c); detail.style.position = 'absolute'; detail.style.right = '16px'; detail.style.top = '64px'; ov.root.appendChild(detail); } },
+        onHover: (uid) => { detail?.remove(); const c = cands.find((x) => x.uid === uid); if (c) { detail = unitPanel(c); detail.classList.add('detail'); detail.style.position = 'absolute'; detail.style.right = '16px'; detail.style.top = '64px'; ov.root.appendChild(detail); } },
       }).promise;
       if (!pick) return;
       const c = cands.find((x) => x.uid === pick)!;

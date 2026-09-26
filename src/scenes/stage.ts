@@ -17,6 +17,7 @@ import { GeoBuilder } from '../gfx/geo';
 import { loadOptions } from '../game/state';
 import { input, type Action } from '../ui/input';
 import { releaseTree } from '../gfx/dispose';
+import { audio } from '../audio/audio';
 
 export type HighlightKind = 'move' | 'target' | 'aoe' | 'deploy' | 'cursor' | 'enemyMove' | 'path' | 'charge';
 const HL_COLORS: Record<HighlightKind, string> = {
@@ -33,12 +34,12 @@ export class Stage {
   post!: PostFX;
   vfx!: Vfx;
   readonly views = new Map<number | string, UnitView>();
-  private hl = new Map<string, Group>();
+  private hl = new Map<string, Mesh>();
   private cursorMesh: Mesh;
   cursor: [number, number] = [0, 0];
   private ray: Raycaster;
   private disposed = false;
-  private chargeMarks = new Map<number, Group>();
+  private chargeMarks = new Map<number, Mesh>();
   timeScale = 1;
   private stormT = 4;
 
@@ -204,7 +205,10 @@ export class Stage {
   }
 
   // ------------------------------------------------------------ highlights
-  private makeTileMesh(cells: Array<[number, number]>, mat: Material, lift = 0.03): Mesh {
+  // Highlights, the cursor and charge markers are persistent meshes that are hidden, not destroyed, and
+  // get a new geometry when their tiles change: freeing a mesh also frees its GPU pipeline, and the
+  // renderer would rebuild it (a 3-7 ms hitch) on every cursor step.
+  private tileGeo(cells: Array<[number, number]>, lift = 0.03) {
     const b = new GeoBuilder();
     const one: [number, number, number] = [1, 1, 1];
     for (const [x, z] of cells) {
@@ -220,53 +224,53 @@ export class Stage {
         [[0, 0], [1, 0], [1, 1], [0, 1]], [one, one, one, one], [0, 1, 0],
       );
     }
-    const m = new THREE.Mesh(b.build(), mat);
+    return b.build();
+  }
+  private makeTileMesh(cells: Array<[number, number]>, mat: Material, lift = 0.03): Mesh {
+    const m = new THREE.Mesh(this.tileGeo(cells, lift), mat);
     m.renderOrder = 4;
+    return m;
+  }
+  /** show `cells` on the persistent mesh `m` (created on first use) */
+  private tiles(m: Mesh | undefined, cells: Array<[number, number]>, mat: Material, lift: number): Mesh {
+    if (!m) { m = this.makeTileMesh(cells, mat, lift); this.scene.add(m); }
+    else { const old = m.geometry; m.geometry = this.tileGeo(cells, lift); old.dispose(); if (m.material !== mat) m.material = mat; }
+    m.visible = true;
     return m;
   }
 
   highlight(kind: HighlightKind, cells: Array<[number, number]> | Cell[], id: string = kind) {
-    this.clearHighlight(id);
     const list = cells.map((c: any) => (Array.isArray(c) ? c : [c.x, c.z])) as Array<[number, number]>;
-    if (!list.length) return;
-    const g = new THREE.Group();
-    g.add(this.makeTileMesh(list, tileMaterial(HL_COLORS[kind], kind !== 'path', kind === 'aoe' ? 0.7 : 0.5), kind === 'aoe' ? 0.045 : 0.035));
-    this.scene.add(g);
-    this.hl.set(id, g);
+    if (!list.length) { this.clearHighlight(id); return; }
+    const mat = tileMaterial(HL_COLORS[kind], kind !== 'path', kind === 'aoe' ? 0.7 : 0.5);
+    this.hl.set(id, this.tiles(this.hl.get(id), list, mat, kind === 'aoe' ? 0.045 : 0.035));
   }
   clearHighlight(id?: string) {
-    if (id) { const g = this.hl.get(id); if (g) { this.scene.remove(g); releaseTree(g); this.hl.delete(id); } return; }
-    for (const k of [...this.hl.keys()]) this.clearHighlight(k);
+    if (id) { const m = this.hl.get(id); if (m) m.visible = false; return; }
+    for (const m of this.hl.values()) m.visible = false;
   }
+  /** is highlight `id` currently shown */
+  isHighlighted(id: string) { return !!this.hl.get(id)?.visible; }
 
   setCursor(x: number, z: number, visible = true) {
     this.cursor = [x, z];
     const c = this.grid.cell(x, z);
     if (!c) { this.cursorMesh.visible = false; return; }
-    this.scene.remove(this.cursorMesh);
-    releaseTree(this.cursorMesh);
-    this.cursorMesh = this.makeTileMesh([[x, z]], tileMaterial('#ffffff', true, 0.9), 0.06);
+    this.tiles(this.cursorMesh, [[x, z]], this.cursorMesh.material as Material, 0.06);
     this.cursorMesh.visible = visible;
-    this.scene.add(this.cursorMesh);
   }
   hideCursor() { this.cursorMesh.visible = false; }
 
   /** persistent goal marker (reach objectives) — survives clearHighlight() */
   markGoal(cells: Array<[number, number]>) {
-    const g = new THREE.Group();
-    g.add(this.makeTileMesh(cells, tileMaterial('#ffd24a', true, 0.75), 0.05));
-    this.scene.add(g);
+    this.scene.add(this.makeTileMesh(cells, tileMaterial('#ffd24a', true, 0.75), 0.05));
   }
 
   /** persistent marker for charged spell targets */
   markCharge(uid: number, cells: Array<[number, number]>) {
-    this.unmarkCharge(uid);
-    const g = new THREE.Group();
-    g.add(this.makeTileMesh(cells, tileMaterial(HL_COLORS.charge, true, 0.35), 0.04));
-    this.scene.add(g);
-    this.chargeMarks.set(uid, g);
+    this.chargeMarks.set(uid, this.tiles(this.chargeMarks.get(uid), cells, tileMaterial(HL_COLORS.charge, true, 0.35), 0.04));
   }
-  unmarkCharge(uid: number) { const g = this.chargeMarks.get(uid); if (g) { this.scene.remove(g); releaseTree(g); this.chargeMarks.delete(uid); } }
+  unmarkCharge(uid: number) { const m = this.chargeMarks.get(uid); if (m) m.visible = false; }
 
   // ------------------------------------------------------------ picking & projection
   pickCell(clientX: number, clientY: number): [number, number] | null {
@@ -315,7 +319,7 @@ export class Stage {
         this.stormT = 5 + Math.random() * 9;
         this.post.flash('#e8f0ff', 0.45);
         this.env.lightning();
-        setTimeout(() => import('../audio/audio').then((m) => m.audio.sfx('thunderclap', { volume: 0.6 })), 250 + Math.random() * 600);
+        setTimeout(() => audio.sfx('thunderclap', { volume: 0.6 }), 250 + Math.random() * 600);
       }
     }
     // focus DOF on the camera target

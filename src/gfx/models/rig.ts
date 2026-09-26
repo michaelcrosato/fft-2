@@ -5,6 +5,7 @@ import { GeoBuilder, mat } from '../geo';
 import type { BufferGeometry, Group, Material, Mesh, Object3D } from 'three/webgpu';
 import { propMaterial } from '../materials';
 import { markShared } from '../dispose';
+import { rinfo } from '../renderer';
 
 export type BoneName =
   | 'root' | 'body' | 'hips' | 'torso' | 'head' | 'armL' | 'armR' | 'elbowL' | 'elbowR' | 'handL' | 'handR'
@@ -68,7 +69,12 @@ export class BonePart {
     const out: Mesh[] = [];
     if (this.b.count) {
       const m = new THREE.Mesh(this.b.build(), material);
-      m.castShadow = true; m.receiveShadow = true;
+      // each shadow caster is another draw in the shadow pass: only sizeable parts (not hands, feet,
+      // trinkets) cast, and only on high/ultra — the blob shadow grounds units below that
+      m.geometry.computeBoundingSphere();
+      const q = rinfo?.quality;
+      m.castShadow = (q === 'ultra' || q === 'high' || !q) && (m.geometry.boundingSphere?.radius ?? 1) > 0.1;
+      m.receiveShadow = true;
       this.obj.add(m); out.push(m);
     }
     if (this.ob.count) {

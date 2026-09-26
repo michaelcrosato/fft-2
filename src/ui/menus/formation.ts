@@ -82,7 +82,8 @@ async function jobMenu(game: Game, u: RosterUnit, parent: HTMLElement, refresh: 
   // the classic job-tree order, the unit's own unique calling first
   const TREE = ['squire', 'chemist', 'knight', 'archer', 'monk', 'priest', 'wizard', 'timeMage', 'summoner', 'thief', 'orator', 'mystic', 'geomancer', 'lancer', 'samurai', 'ninja', 'arithmancer', 'bard', 'dancer', 'mime'];
   const rank = (id: string) => { const i = TREE.indexOf(id); return i < 0 ? -1 : i; };
-  const all = [...JOBS.values()].filter((j) => !j.monster && (j.generic || j.unique === u.charId) && !supersededJob(u, j)).sort((a, b) => rank(a.id) - rank(b.id));
+  // generic jobs, plus the unit's own unique calling (generic units have none: `undefined === undefined` let enemy jobs in)
+  const all = [...JOBS.values()].filter((j) => !j.monster && (j.generic || (!!j.unique && j.unique === u.charId)) && !supersededJob(u, j)).sort((a, b) => rank(a.id) - rank(b.id));
   const items = all.map((j) => {
     const ok = jobUnlocked(u, j);
     const req = (j.requires ?? []).map((r) => `${JOBS.get(r.job)?.name ?? r.job} ${r.level}`).join(', ');

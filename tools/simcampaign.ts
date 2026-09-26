@@ -55,12 +55,13 @@ for (const st of steps) {
   const def = BATTLES.get(st.battle!);
   if (!def) { console.log(`${st.battle}: MISSING`); errs++; continue; }
   const chapter = (st as any).chapter ?? (st as any).chapterMin ?? 4;
-  const s = newGame('Rhen', [4, 12]);
+  // fixed seeds: the same code gives the same results, so balance changes can be compared run to run
+  const s = newGame('Rhen', [4, 12], 20260925);
   s.chapter = chapter; s.tier = Math.min(8, 1 + chapter * 2);
   const comp = chapter >= 2 ? ['adria', 'mattis'] : [];
   if (chapter >= 3) comp.push('rana', 'malik');
   if (chapter >= 4) comp.push('orland', 'melisande');
-  for (const c of comp) joinCharacter(s, c);
+  for (const c of comp) joinCharacter(s, c, new Rng(c.length * 7919));
   const lv = LEVEL_BY_CHAPTER[Math.min(4, chapter)];
   const rng = new Rng(7);
   const jobsFor = JOBS_BY_CHAPTER[Math.min(4, chapter)];

@@ -55,8 +55,11 @@ WebGL 2 for the rest of the session if it happens twice.
 | Recenter | F / Home | ◎ button | R3 |
 | Turn order | Tab | | View / Back |
 | Fast-forward | hold Shift | | hold X |
+| Skip a cutscene | M | Skip ⏭ button | Start / Y |
 
-The round camera buttons sit at the bottom of the battlefield (right edge on phones). The camera stays under your
+The round camera buttons sit at the bottom of the battlefield (right edge on phones). On touch screens a tile is
+chosen with two taps (the first shows it, the second confirms), and so is a place on the world map; Back from the
+facing step returns to the command menu. The camera stays under your
 control for the whole battle, including enemy turns. Controllers are detected on connect (standard mapping; PlayStation
 and Switch pads work in the equivalent positions) and rumble on heavy hits where the browser supports it.
 

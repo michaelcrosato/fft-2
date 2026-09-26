@@ -142,60 +142,65 @@ export class BattleController {
     this.hud.card(u, 'a', this.b);
     audio.sfx('turn');
     const startX = u.x, startZ = u.z;
+    // command menu → facing; backing out of the facing step returns to the menu
     for (;;) {
-      if (this.b.result) return;
-      this.hud.card(u, 'a', this.b);
-      this.hud.helpText(() => input.lastDevice === 'pad'
-        ? `${input.hint('confirm')} confirm · ${input.hint('rotL')}${input.hint('rotR')} rotate · <kbd>RS</kbd> orbit · ${input.hint('zoomOut')}${input.hint('zoomIn')} zoom · ${input.hint('recenter')} recenter`
-        : '<kbd>↑↓</kbd> choose · <kbd>Enter</kbd> confirm · <kbd>Q</kbd>/<kbd>E</kbd> rotate · drag/wheel camera · <kbd>F</kbd> recenter');
-      const items: MenuItem<string>[] = [
-        { label: 'Move', value: 'move', disabled: u.moved || !u.canMove, icon: '➤' },
-        { label: 'Act', value: 'act', disabled: u.acted || !u.canAct, icon: '⚔' },
-        { label: 'Wait', value: 'wait', icon: '⌛' },
-        { label: 'Status', value: 'status', icon: '☰' },
-        { label: 'Auto-Battle', value: 'auto', icon: '⚙' },
-      ];
-      const m = menu({ items, x: 14, bottom: 'var(--menu-bottom)', title: u.name, cancelable: true, closeTitle: 'Survey the field', onAction: (a) => this.globalKeys(a) });
-      const choice = await m.promise;
-      if (choice === null) {
-        // undo move if nothing else done
-        if (u.moved && !u.acted && (u.x !== startX || u.z !== startZ) && loadOptions().confirmMoves) {
-          // FFT doesn't allow undo; we allow a free look instead
-        }
-        await this.freeLook(u);
-        continue;
-      }
-      if (choice === 'move') {
-        const cells = this.b.moveRange(u);
-        const dest = await this.pickTile({ cells: cells.map((c) => [c.x, c.z] as [number, number]), kind: 'move', from: u, help: 'Choose a destination' });
-        this.stage.clearHighlight();
-        if (!dest) continue;
-        const ev = this.b.doMove(u, dest[0], dest[1]);
-        await this.playEvents(ev);
+      for (;;) {
+        if (this.b.result) return;
         this.hud.card(u, 'a', this.b);
-        if (u.acted) break;
-        continue;
+        this.hud.helpText(() => input.lastDevice === 'touch' ? '' : input.lastDevice === 'pad'
+          ? `${input.hint('confirm')} confirm · ${input.hint('rotL')}${input.hint('rotR')} rotate · <kbd>RS</kbd> orbit · ${input.hint('zoomOut')}${input.hint('zoomIn')} zoom · ${input.hint('recenter')} recenter`
+          : '<kbd>↑↓</kbd> choose · <kbd>Enter</kbd> confirm · <kbd>Q</kbd>/<kbd>E</kbd> rotate · drag/wheel camera · <kbd>F</kbd> recenter');
+        const items: MenuItem<string>[] = [
+          { label: 'Move', value: 'move', disabled: u.moved || !u.canMove, icon: '➤' },
+          { label: 'Act', value: 'act', disabled: u.acted || !u.canAct, icon: '⚔' },
+          { label: 'Wait', value: 'wait', icon: '⌛' },
+          { label: 'Status', value: 'status', icon: '☰' },
+          { label: 'Auto-Battle', value: 'auto', icon: '⚙' },
+        ];
+        const m = menu({ items, x: 14, bottom: 'var(--menu-bottom)', title: u.name, cancelable: true, closeTitle: 'Survey the field', onAction: (a) => this.globalKeys(a) });
+        const choice = await m.promise;
+        if (choice === null) {
+          // undo move if nothing else done
+          if (u.moved && !u.acted && (u.x !== startX || u.z !== startZ) && loadOptions().confirmMoves) {
+            // FFT doesn't allow undo; we allow a free look instead
+          }
+          await this.freeLook(u);
+          continue;
+        }
+        if (choice === 'move') {
+          const cells = this.b.moveRange(u);
+          const dest = await this.pickTile({ cells: cells.map((c) => [c.x, c.z] as [number, number]), kind: 'move', from: u, help: 'Choose a destination' });
+          this.stage.clearHighlight();
+          if (!dest) continue;
+          const ev = this.b.doMove(u, dest[0], dest[1]);
+          await this.playEvents(ev);
+          this.hud.card(u, 'a', this.b);
+          if (u.acted) break;
+          continue;
+        }
+        if (choice === 'act') {
+          const done = await this.actMenu(u);
+          if (done) { this.syncAll(); if (u.moved || !u.canMove || this.b.result) break; }
+          continue;
+        }
+        if (choice === 'wait') break;
+        if (choice === 'status') { await this.statusView(u); continue; }
+        if (choice === 'auto') {
+          const all = await confirm('Let this unit act on its own for the rest of the battle?', 'This unit', 'Cancel');
+          // autoAi, not controlled=false: the unit stays the player's (crystallizes, keeps Brave/Faith, player colours)
+          if (all) { u.autoAi = true; u.ai = 'aggressive'; await this.aiTurn(u); return; }
+          continue;
+        }
       }
-      if (choice === 'act') {
-        const done = await this.actMenu(u);
-        if (done) { this.syncAll(); if (u.moved || !u.canMove || this.b.result) break; }
-        continue;
-      }
-      if (choice === 'wait') break;
-      if (choice === 'status') { await this.statusView(u); continue; }
-      if (choice === 'auto') {
-        const all = await confirm('Let this unit act on its own for the rest of the battle?', 'This unit', 'Cancel');
-        // autoAi, not controlled=false: the unit stays the player's (crystallizes, keeps Brave/Faith, player colours)
-        if (all) { u.autoAi = true; u.ai = 'aggressive'; await this.aiTurn(u); return; }
-        continue;
-      }
+      if (this.b.result) return;
+      const facing = await this.pickFacing(u);
+      if (!facing) continue;
+      const ev = this.b.endTurn(u, facing);
+      await this.playEvents(ev);
+      this.hud.clearPreview();
+      this.hud.card(null, 'b');
+      return;
     }
-    if (this.b.result) return;
-    const facing = await this.pickFacing(u);
-    const ev = this.b.endTurn(u, facing);
-    await this.playEvents(ev);
-    this.hud.clearPreview();
-    this.hud.card(null, 'b');
   }
 
   private globalKeys(a: Action): boolean {
@@ -302,12 +307,14 @@ export class BattleController {
     let cx = o.from?.x ?? o.cells[0][0], cz = o.from?.z ?? o.cells[0][1];
     if (!valid.has(cx + ',' + cz) && o.cells.length) [cx, cz] = o.cells[0];
     const el = renderer.domElement;
-    this.hud.helpText(() => `${o.help ?? ''} · ${input.lastDevice === 'pad' ? `${input.hint('confirm')} confirm · ${input.hint('cancel')} back` : '<kbd>Enter</kbd>/click confirm · <kbd>Esc</kbd>/right-click back'}`);
+    this.hud.helpText(() => input.lastDevice === 'touch' ? `${o.help ?? ''} · tap a tile, tap it again to confirm` : `${o.help ?? ''} · ${input.lastDevice === 'pad' ? `${input.hint('confirm')} confirm · ${input.hint('cancel')} back` : '<kbd>Enter</kbd>/click confirm · <kbd>Esc</kbd>/right-click back'}`);
     this.hud.backButton(true);
     return new Promise((resolve) => {
-      const update = () => {
+      // keyboard/gamepad cursor moves pull the camera along; taps and clicks must not
+      // (on touch the second tap has to land where the first one did)
+      const update = (follow = true) => {
         st.setCursor(cx, cz);
-        st.focusTile(cx, cz);
+        if (follow) st.focusTile(cx, cz);
         this.hud.tileInfo(st.grid.cell(cx, cz) ?? null);
         if (valid.has(cx + ',' + cz)) o.hover?.(cx, cz);
         else { st.clearHighlight('aoe'); this.hud.clearPreview(); }
@@ -351,7 +358,7 @@ export class BattleController {
       let lastTap = '';
       const onDown = (e: PointerEvent) => { downAt = { x: e.clientX, y: e.clientY, t: performance.now() }; };
       const onMove = (e: PointerEvent) => {
-        if (e.pointerType === 'touch') return;
+        if (e.pointerType === 'touch' || e.buttons) return; // (a held button = dragging the camera)
         const c = st.pickCell(e.clientX, e.clientY);
         if (c && (c[0] !== cx || c[1] !== cz)) { cx = c[0]; cz = c[1]; st.setCursor(cx, cz); this.hud.tileInfo(st.grid.cell(cx, cz) ?? null); if (valid.has(cx + ',' + cz)) o.hover?.(cx, cz); else { st.clearHighlight('aoe'); this.hud.clearPreview(); } if (o.kind === 'move' && o.from) st.highlight('path', valid.has(cx + ',' + cz) ? this.b.pathFor(o.from, cx, cz) : [], 'pathLine'); if (!o.hover) { const t = this.b.unitAt(cx, cz); this.hud.card(t && t !== o.from ? t : null, 'b', this.b); } }
       };
@@ -365,9 +372,9 @@ export class BattleController {
         const c = st.pickCell(e.clientX, e.clientY);
         if (!c) return;
         const key = c[0] + ',' + c[1];
-        if (e.pointerType === 'touch' && key !== lastTap) { lastTap = key; cx = c[0]; cz = c[1]; update(); return; }
+        if (e.pointerType === 'touch' && key !== lastTap) { lastTap = key; cx = c[0]; cz = c[1]; update(false); return; }
         cx = c[0]; cz = c[1];
-        update();
+        update(false);
         tryConfirm();
       };
       el.addEventListener('pointermove', onMove);
@@ -377,17 +384,24 @@ export class BattleController {
     });
   }
 
-  pickFacing(u: BattleUnit): Promise<Facing> {
+  /** choose the facing that ends the turn; null = back to the command menu */
+  pickFacing(u: BattleUnit): Promise<Facing | null> {
     const v = this.view(u.uid)!;
     let f = u.facing;
     // arrow tiles around the unit
     const around = FACINGS.map((d) => { const [dx, dz] = d === 'N' ? [0, -1] : d === 'S' ? [0, 1] : d === 'E' ? [1, 0] : [-1, 0]; return { d, x: u.x + dx, z: u.z + dz }; }).filter((c) => this.stage.grid.cell(c.x, c.z));
     this.stage.highlight('move', around.map((c) => [c.x, c.z] as [number, number]), 'facing');
-    this.hud.helpText(() => input.lastDevice === 'pad' ? `Choose facing · ${input.hint('left')} · ${input.hint('confirm')} end turn` : 'Choose facing · <kbd>←↑→↓</kbd> or click · <kbd>Enter</kbd> end turn');
+    this.hud.helpText(() => input.lastDevice === 'touch' ? 'Choose facing · tap the side to face (tap the unit to keep its facing)' : input.lastDevice === 'pad' ? `Choose facing · ${input.hint('left')} · ${input.hint('confirm')} end turn` : 'Choose facing · <kbd>←↑→↓</kbd> or click · <kbd>Enter</kbd> end turn');
     const el = renderer.domElement;
     return new Promise((resolve) => {
       const set = (d: Facing) => { f = d; v.face(d); };
-      const finish = () => { pop(); el.removeEventListener('pointerup', onUp); el.removeEventListener('pointermove', onMove); el.removeEventListener('pointerdown', onDown); this.stage.clearHighlight('facing'); this.hud.helpText(''); audio.sfx('confirm'); resolve(f); };
+      this.hud.backButton(true);
+      const start = u.facing;
+      const finish = (keep: boolean) => {
+        pop(); el.removeEventListener('pointerup', onUp); el.removeEventListener('pointermove', onMove); el.removeEventListener('pointerdown', onDown);
+        this.stage.clearHighlight('facing'); this.hud.helpText(''); this.hud.backButton(false);
+        if (keep) { audio.sfx('confirm'); resolve(f); } else { audio.sfx('cancel'); v.face(start); resolve(null); }
+      };
       const pop = input.push((a) => {
         if (this.globalKeys(a)) return true;
         if (a === 'up' || a === 'down' || a === 'left' || a === 'right') {
@@ -396,23 +410,28 @@ export class BattleController {
           audio.sfx('cursor', { volume: 0.4 });
           return true;
         }
-        if (a === 'confirm' || a === 'cancel') { finish(); return true; }
+        if (a === 'confirm') { finish(true); return true; }
+        if (a === 'cancel') { finish(false); return true; }
         return true;
       });
-      const dirAt = (e: PointerEvent): Facing | null => {
+      /** the facing a pointer points at; 'self' = the unit's own tile (keep facing); null = nothing */
+      const dirAt = (e: PointerEvent): Facing | 'self' | null => {
         const c = this.stage.pickCell(e.clientX, e.clientY);
         if (!c) return null;
-        if (c[0] === u.x && c[1] === u.z) return null;
+        if (c[0] === u.x && c[1] === u.z) return 'self';
         return MapGrid.faceToward(u.x, u.z, c[0], c[1], f);
       };
       let downAt: { x: number; y: number } | null = null;
       const onDown = (e: PointerEvent) => { downAt = { x: e.clientX, y: e.clientY }; };
-      const onMove = (e: PointerEvent) => { if (e.pointerType === 'touch' || e.buttons) return; const d = dirAt(e); if (d && d !== f) set(d); };
+      const onMove = (e: PointerEvent) => { if (e.pointerType === 'touch' || e.buttons) return; const d = dirAt(e); if (d && d !== 'self' && d !== f) set(d); };
       const onUp = (e: PointerEvent) => {
         const moved = downAt ? Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) : 0;
         downAt = null;
         if (e.button !== 0 || moved > 10) return; // dragging the camera is not a choice
-        const d = dirAt(e); if (d) { set(d); } finish();
+        const d = dirAt(e);
+        if (!d) return; // the sky, or off the map: not a choice either
+        if (d !== 'self') set(d);
+        finish(true);
       };
       el.addEventListener('pointerdown', onDown);
       el.addEventListener('pointerup', onUp);
@@ -426,25 +445,30 @@ export class BattleController {
     this.stage.clearHighlight();
     await new Promise<void>((resolve) => {
       let cx = u.x, cz = u.z;
-      const upd = () => {
-        this.stage.setCursor(cx, cz); this.stage.focusTile(cx, cz);
+      // the camera follows keyboard/gamepad moves only; hovering or tapping inspects in place
+      const upd = (follow = true) => {
+        this.stage.setCursor(cx, cz); if (follow) this.stage.focusTile(cx, cz);
         const t = this.b.unitAt(cx, cz);
         this.hud.card(t && t !== u ? t : null, 'b', this.b);
         this.hud.tileInfo(this.stage.grid.cell(cx, cz) ?? null);
         if (t && t.alive && t !== u) this.stage.highlight(t.team === u.team ? 'move' : 'enemyMove', this.b.moveRange(t).map((c) => [c.x, c.z] as [number, number]), 'look');
         else this.stage.clearHighlight('look');
       };
-      this.hud.helpText(() => `Survey the field · ${input.hint('cancel')} return`);
+      this.hud.helpText(() => input.lastDevice === 'touch' ? 'Survey the field · tap a unit to see its reach' : `Survey the field · ${input.hint('cancel')} return`);
       this.hud.backButton(true, 'Done');
       const el = renderer.domElement;
-      const onMove = (e: PointerEvent) => { const c = this.stage.pickCell(e.clientX, e.clientY); if (c && (c[0] !== cx || c[1] !== cz)) { cx = c[0]; cz = c[1]; upd(); } };
+      const at = (e: PointerEvent) => { const c = this.stage.pickCell(e.clientX, e.clientY); if (c && (c[0] !== cx || c[1] !== cz)) { cx = c[0]; cz = c[1]; upd(false); } };
+      const onMove = (e: PointerEvent) => { if (e.pointerType === 'mouse' && !e.buttons) at(e); };
+      let downAt: { x: number; y: number } | null = null;
+      const onDown = (e: PointerEvent) => { downAt = { x: e.clientX, y: e.clientY }; };
+      const onUp = (e: PointerEvent) => { if (downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 10) at(e); downAt = null; };
       const pop = input.push((a) => {
         if (this.globalKeys(a)) return true;
         if (a === 'up' || a === 'down' || a === 'left' || a === 'right') { const [dx, dz] = screenDir(this.stage.cam.yaw, a); if (this.stage.grid.cell(cx + dx, cz + dz)) { cx += dx; cz += dz; upd(); } return true; }
-        if (a === 'cancel' || a === 'confirm') { pop(); el.removeEventListener('pointermove', onMove); this.stage.clearHighlight(); this.stage.hideCursor(); this.hud.card(null, 'b'); this.hud.tileInfo(null); this.hud.backButton(false); this.stage.focusTile(u.x, u.z); resolve(); return true; }
+        if (a === 'cancel' || a === 'confirm') { pop(); el.removeEventListener('pointermove', onMove); el.removeEventListener('pointerdown', onDown); el.removeEventListener('pointerup', onUp); this.stage.clearHighlight(); this.stage.hideCursor(); this.hud.card(null, 'b'); this.hud.tileInfo(null); this.hud.backButton(false); this.stage.focusTile(u.x, u.z); resolve(); return true; }
         return true;
       });
-      el.addEventListener('pointermove', onMove);
+      el.addEventListener('pointermove', onMove); el.addEventListener('pointerdown', onDown); el.addEventListener('pointerup', onUp);
       upd();
       void cells;
     });

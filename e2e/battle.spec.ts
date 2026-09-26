@@ -114,3 +114,60 @@ test('reaches the first player turn with a usable HUD', async ({ page }, info) =
   await page.screenshot({ path: info.outputPath('turn.png') });
   w.assertClean();
 });
+
+test('a whole turn by touch or mouse: move, wait, face', async ({ page }, info) => {
+  const w = watchErrors(page);
+  await page.addInitScript(() => { try { localStorage.setItem('fft-fealty-options', JSON.stringify({ battleSpeed: 2, textSpeed: 2.5 })); } catch { /* private mode */ } });
+  await page.goto(gameUrl(info, FAST));
+  await waitForUiText(page, 'Begin Battle');
+  await press(page, '.menu .item:has-text("Begin Battle")', info);
+  await expect.poll(async () => {
+    const skip = page.locator('.btn.ghost:has-text("Skip")');
+    if (await skip.isVisible().catch(() => false)) await skip.click({ timeout: 2000 }).catch(() => {});
+    const t = await uiText(page);
+    return t.includes('Move') && t.includes('Act') && t.includes('Wait');
+  }, { timeout: 150_000, intervals: [1000] }).toBe(true);
+  const active = () => page.evaluate(() => { const b = (window as any).__game.currentBattle; const u = b.active; return { uid: u.uid, x: u.x, z: u.z }; });
+  const u0 = await active();
+  await press(page, '.menu .item:has-text("Move")', info);
+  await expect(page.locator('.hudback')).toBeVisible();
+  // the camera glides to the unit first; measure tile positions once it has settled
+  let prev = '';
+  await expect.poll(async () => { const c = (await camState(page))!; const k = [c.x, c.z, c.yaw, c.dist].map((v) => v.toFixed(2)).join(); const still = k === prev; prev = k; return still; }, { timeout: 30_000, intervals: [500] }).toBe(true);
+  // a reachable tile away from the unit, and where it is on screen
+  const target = await page.evaluate(() => {
+    const g = (window as any).__game, b = g.currentBattle, u = b.active, st = g.stage;
+    const cells = b.moveRange(u).filter((c: any) => (c.x !== u.x || c.z !== u.z) && !b.unitAt(c.x, c.z));
+    cells.sort((p: any, q: any) => (Math.abs(q.x - u.x) + Math.abs(q.z - u.z)) - (Math.abs(p.x - u.x) + Math.abs(p.z - u.z)));
+    for (const c of cells.slice(0, 12)) {
+      const s = st.toScreen(st.tileWorld(c.x, c.z));
+      if (s.visible && s.x > 40 && s.y > 40 && s.x < innerWidth - 40 && s.y < innerHeight - 160) {
+        const hit = st.pickCell(s.x, s.y);
+        if (hit && hit[0] === c.x && hit[1] === c.z) return { x: c.x, z: c.z, sx: s.x, sy: s.y };
+      }
+    }
+    return null;
+  });
+  test.skip(!target, 'no unobstructed tile on screen at this camera angle');
+  const tapTile = async () => { if (info.project.use.hasTouch) await page.touchscreen.tap(target!.sx, target!.sy); else await page.mouse.click(target!.sx, target!.sy); };
+  await tapTile();
+  if (info.project.use.hasTouch) { await page.waitForTimeout(400); await tapTile(); } // touch: the first tap only moves the cursor
+  await expect.poll(async () => { const u = await active(); return u.x === target!.x && u.z === target!.z; }, { timeout: 60_000 }).toBe(true);
+  expect((await active()).uid).toBe(u0.uid);
+  // back at the command menu: Move is spent, Wait ends the turn after choosing a facing
+  await waitForUiText(page, 'Wait');
+  await press(page, '.menu .item:has-text("Wait")', info);
+  const facing = () => page.evaluate(() => (window as any).__game.stage.isHighlighted('facing'));
+  await expect.poll(facing, { timeout: 60_000 }).toBe(true);
+  // Back from the facing step returns to the command menu (the turn isn't over yet)
+  await press(page, '.hudback', info);
+  await expect.poll(facing, { timeout: 30_000 }).toBe(false);
+  await waitForUiText(page, 'Wait');
+  expect((await active()).uid).toBe(u0.uid);
+  await press(page, '.menu .item:has-text("Wait")', info);
+  await expect.poll(facing, { timeout: 60_000 }).toBe(true);
+  const nb = await page.evaluate(() => { const g = (window as any).__game, u = g.currentBattle.active, st = g.stage; const s = st.toScreen(st.tileWorld(u.x + (u.x > 0 ? -1 : 1), u.z)); return s; });
+  if (info.project.use.hasTouch) await page.touchscreen.tap(nb.x, nb.y); else await page.mouse.click(nb.x, nb.y);
+  await expect.poll(() => page.evaluate(() => (window as any).__game.stage.isHighlighted('facing')), { timeout: 30_000 }).toBe(false);
+  w.assertClean();
+});

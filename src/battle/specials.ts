@@ -45,7 +45,7 @@ const throwCat = (id: string, cat: string) => {
 export function throwables(b: Battle, cat: string, u?: BattleUnit): string[] {
   if (u && !b.usesStock(u)) {
     const own = [...ITEMS.values()].filter((it) => it.price > 0 && throwCat(it.id, cat)).sort((p, q) => p.price - q.price)[0];
-    return own ? [own.id] : [];
+    return own && b.stockOf(u, own.id) > 0 ? [own.id] : [];
   }
   const out: string[] = [];
   for (const [id, n] of b.inventory) if (n > 0 && throwCat(id, cat)) out.push(id);
@@ -75,7 +75,7 @@ export const SPECIALS: Record<string, Special> = {
       const list = throwables(b, String(a.params?.cat ?? 'shuriken'), u);
       const item = opts.item && list.includes(opts.item) ? opts.item : list.sort((p, q) => (ITEMS.get(q)?.wp ?? 0) - (ITEMS.get(p)?.wp ?? 0))[0];
       if (!item) return;
-      if (b.usesStock(u)) b.takeItem(item);
+      b.spendItem(u, item);
       b.resolveAbility(u, a, x, z, { ...opts, item });
     },
   },

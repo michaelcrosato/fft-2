@@ -39,6 +39,8 @@ export class TacticsCamera {
     this.target.copy(target);
     this.goal.target = target.clone();
     this.home.target = target.clone();
+    // tall screens: frame a little closer so tiles stay big enough to tap (pan/zoom reach the rest)
+    if (dist && this.cam.aspect < 0.8) dist = Math.max(this.minDist, dist * 0.8);
     if (dist) { this.dist = dist; this.goal.dist = dist; this.home.dist = dist; }
     this.apply();
   }

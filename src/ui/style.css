@@ -30,7 +30,8 @@
   --vh: 1vh;
 }
 @supports (height: 1dvh) { :root { --vh: 1dvh; } }
-.touch .helpbar { display: none; }
+/* touch: short prompts at the top (the bottom belongs to the unit cards and camera buttons) */
+.touch .helpbar { top: 50px; bottom: auto; white-space: normal; max-width: min(92vw, 560px); text-align: center; }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; background: #07060a; overflow: hidden; overscroll-behavior: none; }
@@ -41,6 +42,9 @@ body { font-family: var(--font-body); color: var(--ink); -webkit-font-smoothing:
 #ui > * { pointer-events: auto; }
 #ui .passthru { pointer-events: none; }
 #ui .passthru > * { pointer-events: auto; }
+/* purely visual layers never take pointer input: the two rules above would otherwise switch it back on,
+   and the (transparent) fade layer left in place after the first fade would swallow every tap on the 3D view */
+#ui > .fade, #ui > .toast, #ui > .banner, #ui > .floater, #ui .helpbar { pointer-events: none; }
 
 /* ---------------- panels ---------------- */
 .panel {
@@ -62,6 +66,8 @@ body { font-family: var(--font-body); color: var(--ink); -webkit-font-smoothing:
   color: #f1e6cc; border-color: #a58a4a;
 }
 .panel.dark::before { border-color: rgba(220, 190, 120, 0.25); }
+.panel input:focus-visible, .panel select:focus-visible, .panel button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.panel input:focus, .panel select:focus { outline: 2px solid var(--gold); outline-offset: 2px; }
 .panel h2, .panel h3 { font-family: var(--font-head); font-weight: 700; margin: 0 0 6px; letter-spacing: 0.04em; color: #4a2c14; }
 .panel.dark h2, .panel.dark h3 { color: var(--gold2); }
 .panel h2 { font-size: 1.15em; }
@@ -92,9 +98,21 @@ body { font-family: var(--font-body); color: var(--ink); -webkit-font-smoothing:
 .menu .sep { height: 1px; margin: 5px 6px; background: linear-gradient(90deg, transparent, rgba(90, 60, 30, 0.45), transparent); }
 .menu .scroll { max-height: calc(55 * var(--vh)); overflow-y: auto; padding: 2px 4px 2px 32px; margin-left: -32px; scrollbar-width: thin; }
 .menu.title-menu { transform: translateX(-50%); min-width: 230px; text-align: left; }
+.menu.centered { transform: translate(-50%, -50%); }
+/* never wider than the screen (the ✕ in the corner must stay reachable); long labels shorten */
+.menu { max-width: calc(100vw - 28px); }
+.menu .item .l { overflow: hidden; text-overflow: ellipsis; }
 .menu.title-menu .item { font-family: var(--font-head); font-weight: 500; letter-spacing: 0.05em; font-size: 1.08em; }
 .menu .desc { font-size: 0.82em; font-style: italic; color: var(--ink-soft); max-width: 300px; white-space: normal; margin: 6px 4px 0; }
 .menu { z-index: 2; }
+/* stacking inside #ui: menus 2 · full-screen menus 5 (inline) · banners 20 · dialogue 30 · narration 35 · prompts 40 · toasts 45 · fades 50 */
+.banner, .floater { z-index: 20; }
+.dialogue { z-index: 30; }
+.narration, .titlecard { z-index: 35; }
+.skipbtn { z-index: 36; }
+.panel.prompt { z-index: 40; }
+.toast { z-index: 45; }
+.fade { z-index: 50; }
 .menu .mclose {
   position: absolute; top: -12px; right: -10px; width: 26px; height: 26px; padding: 0; border-radius: 50%; cursor: pointer;
   background: linear-gradient(180deg, #7c5424, #4e3014); color: #f7e3a8; border: 1px solid #2b1a0a; box-shadow: 0 2px 4px rgba(0,0,0,.4);
@@ -234,9 +252,11 @@ body { font-family: var(--font-body); color: var(--ink); -webkit-font-smoothing:
   :root { --ui-scale: 0.74; --menu-bottom: 134px; }
   .dialogue { min-height: 96px; }
   /* side detail panels (formation, shop, chronicle, help) dock under the list instead of covering it */
-  .panel.detail { left: 8px !important; right: 8px !important; top: auto !important; bottom: 8px !important; width: auto !important; max-height: calc(42 * var(--vh)) !important; }
+  .panel.detail { left: 8px !important; right: 8px !important; top: auto !important; bottom: 8px !important; width: auto !important; min-width: 0 !important; max-height: calc(42 * var(--vh)) !important; }
   .unitcard { min-width: 250px; padding: 6px 10px 6px 6px; }
-  .menu .scroll { max-height: calc(40 * var(--vh)); }
+  /* !important: menus set their own (desktop-sized) inline heights */
+  .menu .scroll { max-height: calc(40 * var(--vh)) !important; }
+  .job-delta { top: 8px !important; bottom: auto !important; right: 8px !important; font-size: 0.9em; }
   .unitcard .portrait { width: 64px; height: 72px; }
   .atlist { display: none; }
   .dialogue { grid-template-columns: 76px 1fr; }
@@ -246,9 +266,19 @@ body { font-family: var(--font-body); color: var(--ink); -webkit-font-smoothing:
 }
 /* portrait phones: the unit cards fill the bottom, so the camera buttons stand at the right edge */
 @media (orientation: portrait) and (max-width: 760px) {
+  /* the deployment list docks at the bottom so the deployment tiles stay in view */
+  .menu.deploy { top: auto !important; bottom: 10px; right: 64px; }
+  .preview { right: 54px; }
+  .menu.deploy .scroll { max-height: calc(30 * var(--vh)) !important; }
   .camctl, .touch .camctl { left: auto; right: 8px; bottom: auto; top: 50%; transform: translateY(-50%); flex-direction: column; }
 }
 /* landscape phones: no room between the unit cards; a 2×3 block at the top right (below the Skip button) */
 @media (orientation: landscape) and (max-height: 520px) {
   .camctl, .touch .camctl { left: auto; right: 8px; bottom: auto; top: 46px; transform: none; display: grid; grid-template-columns: repeat(2, auto); }
+  .preview { right: 100px; }
+  /* short screens: detail panels sit beside the list rather than under it */
+  .panel.detail { left: auto !important; right: 8px !important; top: 48px !important; bottom: 8px !important; width: min(50vw, 440px) !important; min-width: 0 !important; max-height: none !important; overflow-y: auto !important; }
+  .menu .scroll { max-height: calc(62 * var(--vh)) !important; }
+  /* panels with a title plate scroll inside instead (overflow would clip the plate) */
+  .panel.detail.titled { overflow: visible !important; }
 }

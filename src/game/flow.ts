@@ -9,7 +9,7 @@ import { menu, toast, confirm, fade, say, titleCard } from '../ui/widgets';
 import { h, uiRoot, sleep } from '../ui/dom';
 import { input } from '../ui/input';
 import { audio } from '../audio/audio';
-import { renderer } from '../gfx/renderer';
+import { renderer, rinfo } from '../gfx/renderer';
 import { Rng } from '../core/rng';
 import { MapGrid } from '../battle/grid';
 import { mapDef } from '../data/db';
@@ -42,7 +42,7 @@ export async function runTitle(game: Game) {
     h('div', { style: { fontFamily: 'EB Garamond, serif', fontStyle: 'italic', fontSize: 'min(4vw, 20px, 4.5vh)', color: '#e8d8b0', whiteSpace: 'nowrap' } }, 'The Chronicle of the Twelve Braves'),
   );
   uiRoot().appendChild(logo);
-  const footer = h('div', { style: { position: 'absolute', bottom: '10px', width: '100%', textAlign: 'center', color: 'rgba(240,225,190,.6)', fontSize: '12px', pointerEvents: 'none' } }, 'A fan-made spiritual successor · three.js WebGPU · all names, words and music original');
+  const footer = h('div', { style: { position: 'absolute', bottom: '10px', width: '100%', textAlign: 'center', color: 'rgba(240,225,190,.6)', fontSize: '12px', pointerEvents: 'none' } }, `A fan-made spiritual successor · three.js ${({ webgpu: 'WebGPU', webgl2: 'WebGL 2', webgl1: 'WebGL 1' } as Record<string, string>)[rinfo?.backend ?? ''] ?? ''} · all names, words and music original`);
   uiRoot().appendChild(footer);
   for (;;) {
     const hasSave = latestSave() !== null;
@@ -97,8 +97,31 @@ async function newGameSetup(): Promise<GameState | null> {
     const done = (v: boolean) => { pop(); resolve(v); };
     ok.onclick = () => done(true);
     back.onclick = () => done(false);
-    // (while the name field has focus, the input layer only forwards Enter/Escape)
-    const pop = input.push((a) => { if (a === 'confirm') done(true); if (a === 'cancel') done(false); return true; });
+    // gamepad / keyboard navigation: ↑↓ between fields, ←→ change month / day / Gentle, A begins (or goes back on Back)
+    const fields: HTMLElement[] = [inp, monthSel, daySel, gentle, ok, back];
+    let fi = 0;
+    panel.addEventListener('focusin', (e) => { const i = fields.indexOf(e.target as HTMLElement); if (i >= 0) fi = i; });
+    const focusField = (i: number) => { fi = (i + fields.length) % fields.length; fields[fi].focus(); };
+    const step = (sel: HTMLSelectElement, n: number, d: number) => { sel.value = String(((+sel.value - 1 + d + n) % n) + 1); upd(); };
+    // (while a text field or select has focus, the input layer only forwards Enter/Escape; the pad always gets here)
+    const pop = input.push((a, e) => {
+      if (a === 'up' || a === 'down') { focusField(fi + (a === 'down' ? 1 : -1)); return true; }
+      if (a === 'left' || a === 'right') {
+        const d = a === 'right' ? 1 : -1, f = fields[fi];
+        if (f === monthSel) step(monthSel, 12, d);
+        else if (f === daySel) step(daySel, 31, d);
+        else if (f === gentle) gentle.checked = !gentle.checked;
+        else if (f === ok || f === back) focusField(f === ok ? fields.indexOf(back) : fields.indexOf(ok));
+        return true;
+      }
+      if (a === 'confirm') {
+        if (fields[fi] === back) done(false);
+        else if (fields[fi] === gentle && !e) gentle.checked = !gentle.checked; // pad A ticks the box
+        else done(true);
+      }
+      if (a === 'cancel') done(false);
+      return true;
+    });
   });
   panel.remove();
   if (!r) return null;
@@ -218,7 +241,8 @@ async function worldLoop(game: Game): Promise<'title' | 'continue'> {
   const hud = h('div.passthru', { style: { position: 'absolute', inset: '0' } });
   uiRoot().appendChild(hud);
   worldHud = hud;
-  const top = h('div.panel', { style: { left: '12px', top: '12px', padding: '6px 14px', fontSize: '0.9em' } });
+  // (leaves room for the ☰ Menu button on narrow screens)
+  const top = h('div.panel', { style: { left: '12px', top: '12px', padding: '6px 14px', fontSize: '0.9em', maxWidth: 'calc(100% - 130px)' } });
   const label = h('div.panel', { style: { display: 'none', padding: '3px 12px', fontFamily: 'Cinzel, serif', fontWeight: '700', transform: 'translate(-50%, -100%)', pointerEvents: 'none' } });
   hud.appendChild(top); hud.appendChild(label);
   const refreshTop = () => {
@@ -278,7 +302,8 @@ async function worldLoop(game: Game): Promise<'title' | 'continue'> {
           return;
         }
       }
-      const res = await nodeMenu(game, world, s.location);
+      // the location's own panel and menu replace the world HUD while they are open
+      const res = await hudHidden(() => nodeMenu(game, world, s.location));
       if (res === 'rebuild' || res === 'title') { result = res === 'title' ? 'title' : 'continue'; return; }
       world.setMarkerStates(markerStates(game));
       refreshTop();
@@ -287,13 +312,18 @@ async function worldLoop(game: Game): Promise<'title' | 'continue'> {
   const onMove = (e: PointerEvent) => { if (busy) return; const id = world.pickNode(e.clientX, e.clientY); if (id !== hovered) showLabel(id); };
   let down: { x: number; y: number } | null = null;
   const onDown = (e: PointerEvent) => { down = { x: e.clientX, y: e.clientY }; };
+  let tapped: string | null = null;
   const onUp = (e: PointerEvent) => {
     if (!down || busy) return;
     const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y);
     down = null;
     if (moved > 8) return;
     const id = world.pickNode(e.clientX, e.clientY);
-    if (id) goTo(id);
+    if (!id) { tapped = null; showLabel(null); return; }
+    // touch has no hover: the first tap names the place, a second tap travels there
+    if (e.pointerType === 'touch' && tapped !== id) { tapped = id; sel = id; showLabel(id); audio.sfx('cursor', { volume: 0.5 }); return; }
+    tapped = null;
+    goTo(id);
   };
   const onWheel = (e: WheelEvent) => {
     e.preventDefault(); // ctrl+wheel (trackpad pinch) would zoom the page
@@ -338,6 +368,7 @@ async function worldLoop(game: Game): Promise<'title' | 'continue'> {
   const openWorldMenu = async () => {
     if (busy) return;
     busy = true;
+    hud.style.display = 'none'; // full-screen menus and their titles would draw over it
     try {
       const pick = await menu({ items: [
         { label: 'Formation', value: 'formation' }, { label: 'Chronicle', value: 'chronicle' }, { label: 'Save', value: 'save' }, { label: 'Load', value: 'load' },
@@ -350,7 +381,7 @@ async function worldLoop(game: Game): Promise<'title' | 'continue'> {
       if (pick === 'options') await openOptions(game);
       if (pick === 'title' && await confirm('Return to the title screen? Unsaved progress will be lost.', 'Return to title', 'Stay', true)) result = 'title';
       refreshTop();
-    } finally { busy = false; }
+    } finally { busy = false; hud.style.display = ''; }
   };
   // welcome: if the current story step is here, offer it immediately
   const stepHere = STORY[s.storyIndex];
@@ -402,10 +433,13 @@ function advanceDay(game: Game, n: number) {
 // ---------------------------------------------------------------- node menu
 /** the world map's status panel and menu button; hidden while a scene or battle plays */
 let worldHud: HTMLElement | null = null;
+let hudHides = 0;
 async function hudHidden<T>(fn: () => Promise<T>): Promise<T> {
   const el = worldHud;
+  hudHides++;
   if (el) el.style.display = 'none';
-  try { return await fn(); } finally { if (el) el.style.display = ''; }
+  // nested calls (a battle started from a location's menu) keep it hidden until the outermost ends
+  try { return await fn(); } finally { if (--hudHides === 0 && el) el.style.display = ''; }
 }
 
 async function nodeMenu(game: Game, world: WorldView, nodeId: string): Promise<'stay' | 'rebuild' | 'title'> {

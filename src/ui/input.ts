@@ -90,7 +90,8 @@ class InputManager {
     });
     window.addEventListener('keyup', (e) => { if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') this.kbFast = false; });
     // keys released while the window was in the background never send keyup
-    const reset = () => { this.kbFast = false; this.padFast = false; this.padPrev = []; this.padRepeat.clear(); };
+    // (a pad button still held when focus returns must be released before it counts again)
+    const reset = () => { this.kbFast = false; this.padFast = false; this.padResync = true; this.padRepeat.clear(); };
     window.addEventListener('blur', reset);
     document.addEventListener('visibilitychange', () => { if (document.hidden) reset(); });
     window.addEventListener('pointerdown', (e) => {
@@ -144,7 +145,9 @@ class InputManager {
     try { return [...(navigator.getGamepads?.() ?? [])].filter((p): p is Gamepad => !!p && p.connected); } catch { return []; }
   }
 
+  private padResync = false;
   private pollPad() {
+    if (typeof document !== 'undefined' && document.hidden) return; // a background tab takes no input
     const pads = this.pads();
     const st = this.pad;
     st.connected = pads.length > 0;
@@ -163,6 +166,7 @@ class InputManager {
     st.lx = lx; st.ly = ly; st.rx = rx; st.ry = ry; st.lt = trig(PAD_LT); st.rt = trig(PAD_RT);
     const now = performance.now();
     const edge = (key: number, down: boolean, a: Action) => {
+      if (this.padResync) { this.padPrev[key] = down; return; }
       if (down && !this.padPrev[key]) { this.setDevice('pad'); this.dispatch(a); this.padRepeat.set(key, now + PAD_REPEAT_FIRST); }
       else if (down && REPEATS.has(a) && now > (this.padRepeat.get(key) ?? Infinity)) { this.dispatch(a); this.padRepeat.set(key, now + PAD_REPEAT_NEXT); }
       this.padPrev[key] = down;
@@ -183,6 +187,7 @@ class InputManager {
       for (const k of [PAD_LT + 200, PAD_RT + 200, 300, 301]) this.padPrev[k] = true; // no stale edge when control returns
     }
     if (Math.abs(rx) + Math.abs(ry) + st.lt + st.rt > 0.3) this.setDevice('pad');
+    this.padResync = false;
   }
 }
 

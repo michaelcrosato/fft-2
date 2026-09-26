@@ -17,7 +17,8 @@ export interface QualitySettings {
 
 export const QUALITY: Record<Quality, QualitySettings> = {
   ultra: { pixelRatio: 2, shadowSize: 4096, ao: true, bloom: true, dof: true, aa: 'smaa', grass: 1.0, particles: 1.0, grading: true },
-  high: { pixelRatio: 1.5, shadowSize: 2048, ao: true, bloom: true, dof: true, aa: 'smaa', grass: 0.8, particles: 0.8, grading: true },
+  // (no SSAO on high: its prepass re-draws every object — a third of the frame's CPU — and terrain has baked AO)
+  high: { pixelRatio: 1.5, shadowSize: 2048, ao: false, bloom: true, dof: true, aa: 'smaa', grass: 0.8, particles: 0.8, grading: true },
   medium: { pixelRatio: 1.25, shadowSize: 2048, ao: false, bloom: true, dof: false, aa: 'fxaa', grass: 0.5, particles: 0.6, grading: true },
   low: { pixelRatio: 1, shadowSize: 1024, ao: false, bloom: false, dof: false, aa: 'fxaa', grass: 0.25, particles: 0.4, grading: false },
 };
@@ -82,7 +83,7 @@ export async function initRenderer(container: HTMLElement, pref: Backend | 'auto
         setThree(ns, b);
         const r = new ns.WebGPURenderer({ antialias: false, forceWebGL: b === 'webgl2', powerPreference: 'high-performance' } as never);
         // three routes both a lost WebGPU device and a lost WebGL context here
-        (r as unknown as { onDeviceLost: (info: { message?: string }) => void }).onDeviceLost = (info) => fireLost(info?.message ?? 'device lost');
+        (r as unknown as { onDeviceLost: (info: { message?: string }) => void }).onDeviceLost = (info) => { if (renderer === r) fireLost(info?.message ?? 'device lost'); };
         await r.init();
         const be = (r as unknown as { backend: { isWebGPUBackend?: boolean } }).backend;
         if (b === 'webgpu' && !be.isWebGPUBackend) {

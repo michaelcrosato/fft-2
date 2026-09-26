@@ -58,3 +58,15 @@ test('gamepad drives the menus', async ({ page }, info) => {
   await pad.axis(1, 0);
   w.assertClean();
 });
+
+test('after a scene fades in, taps and clicks still reach the 3D view', async ({ page }, info) => {
+  const w = watchErrors(page);
+  await page.goto(gameUrl(info, { test: 'scene', id: 'sc_pro_alazar', quality: 'low' }));
+  await expect(page.locator('.dialogue, .narration').first()).toBeVisible({ timeout: 90_000 });
+  const vp = page.viewportSize()!;
+  // the fade layer stays in the DOM after fading; it must not catch pointer input
+  const top = await page.evaluate(([x, y]) => { const el = document.elementFromPoint(x, y) as HTMLElement | null; return el?.id || el?.className || el?.tagName; }, [vp.width / 2, vp.height * 0.3]);
+  expect(await page.locator('.fade').count()).toBeGreaterThan(0);
+  expect(top === 'gl' || /narration/.test(String(top)), `topmost element was ${top}`).toBe(true);
+  w.assertClean();
+});

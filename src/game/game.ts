@@ -5,7 +5,7 @@ import { THREE } from '../gfx/three';
 import { Stage } from '../scenes/stage';
 import { BattleController, preloadPortraits } from '../scenes/battleController';
 import { runScene, type SceneHost } from '../scenes/cutscene';
-import { UnitView, loadMonsterBuilder } from '../scenes/unitview';
+import { UnitView, loadMonsterBuilder, getMonsterBuilder } from '../scenes/unitview';
 import { BATTLES, SCENES, STORY, SIDE, CHARACTERS, JOBS, ITEMS, NODES, ABILITIES, CHRONICLE } from '../data/db';
 import type { BattleDef, CharacterDef, Facing, JobDef, SceneDef, StoryStep, SideQuestStep, EnvTime, Weather } from '../data/types';
 import { setupBattle, applyResults, type DeployChoice } from './setup';
@@ -107,6 +107,10 @@ export class Game {
   async makeStage(mapId: string, opts: { time?: EnvTime; weather?: Weather } = {}): Promise<Stage> {
     const st = new Stage(mapId, opts);
     await st.init();
+    // compile the new map's shaders/pipelines in the background while the old screen (or a fade) is
+    // still up, instead of freezing for 1–2 s on its first frame; bounded so a slow driver can't stall us
+    const compile = (renderer as unknown as { compileAsync?: (s: unknown, c: unknown) => Promise<void> }).compileAsync;
+    if (compile) { try { await Promise.race([compile.call(renderer, st.scene, st.cam.cam), sleep(5000)]); } catch { /* optional */ } }
     if (this.stage && this.stage !== st) { const old = this.stage; this.stage = null; if (this.screen === (old as unknown as Screen)) this.screen = null; old.dispose(); }
     this.stage = st;
     this.setScreen({
@@ -207,7 +211,6 @@ export class Game {
         if (v) {
           const spec = v.spec;
           if (spec.job.monster) {
-            const { getMonsterBuilder } = await import('../scenes/unitview');
             const mb = getMonsterBuilder();
             return mb ? portrait('job:' + spec.job.id, () => mb(spec.job.monster), '#5a4a3a') : null;
           }
@@ -235,7 +238,6 @@ export class Game {
     const j = JOBS.get(jid) ?? JOBS.get(c.job)!;
     const bg = c.color ?? '#4a5a6a';
     if (j.monster) {
-      const { getMonsterBuilder } = await import('../scenes/unitview');
       const mb = getMonsterBuilder();
       if (mb) return portrait(charId + ':' + jid, () => mb(j.monster), bg);
       return null;
@@ -424,7 +426,7 @@ export class Game {
           { label: '', value: 'sep', sep: true },
           { label: 'Begin Battle', value: 'go' },
         ];
-        const pick = await menu({ items, x: 14, y: '12%', title: `Deploy ${placements.size}/${max}`, maxHeight: 'calc(60 * var(--vh))', cancelable: false, initial: lastPick ?? 'go', onAction: (a) => stageKeys(stage, a) }).promise;
+        const pick = await menu({ items, x: 14, y: '12%', className: 'deploy', title: `Deploy ${placements.size}/${max}`, maxHeight: 'calc(60 * var(--vh))', cancelable: false, initial: lastPick ?? 'go', onAction: (a) => stageKeys(stage, a) }).promise;
         lastPick = pick ?? undefined;
         if (pick === 'go') {
           if (!placements.has(heroU)) { toast(`${heroU.name} must lead the battle.`); continue; }
@@ -438,7 +440,7 @@ export class Game {
             const cell = await this.pickDeployCell(stage, cells);
             if (cell) { const other = [...placements.entries()].find(([, c]) => c[0] === cell[0] && c[1] === cell[1]); if (other) placements.set(other[0], placements.get(r)!); placements.set(r, cell); }
           } else {
-            const act = await menu({ items: [{ label: 'Reposition', value: 'pos' }, { label: 'Withdraw', value: 'out', disabled: forced.includes(r) ? 'Must fight in this battle' : false }], x: 260, y: '30%', title: r.name }).promise;
+            const act = await menu({ items: [{ label: 'Reposition', value: 'pos' }, { label: 'Withdraw', value: 'out', disabled: forced.includes(r) ? 'Must fight in this battle' : false }], x: '50%', y: '50%', className: 'centered', title: r.name }).promise;
             if (act === 'out') placements.delete(r);
             if (act === 'pos') { const cell = await this.pickDeployCell(stage, cells); if (cell) { const other = [...placements.entries()].find(([, c]) => c[0] === cell[0] && c[1] === cell[1]); if (other) placements.set(other[0], placements.get(r)!); placements.set(r, cell); } }
           }
@@ -501,7 +503,7 @@ export class Game {
     const rows = party.map((u) => h('div.kv', null, h('span', null, `${u.name}${u.levelUps ? ` — Lv ${u.level} ▲` : ''}`), h('span', null, `EXP +${u.expGained} · JP +${u.jpGained}`)));
     const loot = [...b.loot, ...(def.rewards?.items ?? [])].map((i) => ITEMS.get(i)?.name ?? i);
     const learned = party.flatMap((u) => u.crystalLearned.map((a) => `${u.name}: ${ABILITIES.get(a)?.name ?? a}`));
-    const panel = h('div.panel', { style: { left: '50%', top: '50%', transform: 'translate(-50%,-50%)', minWidth: '420px', maxWidth: '92vw' } },
+    const panel = h('div.panel', { style: { left: '50%', top: '50%', transform: 'translate(-50%,-50%)', minWidth: 'min(420px, 92vw)', maxWidth: '92vw' } },
       h('div.title-plate', null, 'Spoils of Battle'),
       h('h2', null, def.name),
       ...rows,

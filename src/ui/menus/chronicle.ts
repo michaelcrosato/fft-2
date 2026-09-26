@@ -14,8 +14,8 @@ export async function openChronicle(game: Game) {
   let body = null as HTMLElement | null;
   const show = (title: string, text: string) => {
     body?.remove();
-    body = h('div.panel.detail', { style: { right: '16px', top: '64px', width: 'min(620px, 58vw)', maxHeight: 'calc(78 * var(--vh))', overflowY: 'auto' } },
-      h('div.title-plate', null, title), h('div', { style: { whiteSpace: 'pre-wrap', lineHeight: '1.55', marginTop: '6px', fontSize: '1.02em' } }, text));
+    body = h('div.panel.detail.titled', { style: { right: '16px', top: '64px', width: 'min(620px, 58vw)', maxHeight: 'calc(78 * var(--vh))', display: 'flex', flexDirection: 'column' } },
+      h('div.title-plate', null, title), h('div', { style: { whiteSpace: 'pre-wrap', lineHeight: '1.55', marginTop: '6px', fontSize: '1.02em', overflowY: 'auto', minHeight: '0' } }, text));
     ov.root.appendChild(body);
   };
   /** a browsable list: entries show on hover/choose; only Back returns to the sections */

@@ -127,13 +127,14 @@ function showRendererLost() {
   try { sessionStorage.setItem(LOST_KEY, String(lostCount() + 1)); } catch { /* private mode */ }
   const box = document.createElement('div');
   box.className = 'panel';
-  Object.assign(box.style, { left: '50%', top: '50%', transform: 'translate(-50%,-50%)', maxWidth: 'min(460px, 92vw)', textAlign: 'center', zIndex: '20' });
+  Object.assign(box.style, { left: '50%', top: '50%', transform: 'translate(-50%,-50%)', maxWidth: 'min(460px, 92vw)', textAlign: 'center', zIndex: '60' });
   box.innerHTML = '<h2>The picture was lost</h2><p>The graphics device stopped responding (a driver reset, or the browser reclaimed it). Your last autosave is safe.</p>';
   const btn = document.createElement('button');
   btn.className = 'btn'; btn.type = 'button'; btn.textContent = 'Reload';
   btn.onclick = () => location.reload();
   box.appendChild(btn);
   document.getElementById('ui')?.appendChild(box);
+  input.push((a) => { if (a === 'confirm' || a === 'menu') location.reload(); return true; }); // gamepad A / Enter
 }
 
 boot().catch((e) => {

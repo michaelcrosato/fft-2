@@ -1,6 +1,6 @@
 // Cutscene script interpreter (story scenes and mid-battle scripts).
 import type { SceneCmd, Facing, StatusId, EnvTime, Weather } from '../data/types';
-import { say, narrate, titleCard, fade, menu, closeDialogue } from '../ui/widgets';
+import { say, narrate, titleCard, fade, menu, closeDialogue, setSkipHook } from '../ui/widgets';
 import type { Stage } from './stage';
 import type { UnitView } from './unitview';
 import type { ClipName } from '../gfx/models/anim';
@@ -45,11 +45,13 @@ let skipAll = false;
 export async function runScene(cmds: SceneCmd[], host: SceneHost): Promise<void> {
   skipAll = !!(window as any).__autoPlay;
   // skip button
-  const skip = h('div.btn.ghost', { style: { position: 'absolute', right: '14px', top: '12px', color: '#efe3c6', borderColor: 'rgba(240,210,140,.4)', fontSize: '0.8em', padding: '3px 10px' }, onclick: () => { skipAll = true; input.dispatch('confirm'); } }, 'Skip ⏭');
+  const skip = h('div.btn.ghost.skipbtn', { style: { position: 'absolute', right: '14px', top: '12px', color: '#efe3c6', borderColor: 'rgba(240,210,140,.4)', fontSize: '0.8em', padding: '3px 10px' }, onclick: () => { skipAll = true; input.dispatch('confirm'); } }, 'Skip ⏭');
   uiRoot().appendChild(skip);
+  setSkipHook(() => { skipAll = true; });
   try {
     await runCmds(cmds, host);
   } finally {
+    setSkipHook(null);
     skip.remove();
     // the last line of dialogue stays up between lines; clear it when the scene is over
     closeDialogue();

@@ -32,6 +32,8 @@ export interface MenuOpts<T> {
   maxHeight?: string;
   /** tooltip for the corner close button of a cancelable menu (default "Back") */
   closeTitle?: string;
+  /** touch: first tap only selects (default for menus with hover panels or descriptions) */
+  tapSelects?: boolean;
 }
 
 export interface MenuHandle<T> { promise: Promise<T | null>; close: () => void; el: HTMLElement; refresh: (items: MenuItem<T>[]) => void; }
@@ -57,7 +59,7 @@ export function menu<T = string>(o: MenuOpts<T>): MenuHandle<T> {
   let sel = -1;
   let rows: HTMLElement[] = [];
   // on touch, menus whose rows show details (hover panels, descriptions) select on the first tap and choose on the second
-  const infoMenu = !!(o.onHover || o.showDesc);
+  const infoMenu = o.tapSelects ?? !!(o.onHover || o.showDesc);
   let lastPointer = '';
   let resolve!: (v: T | null) => void;
   const promise = new Promise<T | null>((r) => (resolve = r));
@@ -139,7 +141,8 @@ export function menu<T = string>(o: MenuOpts<T>): MenuHandle<T> {
 
 /** yes/no prompt; `defaultNo` preselects No (for destructive choices) */
 export async function confirm(text: string, yes = 'Yes', no = 'No', defaultNo = false): Promise<boolean> {
-  const wrap = h('div.panel', { style: { left: '50%', top: '40%', transform: 'translate(-50%,-50%)', maxWidth: '520px', textAlign: 'center', padding: '16px 22px 8px' } }, h('div', { style: { marginBottom: '10px', fontSize: '1.1em' } }, text));
+  // (.prompt stacks above full-screen menus like Formation or Save, which open prompts of their own)
+  const wrap = h('div.panel.prompt', { style: { left: '50%', top: '40%', transform: 'translate(-50%,-50%)', maxWidth: 'min(520px, 92vw)', textAlign: 'center', padding: '16px 22px 8px' } }, h('div', { style: { marginBottom: '10px', fontSize: '1.1em' } }, text));
   uiRoot().appendChild(wrap);
   const m = menu({ items: [{ label: yes, value: true }, { label: no, value: false }], parent: wrap, className: 'inline', initial: !defaultNo });
   m.el.style.position = 'relative'; m.el.style.display = 'inline-block'; m.el.style.margin = '6px auto';
@@ -160,6 +163,10 @@ export function toast(text: string, ms = 2200) {
 export interface SayOpts { mood?: 'normal' | 'shout' | 'whisper' | 'think'; pos?: 'top' | 'bottom'; portrait?: string | null; speed?: number; auto?: number }
 
 let dlgEl: HTMLElement | null = null;
+
+let skipHook: (() => void) | null = null;
+/** set while a cutscene runs: the menu action (Start / Y / M) skips it from any line, narration or card */
+export function setSkipHook(fn: (() => void) | null) { skipHook = fn; }
 
 export function say(speaker: string, text: string, o: SayOpts = {}): Promise<void> {
   closeDialogue();
@@ -206,7 +213,11 @@ export function say(speaker: string, text: string, o: SayOpts = {}): Promise<voi
     const onUp = (e: PointerEvent) => { if (downAt && e.button === 0 && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 10) advance(); downAt = null; };
     gl?.addEventListener('pointerdown', onDown); gl?.addEventListener('pointerup', onUp);
     // allow clicking anywhere to advance
-    const pop = input.push((a) => { if (a === 'confirm' || a === 'cancel') advance(); return true; });
+    const pop = input.push((a) => {
+      if (a === 'menu' && skipHook) { skipHook(); if (!done) advance(); advance(); return true; }
+      if (a === 'confirm' || a === 'cancel') advance();
+      return true;
+    });
     if (input.fast) setTimeout(() => { if (!done) advance(); }, 250);
   });
 }
@@ -232,6 +243,7 @@ export async function narrate(text: string): Promise<void> {
       p.textContent += words[i++];
     }, input.fast ? 5 : 45);
     const pop = input.push((a) => {
+      if (a === 'menu' && skipHook) { skipHook(); clearInterval(t); done = true; pop(); el.removeEventListener('click', click); resolve(); return true; }
       if (a !== 'confirm' && a !== 'cancel') return true;
       if (!done) { clearInterval(t); p.textContent = text; done = true; i = words.length; return true; }
       pop(); el.removeEventListener('click', click); resolve(); return true;
@@ -253,7 +265,7 @@ export async function titleCard(t1: string, t2?: string, hold = 2600): Promise<v
   audio.sfx('bell', { volume: 0.6 });
   await new Promise<void>((resolve) => {
     const t = setTimeout(done, hold + 900);
-    const pop = input.push((a) => { if (a === 'confirm' || a === 'cancel') done(); return true; });
+    const pop = input.push((a) => { if (a === 'menu' && skipHook) skipHook(); if (a === 'confirm' || a === 'cancel' || (a === 'menu' && skipHook)) done(); return true; });
     function done() { clearTimeout(t); pop(); resolve(); }
   });
   el.style.opacity = '0';
