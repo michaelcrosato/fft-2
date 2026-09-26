@@ -9,3 +9,6 @@ tools/out
 !.env.example
 e2e-results
 e2e-report
+# stray browser profiles from Lighthouse / Windows-side tooling run in this folder
+C:*
+lighthouse.*

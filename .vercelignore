@@ -7,3 +7,5 @@ dist
 .env*
 e2e-results
 e2e-report
+C:*
+lighthouse.*
