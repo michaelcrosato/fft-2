@@ -151,6 +151,7 @@ It stays up through scene construction and the first complete rendered frames; c
 place their opening actors and camera before revealing the scene. Menu and Game Mode exit
 remain accessible while loading. Reduced-motion preferences stop the spinner animation,
 and preparation failures offer a reload instead of leaving an unexplained black screen.
+Entering fullscreen also keeps open menus and their Exit control above the canvas in Safari.
 The world map reuses its fixed terrain data on subsequent visits, and loading no longer
 warms an unused rendering path before preparing the actual post-processing output.
 

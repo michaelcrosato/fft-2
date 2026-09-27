@@ -116,6 +116,17 @@ class GameMode {
       if (!this.active) this.leaveFullscreen(); // an exit won the race with a pending request
       return;
     }
+    if (this.fullscreen) {
+      // WebKit can promote the fullscreen root above dialogs that were already
+      // open. Restore their top-layer order so Menu and Exit stay clickable.
+      const focused = document.activeElement;
+      for (const dialog of document.querySelectorAll<HTMLDialogElement>('dialog[open]')) {
+        if (!dialog.matches(':modal')) continue;
+        dialog.close();
+        dialog.showModal();
+      }
+      if (focused instanceof HTMLElement && focused.isConnected) focused.focus({ preventScroll: true });
+    }
     this.wasFullscreen = this.fullscreen;
     for (const listener of this.listeners) listener();
     void this.keepAwake(); // an optional API must never delay starting a campaign
