@@ -10,16 +10,20 @@ import { NODES, EDGES } from '../data/db';
 import type { WorldNode } from '../data/types';
 import { hash2 } from '../core/rng';
 import { Vfx } from '../gfx/vfx';
-import type { Scene, PerspectiveCamera, Group, Mesh, Vector3, Raycaster, Object3D } from 'three/webgpu';
+import type { Scene, PerspectiveCamera, Group, Mesh, Vector3, Raycaster, Object3D, BufferGeometry } from 'three/webgpu';
 import { buildHumanoid } from '../gfx/models/humanoid';
 import { Animator } from '../gfx/models/anim';
 import { gameClock } from '../core/gameClock';
 import type { UnitModel } from '../gfx/models/rig';
 import { releaseTree } from '../gfx/dispose';
 import { fovFor } from '../gfx/camera';
+import { paintLoading } from '../ui/loading';
 
 const S = 0.6;            // world units per map unit
 const SIZE = 110;         // map extent in map units (0..100 + margin)
+// Immutable CPU data only: each view owns and disposes its GPU geometry. Returning
+// from battles need not recalculate 25,600 heights and their procedural colours.
+let landCache: { heights: Float32Array; geometry: BufferGeometry } | null = null;
 
 function vnoise(x: number, y: number, seed: number) {
   const xi = Math.floor(x), yi = Math.floor(y);
@@ -63,13 +67,14 @@ export class WorldView {
     this.ray = new THREE.Raycaster();
     this.heights = new Float32Array(this.res * this.res);
     this.roads = new THREE.Group();
-    this.buildLand();
-    this.buildLights();
     this.vfx = new Vfx(this.scene);
     this.vfx.setBounds(SIZE * S, SIZE * S, 6);
   }
 
   async init() {
+    await this.buildLand();
+    this.buildLights();
+    await paintLoading();
     this.post = await createPost(this.scene, this.cam);
     this.post.setGrade({ warmth: 0.25, saturation: 1.1, vignette: 0.45 });
   }
@@ -108,38 +113,46 @@ export class WorldView {
     return 0.3 + coast * 1.4 + fbm(mx * 0.2, my * 0.2, 3) * 0.6 + mountain;
   }
 
-  private buildLand() {
+  private async buildLand() {
     const nodes = [...NODES.values()];
     const r = this.res;
-    for (let y = 0; y < r; y++) for (let x = 0; x < r; x++) {
-      const mx = (x / (r - 1)) * SIZE - 5, my = (y / (r - 1)) * SIZE - 5;
-      this.heights[y * r + x] = this.rawHeight(mx, my, nodes);
+    if (!landCache) {
+      for (let y = 0; y < r; y++) for (let x = 0; x < r; x++) {
+        const mx = (x / (r - 1)) * SIZE - 5, my = (y / (r - 1)) * SIZE - 5;
+        this.heights[y * r + x] = this.rawHeight(mx, my, nodes);
+      }
+      await paintLoading();
+      // flatten around nodes so settlements sit on plateaus
+      const b = new GeoBuilder();
+      const col = (h: number, mx: number, my: number): [number, number, number] => {
+        const n = fbm(mx * 0.3, my * 0.3, 55);
+        if (h < 0.05) return hexRgb('#c8b27a');
+        if (h < 0.35) return hexRgb(n > 0.5 ? '#b8a870' : '#c0b07a');
+        if (h < 2.2) return hexRgb(n > 0.55 ? '#5f8f3a' : n > 0.45 ? '#6f9c42' : '#7aa64c');
+        if (h < 3.2) return hexRgb(n > 0.5 ? '#7a7a5a' : '#8a8468');
+        if (h < 4.6 + n * 0.8) return hexRgb(n > 0.5 ? '#8e8a84' : '#7e7a74');
+        return hexRgb(n > 0.5 ? '#e8eef4' : '#d8e0ea');
+      };
+      const vx = (x: number, y: number) => {
+        const mx = (x / (r - 1)) * SIZE - 5, my = (y / (r - 1)) * SIZE - 5;
+        const h = Math.max(-1.5, this.heights[y * r + x]);
+        return { p: [(mx - 50) * S, h * 1.0, (my - 50) * S] as [number, number, number], c: col(h, mx, my) };
+      };
+      // Adjacent cells share vertices: calculate each colour once rather than four times.
+      const vertices = Array.from({ length: r * r }, (_, i) => vx(i % r, Math.floor(i / r)));
+      for (let y = 0; y < r - 1; y++) for (let x = 0; x < r - 1; x++) {
+        const a = vertices[y * r + x], bb = vertices[y * r + x + 1], c = vertices[(y + 1) * r + x + 1], d = vertices[(y + 1) * r + x];
+        // two flat-shaded triangles
+        b.tri(d.p, c.p, bb.p, avg(d.c, c.c, bb.c));
+        b.tri(d.p, bb.p, a.p, avg(d.c, bb.c, a.c));
+      }
+      landCache = { heights: this.heights, geometry: b.build() };
     }
-    // flatten around nodes so settlements sit on plateaus
-    const b = new GeoBuilder();
-    const col = (h: number, mx: number, my: number): [number, number, number] => {
-      const n = fbm(mx * 0.3, my * 0.3, 55);
-      if (h < 0.05) return hexRgb('#c8b27a');
-      if (h < 0.35) return hexRgb(n > 0.5 ? '#b8a870' : '#c0b07a');
-      if (h < 2.2) return hexRgb(n > 0.55 ? '#5f8f3a' : n > 0.45 ? '#6f9c42' : '#7aa64c');
-      if (h < 3.2) return hexRgb(n > 0.5 ? '#7a7a5a' : '#8a8468');
-      if (h < 4.6 + n * 0.8) return hexRgb(n > 0.5 ? '#8e8a84' : '#7e7a74');
-      return hexRgb(n > 0.5 ? '#e8eef4' : '#d8e0ea');
-    };
-    const vx = (x: number, y: number) => {
-      const mx = (x / (r - 1)) * SIZE - 5, my = (y / (r - 1)) * SIZE - 5;
-      const h = Math.max(-1.5, this.heights[y * r + x]);
-      return { p: [(mx - 50) * S, h * 1.0, (my - 50) * S] as [number, number, number], c: col(h, mx, my) };
-    };
-    for (let y = 0; y < r - 1; y++) for (let x = 0; x < r - 1; x++) {
-      const a = vx(x, y), bb = vx(x + 1, y), c = vx(x + 1, y + 1), d = vx(x, y + 1);
-      // two flat-shaded triangles
-      b.tri(d.p, c.p, bb.p, avg(d.c, c.c, bb.c));
-      b.tri(d.p, bb.p, a.p, avg(d.c, bb.c, a.c));
-    }
-    const land = new THREE.Mesh(b.build(), propMaterial({ flat: true, roughness: 0.95 }));
+    this.heights = landCache.heights;
+    const land = new THREE.Mesh(landCache.geometry.clone(), propMaterial({ flat: true, roughness: 0.95 }));
     land.receiveShadow = true; land.castShadow = true;
     this.scene.add(land);
+    await paintLoading();
     // sea
     const sea = new THREE.Mesh(new THREE.PlaneGeometry(SIZE * S * 3, SIZE * S * 3, 1, 1), waterMaterial('water'));
     const sg = sea.geometry;
@@ -167,6 +180,7 @@ export class WorldView {
     const fm = new THREE.Mesh(f.build(), propMaterial({ flat: true, sway: 0.05 }));
     fm.castShadow = true; fm.receiveShadow = true;
     this.scene.add(fm);
+    await paintLoading();
     // roads (flat ribbons following the terrain)
     const rb = new GeoBuilder();
     const roadCol = hexRgb('#b89a6a');

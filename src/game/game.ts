@@ -26,6 +26,7 @@ import { CameraControls } from '../ui/cameraControls';
 import { backBtn, portraitFor } from '../ui/battleHud';
 import { gameClock } from '../core/gameClock';
 import { installGameMenu } from '../ui/gameMenu';
+import { loading, paintLoading } from '../ui/loading';
 
 export interface Screen {
   update(dt: number): void;
@@ -89,11 +90,11 @@ export class Game {
     const dt = Math.min(0.05, rawDt);
     this.last = now;
     if (!gameClock.paused) {
-      this.autoQuality(rawDt);
-      if (this.state) this.state.playtime += dt;
+      if (!loading.preparing) this.autoQuality(rawDt);
+      if (this.state && !loading.preparing) this.state.playtime += dt;
       this.screen?.update(dt);
     }
-    this.screen?.render();
+    if (!loading.preparing) this.screen?.render();
     (window as any).__frames = ((window as any).__frames ?? 0) + 1;
   }
 
@@ -109,14 +110,29 @@ export class Game {
     this.onResize();
   }
 
+  /** The actual post-processing output (including actors/shadows) must exist before reveal. */
+  async present(reveal = true, seconds = 0.25, color?: string): Promise<boolean> {
+    if (!loading.preparing) return false;
+    loading.message('Preparing the view…');
+    await paintLoading();
+    this.screen?.render();
+    await paintLoading();
+    this.screen?.render();
+    // A chapter card/narration needs its authored black backdrop; visual scenes fade in once.
+    if (reveal) {
+      setFadeImmediate(1);
+      await Promise.all([fade('in', seconds, color), loading.finish()]);
+    } else await loading.finish();
+    return true;
+  }
+
   // ============================================================ stages
   async makeStage(mapId: string, opts: { time?: EnvTime; weather?: Weather } = {}): Promise<Stage> {
+    await loading.begin('Preparing the next scene…');
     const st = new Stage(mapId, opts);
     await st.init();
-    // compile the new map's shaders/pipelines in the background while the old screen (or a fade) is
-    // still up, instead of freezing for 1–2 s on its first frame; bounded so a slow driver can't stall us
-    const compile = (renderer as unknown as { compileAsync?: (s: unknown, c: unknown) => Promise<void> }).compileAsync;
-    if (compile) { try { await Promise.race([compile.call(renderer, st.scene, st.cam.cam), sleep(5000)]); } catch { /* optional */ } }
+    // Warming a bare scene compiles different shaders from the post-processing passes,
+    // then repeats the work on first render. present() warms the real output after setup.
     if (this.stage && this.stage !== st) { const old = this.stage; this.stage = null; if (this.screen === (old as unknown as Screen)) this.screen = null; old.dispose(); }
     this.stage = st;
     this.setScreen({
@@ -164,6 +180,7 @@ export class Game {
     if (!def) { console.warn('missing scene', id); return; }
     if (def.music) audio.playMusic(def.music, { fade: 1.5 });
     const actors = new Map<string, { view: UnitView; name: string; charId?: string; job?: string }>();
+    let setupAfterCard = false;
     const ensureStage = async (mapId: string | undefined, opts: { time?: EnvTime; weather?: Weather }) => {
       if (!mapId) {
         if (!this.stage) {
@@ -172,11 +189,10 @@ export class Game {
         }
         return;
       }
-      await fade('out', 0.4);
       actors.clear();
+      setupAfterCard = false;
       await this.makeStage(mapId, opts);
       this.stage!.cam.snap(this.stage!.terrain.center, Math.max(this.stage!.grid.w, this.stage!.grid.d) * 2.2);
-      await fade('in', 0.6);
     };
     if (def.map) await ensureStage(def.map, { time: def.time, weather: def.weather });
     else if (!this.stage) await ensureStage(undefined, {});
@@ -184,6 +200,18 @@ export class Game {
     const host: SceneHost = {
       stage: () => game.stage!,
       changeMap: async (mapId, opts) => { await ensureStage(mapId, opts); },
+      present: async (reveal, seconds, color) => {
+        const presented = await game.present(reveal, seconds, color);
+        if (presented && !reveal) setupAfterCard = true;
+        return presented;
+      },
+      prepareActors: async () => {
+        // A chapter card may precede the cast. Cover that later setup as well,
+        // then warm the actors before the script's first fade-in.
+        if (!setupAfterCard) return;
+        setupAfterCard = false;
+        await loading.begin('Preparing the scene…');
+      },
       actor: (aid) => actors.get(aid)?.view ?? game.stage?.views.get(aid),
       spawn: (aid, who, x, z, facing, opts) => {
         if (!game.stage) return undefined;
@@ -273,6 +301,7 @@ export class Game {
   }
 
   private async battleOnce(def: BattleDef): Promise<'victory' | 'defeat'> {
+    await loading.begin('Preparing the battlefield…');
     audio.playMusic('formation', { fade: 1 });
     const stage = this.stage && this.stage.def.id === def.map ? this.stage : await this.makeStage(def.map, { time: def.time, weather: def.weather });
     // remove scene actors
@@ -281,16 +310,18 @@ export class Game {
     const pre = setupBattle(this.state, def, []);
     for (const u of pre.battle.units) if (!u.hidden) this.addBattleView(stage, u);
     const party = await this.deploy(stage, def, pre.battle);
+    await loading.begin('Preparing your company…');
     for (const k of [...stage.views.keys()]) stage.removeUnit(k);
-    if (!party) return 'defeat';
+    if (!party) { await this.present(); return 'defeat'; }
     const setup = setupBattle(this.state, def, party);
     const b = setup.battle;
     (b as any).gentle = this.options.gentle;
     this.currentBattle = b;
     for (const u of b.units) { const v = this.addBattleView(stage, u); if (u.hidden) v.root.visible = false; }
-    preloadPortraits(b);
     audio.playMusic(def.music ?? 'battle1', { fade: 1.2 });
     if (def.victory.type === 'reach' && stage.def.theme !== 'dungeon') stage.markGoal(def.victory.cells);
+    await this.present();
+    void preloadPortraits(b);
     const ctrl = new BattleController(stage, b, {
       runScript: async (index) => {
         const ev = def.events?.[index];
@@ -423,6 +454,7 @@ export class Game {
       h('h2', null, def.name), h('div.muted', null, victoryText(def)));
     uiRoot().appendChild(briefing);
     const camUi = new CameraControls(stage);
+    await this.present();
     let lastPick: string | undefined;
     try {
       for (;;) {

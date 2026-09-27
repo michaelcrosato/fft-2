@@ -45,6 +45,9 @@ export const uiText = (page: Page) => page.evaluate(() => document.getElementByI
 
 /** wait until the #ui overlay shows some text */
 export async function waitForUiText(page: Page, text: string | RegExp, timeout = 90_000) {
+  // The next screen's DOM can exist while its first frame is still covered.
+  // Keyboard/gamepad input must wait for the same ready state a player sees.
+  await expect(page.locator('#loading')).toHaveCount(0, { timeout });
   await expect.poll(async () => { const t = await uiText(page); return typeof text === 'string' ? t.includes(text) : text.test(t); }, { timeout, intervals: [250, 500, 1000] }).toBe(true);
 }
 

@@ -5,7 +5,7 @@ import { NODES, EDGES, STORY, ERRANDS, JOBS, CHARACTERS, BATTLES, ITEMS } from '
 import type { BattleDef, UnitSpawn, WorldNode } from '../data/types';
 import { WorldView } from '../scenes/worldmap';
 import { buildHumanoid } from '../gfx/models/humanoid';
-import { menu, toast, confirm, fade, say, titleCard } from '../ui/widgets';
+import { menu, toast, confirm, say, titleCard } from '../ui/widgets';
 import { h, uiRoot, sleep } from '../ui/dom';
 import { input } from '../ui/input';
 import { audio } from '../audio/audio';
@@ -20,6 +20,7 @@ import { openChronicle } from '../ui/menus/chronicle';
 import { openOptions, openSaveLoad } from '../ui/menus/system';
 import { gameMode, promptGameMode } from '../ui/gameMode';
 import { setContextMenu, setGameMenuVisible } from '../ui/gameMenu';
+import { loading } from '../ui/loading';
 
 export const MONTHS = ZODIAC_ORDER.map((z) => ZODIAC_NAMES[z]);
 export function dateText(day: number) { const d = day - 1; return `${MONTHS[Math.floor(d / 30) % 12]} ${(d % 30) + 1}`; }
@@ -28,6 +29,7 @@ export function dateText(day: number) { const d = day - 1; return `${MONTHS[Math
 //  Title
 // ============================================================================
 export async function runTitle(game: Game) {
+  await loading.begin('Opening the chronicle…');
   setGameMenuVisible(false);
   const world = new WorldView();
   await world.init();
@@ -48,12 +50,14 @@ export async function runTitle(game: Game) {
   uiRoot().appendChild(footer);
   for (;;) {
     const hasSave = latestSave() !== null;
-    const pick = await menu({ items: [
+    const choice = menu({ items: [
       ...(hasSave ? [{ label: 'Continue', value: 'continue' }] : []),
       { label: 'New Game', value: 'new' },
       { label: 'Load Game', value: 'load', disabled: !hasSave },
       { label: 'Options', value: 'options' },
-    ], x: '50%', y: '58%', className: 'title-menu', cancelable: false }).promise;
+    ], x: '50%', y: '58%', className: 'title-menu', cancelable: false });
+    await game.present();
+    const pick = await choice.promise;
     if (pick === 'options') { await openOptions(game); continue; }
     let state: GameState | null = null;
     if (pick === 'continue') state = loadGame(latestSave()!);
@@ -61,13 +65,11 @@ export async function runTitle(game: Game) {
     if (pick === 'new') { logo.style.display = 'none'; state = await newGameSetup(); logo.style.display = ''; if (!state) continue; }
     if (!state) continue;
     await promptGameMode();
+    await loading.begin('Continuing the tale…');
     logo.remove(); footer.remove();
     game.state = state;
     setGameMenuVisible(true);
-    await fade('out', 0.8);
     game.setScreen(null);
-    world.dispose();
-    await fade('in', 0.1);
     await mainLoop(game);
     return;
   }
@@ -158,10 +160,9 @@ export async function mainLoop(game: Game) {
 
 async function returnToTitle(game: Game) {
   gameMode.exit();
-  await fade('out', 0.6);
+  await loading.begin('Returning to the title…');
   game.disposeStage();
   uiRoot().innerHTML = '';
-  await fade('in', 0.1);
   await runTitle(game);
 }
 
@@ -223,6 +224,7 @@ function markerStates(game: Game) {
 
 // ---------------------------------------------------------------- world loop
 async function worldLoop(game: Game): Promise<'title' | 'continue'> {
+  await loading.begin('Unfolding the world map…');
   const s = game.state;
   const world = new WorldView();
   await world.init();
@@ -392,6 +394,7 @@ async function worldLoop(game: Game): Promise<'title' | 'continue'> {
     void openWorldMenu();
     return true;
   }));
+  await game.present();
   // welcome: if the current story step is here, offer it immediately
   const stepHere = STORY[s.storyIndex];
   if (stepHere?.at === s.location) { busy = false; goTo(s.location); }
@@ -405,7 +408,7 @@ async function worldLoop(game: Game): Promise<'title' | 'continue'> {
   for (const f of cleanupFns) f();
   hud.remove();
   worldHud = null;
-  game.setScreen(null);
+  // Keep the last rendered view until the next screen takes over under its loader.
   return result;
 }
 

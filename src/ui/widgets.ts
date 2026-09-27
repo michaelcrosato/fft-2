@@ -289,7 +289,13 @@ export async function fade(dir: 'in' | 'out', secs = 0.6, color = '#000') {
   uiRoot().appendChild(fadeEl); // keep on top
   await sleep(secs * 1000 + 30);
 }
-export function setFadeImmediate(v: number) { if (!fadeEl) { fadeEl = h('div.fade'); uiRoot().appendChild(fadeEl); } fadeEl.style.transition = 'none'; fadeEl.style.opacity = String(v); }
+export function setFadeImmediate(v: number) {
+  if (!fadeEl) fadeEl = h('div.fade');
+  if (!fadeEl.isConnected) uiRoot().appendChild(fadeEl);
+  fadeEl.style.transition = 'none'; fadeEl.style.opacity = String(v);
+  // Commit the starting opacity before fade() enables a transition in the same task.
+  void fadeEl.offsetWidth;
+}
 
 // ---------------------------------------------------------------------------
 //  Battle HUD bits

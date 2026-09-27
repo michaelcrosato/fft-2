@@ -145,6 +145,15 @@ worker by default; set `E2E_WORKERS=2` to increase concurrency. These runs verif
 WebGL and emulated mobile layouts; WebGPU, physical controllers and actual iOS Safari still need
 hardware checks.
 
+Startup, title/world-map changes, cutscene maps, deployment and battle starts show a
+loading overlay with an animated indicator and a description of the current step.
+It stays up through scene construction and the first complete rendered frames; cutscenes
+place their opening actors and camera before revealing the scene. Menu and Game Mode exit
+remain accessible while loading. Reduced-motion preferences stop the spinner animation,
+and preparation failures offer a reload instead of leaving an unexplained black screen.
+The world map reuses its fixed terrain data on subsequent visits, and loading no longer
+warms an unused rendering path before preparing the actual post-processing output.
+
 For faster interaction regression runs after the default-quality graphics sweep, use
 `E2E_QUALITY=low E2E_WORKERS=2 ./tools/browser-test.sh`. Without that override, tests retain
 their normal automatic quality selection.
@@ -173,6 +182,9 @@ There are no external audio requests at runtime and no synthesized fallback. Unk
 manifest's `fallbackSfx` cue. Music streams from local MP3 files; short effects are decoded and
 cached after the first user gesture. Music crossfades, volume controls, ducking, pan, pitch,
 background suspension and the dev audition page remain available.
+
+All 24 music files are already compressed to 128 kbps stereo MP3. Only the requested music
+is streamed, and scene changes do not wait for a full track download or PCM decode.
 
 The music and five reward stings come from **Final Fantasy Tactics (PlayStation, 1997)** via
 [Zophar’s Domain](https://www.zophar.net/music/playstation-psf/final-fantasy-tactics).

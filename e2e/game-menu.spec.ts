@@ -222,6 +222,7 @@ test('Menu stays usable while the party travels on the world map', async ({ page
   await press(page, '.title-menu .item:has-text("Continue")', info);
   await press(page, '.game-mode-prompt .btn:has-text("Play in Browser")', info);
   await expect(page.locator('.world-status')).toBeVisible();
+  await expect(page.locator('#loading')).toHaveCount(0);
   await page.keyboard.press('ArrowUp'); // the only other unlocked node is north of Orvelle
   await waitForUiText(page, 'Murondel');
   await page.keyboard.press('Enter');

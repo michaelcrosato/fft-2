@@ -1,6 +1,6 @@
 // Entry point: renderer bootstrap, loading screen, routing.
 import './ui/style.css';
-import { initRenderer, rinfo, onRendererLost } from './gfx/renderer';
+import { initRenderer, onRendererLost } from './gfx/renderer';
 import { loadTSL } from './gfx/materials';
 import { input } from './ui/input';
 import { audio } from './audio/audio';
@@ -12,6 +12,7 @@ import { loadMonsterBuilder } from './scenes/unitview';
 import type { Backend } from './gfx/three';
 import { toast } from './ui/widgets';
 import { SIDE, NODES } from './data/db';
+import { loading, paintLoading } from './ui/loading';
 
 const q = new URLSearchParams(location.search);
 // Debug URLs (README): throwaway test parties that autosave over the real save slots,
@@ -23,9 +24,10 @@ function setLoad(p: number, msg?: string) {
   if (bar) bar.style.width = Math.round(p * 100) + '%';
   if (msg) { const m = document.getElementById('loadmsg'); if (m) m.textContent = msg; }
 }
-const tick = () => new Promise((r) => setTimeout(r, 0));
+const tick = paintLoading;
 
 async function boot() {
+  await loading.begin('Waking the renderer…');
   const opts = loadOptions();
   input.init();
   window.addEventListener('gamepadconnected', (e) => toast(`🎮 Controller connected${/xbox|xinput/i.test(e.gamepad.id) ? ' (Xbox)' : /dualsense|dualshock|playstation|054c/i.test(e.gamepad.id) ? ' (PlayStation)' : ''}`));
@@ -45,14 +47,12 @@ async function boot() {
   await loadTSL();
   setLoad(0.3, 'Painting the land…');
   const texIds: TexId[] = ['grass', 'dirt', 'cobble', 'rock', 'brick', 'planks', 'roof', 'plaster', 'stoneWall', 'riverbed', 'sand', 'sandstone', 'moss', 'carpet', 'snow', 'marsh'];
-  for (let i = 0; i < texIds.length; i++) { getTexture(texIds[i]); setLoad(0.3 + (0.5 * i) / texIds.length); await tick(); }
+  for (let i = 0; i < texIds.length; i++) { getTexture(texIds[i]); setLoad(0.3 + (0.5 * i) / texIds.length); if (i % 4 === 3) await tick(); }
   setLoad(0.85, 'Summoning beasts…');
   await loadMonsterBuilder();
   const game = new Game();
-  setLoad(1, `Ready (${rinfo.backend})`);
-  const ld = document.getElementById('loading')!;
-  ld.style.opacity = '0';
-  setTimeout(() => ld.remove(), 700);
+  setLoad(0.9, 'Opening the chronicle…');
+  // The destination releases the loader after its real first frame is ready.
 
   if (DEBUG_HOOKS && (await runDebugHooks(game))) return;
   const { runTitle } = await import('./game/flow');
@@ -95,13 +95,17 @@ async function runDebugHooks(game: Game): Promise<boolean> {
     game.state = newGame('Rhen', [4, 12]);
     game.state.roster.forEach((u) => setLevel(u, Number(q.get('lv') ?? 12)));
     const { openFormation } = await import('./ui/menus/formation');
-    await openFormation(game);
+    const opened = openFormation(game);
+    await loading.finish();
+    await opened;
     return true;
   }
   if (test === 'chronicle') {
     game.state = newGame('Rhen', [4, 12]);
     const { openChronicle } = await import('./ui/menus/chronicle');
-    await openChronicle(game);
+    const opened = openChronicle(game);
+    await loading.finish();
+    await opened;
     return true;
   }
   if (test === 'town') {
@@ -111,6 +115,7 @@ async function runDebugHooks(game: Game): Promise<boolean> {
     game.state.chapter = Number(q.get('ch') ?? 1); game.state.tier = Number(q.get('tier') ?? 2); game.state.gil = 50000;
     const node = NODES.get(q.get('node') ?? 'galwyn')!;
     const which = q.get('open') ?? 'shop';
+    await loading.finish();
     if (which === 'shop') await town.openShop(game, node);
     if (which === 'tavern') await town.openTavern(game, node);
     if (which === 'recruit') await town.openRecruit(game, node);
@@ -131,21 +136,16 @@ function lostCount(): number { try { return Number(sessionStorage.getItem(LOST_K
 /** the GPU device / GL context is gone: the canvas can't recover, so offer a reload (progress is in the autosave) */
 function showRendererLost() {
   try { sessionStorage.setItem(LOST_KEY, String(lostCount() + 1)); } catch { /* private mode */ }
-  const box = document.createElement('div');
-  box.className = 'panel';
-  Object.assign(box.style, { left: '50%', top: '50%', transform: 'translate(-50%,-50%)', maxWidth: 'min(460px, 92vw)', textAlign: 'center', zIndex: '60' });
-  box.innerHTML = '<h2>The picture was lost</h2><p>The graphics device stopped responding (a driver reset, or the browser reclaimed it). Your last autosave is safe.</p>';
-  const btn = document.createElement('button');
-  btn.className = 'btn'; btn.type = 'button'; btn.textContent = 'Reload';
-  btn.onclick = () => location.reload();
-  box.appendChild(btn);
-  document.getElementById('ui')?.appendChild(box);
-  input.push((a) => { if (a === 'confirm' || a === 'menu') location.reload(); return true; }); // gamepad A / Enter
+  loading.fail(new Error('The graphics device stopped responding. Your last autosave is safe. Reload to continue.'));
 }
+
+// World-map actions also run from event handlers rather than the awaited story loop.
+window.addEventListener('unhandledrejection', (event) => {
+  if (loading.preparing) loading.fail(event.reason);
+});
 
 boot().catch((e) => {
   console.error(e);
   (window as any).__error = String(e?.stack ?? e);
-  const m = document.getElementById('loadmsg');
-  if (m) m.textContent = 'Failed to start: ' + (e?.message ?? e);
+  loading.fail(e);
 });
