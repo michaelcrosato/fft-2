@@ -74,6 +74,9 @@ test('new game with only a gamepad: birthday, gentle mode, begin', async ({ page
   await expect(gentle).toBeChecked();
   await pad.tap(13); // ↓ Begin the Tale
   await pad.tap(0);
+  await expect(page.getByRole('dialog', { name: 'Fullscreen Game Mode?' })).toBeVisible();
+  await pad.tap(13); // ↓ Play in Browser
+  await pad.tap(0);
   await expect(page.locator('.narration, .titlecard, .dialogue').first()).toBeVisible({ timeout: 90_000 });
   expect(await page.evaluate(() => (window as any).__game.options.gentle)).toBe(true);
   expect(await uiText(page)).not.toContain('Name your hero');

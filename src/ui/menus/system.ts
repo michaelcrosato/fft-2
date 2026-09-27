@@ -6,6 +6,7 @@ import { listSaves, saveGame, loadGame, deleteSave, saveOptions, type GameState,
 import { audio } from '../../audio/audio';
 import { setQuality, rinfo, type Quality } from '../../gfx/renderer';
 import { NODES } from '../../data/db';
+import { gameMode, promptGameMode } from '../gameMode';
 
 export async function openSaveLoad(game: Game, mode: 'save' | 'load'): Promise<GameState | null> {
   const ov = overlay(mode === 'save' ? 'Save the Chronicle' : 'Load a Chronicle');
@@ -40,7 +41,8 @@ export async function openOptions(game: Game) {
   try {
     for (;;) {
       const pct = (v: number) => `${Math.round(v * 100)}%`;
-      const pick = await menu({ items: [
+      const items = () => [
+        { label: 'Game Mode', value: 'gameMode', right: gameMode.active ? gameMode.fullscreen ? 'Fullscreen' : 'On · browser view' : 'Off', desc: 'Fullscreen and protection against accidental browser gestures. Select to enable or exit.' },
         { label: 'Music volume', value: 'music', right: pct(o.music) },
         { label: 'Effects volume', value: 'sfx', right: pct(o.sfx) },
         { label: 'Battle speed', value: 'speed', right: `${o.battleSpeed}×` },
@@ -53,9 +55,18 @@ export async function openOptions(game: Game) {
         { label: 'Renderer', value: 'renderer', right: `${o.renderer} (${rinfo?.backend ?? ''})`, desc: 'Takes effect after reloading the page.' },
         { label: 'How to Play', value: 'help' },
         { label: 'Back', value: 'back' },
-      ], x: 16, y: 64, title: 'Options', parent: ov.root, showDesc: true, tapSelects: false, initial: last }).promise;
+      ];
+      const optionsMenu = menu({ items: items(), x: 16, y: 64, title: 'Options', parent: ov.root, showDesc: true, tapSelects: false, initial: last });
+      const unsubscribe = gameMode.onChange(() => optionsMenu.refresh(items()));
+      const pick = await optionsMenu.promise;
+      unsubscribe();
       if (!pick || pick === 'back') return;
       last = pick; // keep the cursor on the setting just changed
+      if (pick === 'gameMode') {
+        if (gameMode.active) gameMode.exit();
+        else await promptGameMode();
+        continue;
+      }
       if (pick === 'help') {
         const { openHelp } = await import('./help');
         ov.root.style.visibility = 'hidden';

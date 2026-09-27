@@ -31,6 +31,9 @@ test('new game: the name field takes game keys as letters, then the story begins
   await expect(name).toHaveValue('Zed Wax');
   await expectInViewport(page, '.btn:has-text("Begin the Tale")');
   await press(page, '.btn:has-text("Begin the Tale")', info);
+  await expect(page.getByRole('dialog', { name: 'Fullscreen Game Mode?' })).toBeVisible();
+  await expectInViewport(page, '.game-mode-prompt');
+  await press(page, '.game-mode-prompt .btn:has-text("Play in Browser")', info);
   // the prologue opens with narration, a title card or dialogue
   await expect(page.locator('.narration, .titlecard, .dialogue').first()).toBeVisible({ timeout: 90_000 });
   w.assertClean();
