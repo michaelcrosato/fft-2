@@ -147,7 +147,7 @@ export function menu<T = string>(o: MenuOpts<T>): MenuHandle<T> {
 /** yes/no prompt; `defaultNo` preselects No (for destructive choices) */
 export async function confirm(text: string, yes = 'Yes', no = 'No', defaultNo = false): Promise<boolean> {
   // (.prompt stacks above full-screen menus like Formation or Save, which open prompts of their own)
-  const wrap = h('div.panel.prompt', { style: { left: '50%', top: '40%', transform: 'translate(-50%,-50%)', maxWidth: 'min(520px, 92vw)', textAlign: 'center', padding: '16px 22px 8px' } }, h('div', { style: { marginBottom: '10px', fontSize: '1.1em' } }, text));
+  const wrap = h('div.panel.prompt', { role: 'alertdialog', 'aria-label': text, style: { left: '50%', top: '40%', transform: 'translate(-50%,-50%)', maxWidth: 'min(520px, 92vw)', textAlign: 'center', padding: '16px 22px 8px' } }, h('div', { style: { marginBottom: '10px', fontSize: '1.1em' } }, text));
   uiRoot().appendChild(wrap);
   const m = menu({ items: [{ label: yes, value: true }, { label: no, value: false }], parent: wrap, className: 'inline', initial: !defaultNo });
   m.el.style.position = 'relative'; m.el.style.display = 'inline-block'; m.el.style.margin = '6px auto';
@@ -158,7 +158,8 @@ export async function confirm(text: string, yes = 'Yes', no = 'No', defaultNo = 
 
 export function toast(text: string, ms = 2200) {
   const t = h('div.panel.toast', { style: { animationDuration: `${ms}ms`, width: 'max-content', maxWidth: 'calc(100vw - 48px)' }, role: 'status' }, text);
-  uiRoot().appendChild(t);
+  // the open Game Menu is a modal <dialog> above #ui: messages from its Options must appear on top of it
+  (document.querySelector('dialog.game-menu-shell[open]') ?? uiRoot()).appendChild(t);
   setTimeout(() => t.remove(), ms);
 }
 
@@ -309,18 +310,19 @@ export function banner(text: string, enemy = false, ms = 1400): Promise<void> {
 }
 
 export function floater(x: number, y: number, text: string, cls: string, delay = 0) {
-  setTimeout(() => {
+  // gameplay time: damage numbers wait and hold still while the Menu pauses the battle
+  gameClock.schedule(() => {
     const f = h('div.floater.' + cls, null, text);
     f.style.left = x + 'px'; f.style.top = y + 'px';
     uiRoot().appendChild(f);
-    const t0 = performance.now();
+    const t0 = gameClock.now();
     const dur = 1100;
     const step = () => {
-      const t = (performance.now() - t0) / dur;
+      const t = (gameClock.now() - t0) / dur;
       if (t >= 1) { f.remove(); return; }
       const bounce = t < 0.25 ? Math.sin((t / 0.25) * Math.PI) * 18 : 0;
-      f.style.transform = `translate(-50%, ${-50 - bounce - t * 30}%)`;
-      f.style.top = (y - bounce - t * 26) + 'px';
+      // transform only: moving `top` would lay out the page again for every number on every frame
+      f.style.transform = `translate(-50%, calc(${-50 - bounce - t * 30}% - ${bounce + t * 26}px))`;
       f.style.opacity = String(t > 0.75 ? (1 - t) / 0.25 : 1);
       requestAnimationFrame(step);
     };

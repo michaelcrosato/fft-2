@@ -15,7 +15,12 @@ export function syncGameToolbar() {
   document.documentElement.classList.toggle('game-controls-visible', visible);
 }
 
+const noClickFocus = (e: MouseEvent) => e.preventDefault();
+
 export function addGameControl(button: HTMLElement): () => void {
+  // a mouse click must not leave focus here, or the next Enter/Space would press it again
+  // instead of reaching the game (keyboard Tab focus still works); re-adding is a no-op
+  button.addEventListener('mousedown', noClickFocus);
   gameToolbar().appendChild(button);
   syncGameToolbar();
   return () => {

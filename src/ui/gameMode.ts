@@ -62,7 +62,8 @@ class GameMode {
       'keydown',
       (e) => {
         if (!this.active || e.code !== 'Escape') return;
-        if (document.querySelector('.game-mode-prompt[open]')) return;
+        // an open dialog (Game Menu, Game Mode prompt) takes Escape for itself: closing it must not also leave Game Mode
+        if (document.querySelector('dialog[open]')) return;
         // Leave the browser's Escape behavior intact, without also cancelling a game action.
         e.stopImmediatePropagation();
         this.exit();
@@ -75,6 +76,8 @@ class GameMode {
       'touchstart',
       (e) => {
         if (!this.active || e.touches.length !== 1 || !e.cancelable) return;
+        // controls near the edge (camera buttons, menu close) still need their taps
+        if ((e.target as Element | null)?.closest?.('button, input, select, .menu, .panel, .camctl')) return;
         const x = e.touches[0].clientX;
         if (x <= 20 || x >= window.innerWidth - 20) e.preventDefault();
       },
@@ -121,7 +124,7 @@ class GameMode {
       // open. Restore their top-layer order so Menu and Exit stay clickable.
       const focused = document.activeElement;
       for (const dialog of document.querySelectorAll<HTMLDialogElement>('dialog[open]')) {
-        if (!dialog.matches(':modal')) continue;
+        if (!isModal(dialog)) continue;
         dialog.close();
         dialog.showModal();
       }
@@ -265,4 +268,9 @@ export function promptGameMode(): Promise<void> {
     dialog.showModal();
     enable.focus();
   });
+}
+
+/** `:modal` is newer than <dialog> (Chrome 105, Firefox 103, Safari 15.6); every dialog here opens with showModal(). */
+function isModal(dialog: HTMLDialogElement): boolean {
+  try { return dialog.matches(':modal'); } catch { return true; }
 }

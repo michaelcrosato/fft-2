@@ -189,7 +189,8 @@ export class Battle {
           if (u.performing && ch.ability.perform) {
             // performances repeat until the performer acts again
             this.resolveAbility(u, ch.ability, ch.x, ch.z, { item: ch.item });
-            u.charging = { ...ch, ctLeft: this.chargeTicks(u, ch.ability) };
+            // a reaction can knock the performer out mid-song
+            if (u.alive && u.performing) u.charging = { ...ch, ctLeft: this.chargeTicks(u, ch.ability) };
           } else {
             let tx = ch.x, tz = ch.z;
             if (ch.targetUid) {
@@ -535,9 +536,13 @@ export class Battle {
     if (a.requires?.item && this.usesStock(u) && !(this.inventory.get(a.requires.item) ?? 0)) return 'None in stock';
     const sp = a.special ? SPECIALS[a.special] : undefined;
     if (sp?.usable) { const r = sp.usable(this, u, a); if (r) return r; }
-    const c = this.cellOf(u);
-    if (c.terrain === 'W' && !u.hasMovement('swim') && !u.hasMovement('moveInWater') && !u.has('float') && a.id !== 'attack') return 'In deep water';
+    if (this.deepWaterBlocks(u, a, this.cellOf(u))) return 'In deep water';
     return undefined;
+  }
+
+  /** Only Attack works while wading in deep water, unless the unit swims or floats. */
+  deepWaterBlocks(u: BattleUnit, a: AbilityDef, c: Cell) {
+    return c.terrain === 'W' && !u.hasMovement('swim') && !u.hasMovement('moveInWater') && !u.has('float') && a.id !== 'attack';
   }
 
   mpCost(u: BattleUnit, a: AbilityDef) {
@@ -692,6 +697,8 @@ export class Battle {
   doAction(u: BattleUnit, a: AbilityDef, x: number, z: number, opts: ActionOpts = {}): BEvent[] {
     this.events = [];
     if ((u.acted && !opts.mimic) || !u.canAct || this.unusableReason(u, a, opts.noMp)) return [];
+    // the target must be in reach from where the unit actually stands (a planned Teleport can fail)
+    if (!opts.calc && !opts.mimic && !opts.depth && !this.targetCells(u, a).some((c) => c.x === x && c.z === z)) return [];
     if (u.performing) this.stopPerforming(u);
     // acting reveals an invisible unit — after the blow lands, so the accuracy bonus applies
     const reveal = () => { if (u.has('invisible') && !a.id.startsWith('wait')) { u.statuses.delete('invisible'); this.emit({ t: 'status', uid: u.uid, remove: ['invisible'] }); } };
@@ -789,8 +796,13 @@ export class Battle {
     return undefined;
   }
 
+  private needsBeastSpeech(c: BattleUnit, t: BattleUnit, a: AbilityDef) {
+    return (a.skillset === 'orator' || a.skillset === 'speechcraft') && t.isMonster && !c.hasSupport('monsterTalk');
+  }
+
   /** hit chance (percent) and whether evasion applies */
   hitChance(c: BattleUnit, t: BattleUnit, a: AbilityDef, wp: number): number {
+    if (this.needsBeastSpeech(c, t, a)) return 0;
     const ctx = this.ctx(c, t, wp);
     let p = 100;
     if (a.hit) p = clampPct(a.hit(ctx) * ctx.zodiac);
@@ -876,7 +888,7 @@ export class Battle {
       }
     }
     // ---- beast speech: talk skills don't work on monsters without it ----
-    if ((a.skillset === 'orator' || a.skillset === 'speechcraft') && t.isMonster && !c.hasSupport('monsterTalk')) {
+    if (this.needsBeastSpeech(c, t, a)) {
       h.miss = true; h.guard = 'No effect'; return h;
     }
     // ---- hit roll ----
@@ -961,7 +973,7 @@ export class Battle {
           for (const s of pick) {
             // casting Toad on a toad lifts the curse
             if (s === 'frog' && t.has('frog')) { t.statuses.delete('frog'); rem.push('frog'); continue; }
-            if (this.addStatus(t, s)) add.push(s);
+            if (this.addStatus(t, s, c)) add.push(s);
           }
           if (add.length) (h.add ??= []).push(...add);
           if (rem.length) (h.remove ??= []).push(...rem);
@@ -1007,7 +1019,8 @@ export class Battle {
         }
         case 'invite': {
           if (!t.recruitable) { (h.text ??= []).push('Refused'); break; }
-          if (t.team !== c.team) {
+          // a foe charmed onto the caster's side still belongs to its own side until invited
+          if (t.team !== c.team || t.baseTeam !== c.team) {
             t.team = c.team; t.baseTeam = c.team; t.controlled = c.team === 0; t.statuses.delete('charm');
             if (c.team === 0) this.invited.push(t);
             this.emit({ t: 'teamChange', uid: t.uid, team: t.team });
@@ -1031,14 +1044,14 @@ export class Battle {
       if (!t.alive && sc.status !== 'ko') continue;
       if (this.rng.pct((sc.chance ?? 100) * ctx.zodiac)) {
         if (sc.remove) { if (t.has(sc.status)) { t.statuses.delete(sc.status); (h.remove ??= []).push(sc.status); } }
-        else if (this.addStatus(t, sc.status)) (h.add ??= []).push(sc.status);
+        else if (this.addStatus(t, sc.status, c)) (h.add ??= []).push(sc.status);
       }
     }
     // weapon on-hit statuses & spells
     if (a.id === 'attack' && c.weapon?.onHit && t.alive) {
       const oh = c.weapon.onHit;
       if (this.rng.pct(oh.chance)) {
-        for (const s of oh.status ?? []) if (this.addStatus(t, s)) (h.add ??= []).push(s);
+        for (const s of oh.status ?? []) if (this.addStatus(t, s, c)) (h.add ??= []).push(s);
         for (const s of oh.cure ?? []) if (t.has(s)) { t.statuses.delete(s); (h.remove ??= []).push(s); }
         const sp = oh.spell ? ABILITIES.get(oh.spell) : undefined;
         if (sp && depth === 0) react.push(() => { if (t.alive && c.alive) this.subAction(c, sp, t.x, t.z); });
@@ -1106,7 +1119,18 @@ export class Battle {
   previewAction(u: BattleUnit, a: AbilityDef, x: number, z: number, opts: ActionOpts = {}): TargetPreview[] {
     const eff = opts.calc ? ABILITIES.get(opts.calc.spell) ?? a : a;
     const targets = this.affectedUnits(u, a, x, z, opts);
-    return targets.map((t) => this.previewOn(u, t, eff, opts));
+    const reflects = !(a.special && SPECIALS[a.special]?.resolve) && eff.magic && !eff.noReflect;
+    return targets.map((t) => {
+      // as in resolveAbility: Reflect bounces the spell onto the caster
+      if (reflects && t.has('reflect') && t !== u) {
+        const bounce = this.reflectTarget(u, t);
+        if (!bounce) return { uid: t.uid, hit: 0, status: 'Reflect' };
+        const p = this.previewOn(u, bounce, eff, opts);
+        p.status = p.status ? `Reflected: ${p.status}` : 'Reflected';
+        return p;
+      }
+      return this.previewOn(u, t, eff, opts);
+    });
   }
 
   previewOn(c: BattleUnit, t: BattleUnit, a: AbilityDef, opts: ActionOpts = {}): TargetPreview {
@@ -1144,14 +1168,18 @@ export class Battle {
           else p.mp = -(amt);
           break;
         }
-        case 'revive': if (t.has('ko')) { p.heal = Math.floor(t.maxHp * e.pct); status.push('Revive'); } else if (t.has('undead')) { if (t.boss) p.dmg = (p.dmg ?? 0) + Math.floor(t.maxHp * 0.12); else p.ko = true; } break;
+        case 'revive': if (t.has('ko')) { if (!t.has('undead')) { p.heal = Math.floor(t.maxHp * e.pct); status.push('Revive'); } } else if (t.has('undead')) { if (t.boss) p.dmg = (p.dmg ?? 0) + Math.floor(t.maxHp * 0.12); else p.ko = true; } break;
         case 'status':
           for (const s of e.add ?? []) if (!t.has(s) && !t.immune.has(s)) status.push(STATUS[s].name);
           for (const s of e.remove ?? []) if (t.has(s)) status.push('-' + STATUS[s].name);
           break;
         case 'stat': status.push(`${e.stat} ${e.amount > 0 ? '+' : ''}${e.amount}`); break;
         case 'special':
-          if (e.id === 'instantKo') { if (!t.boss) { p.ko = true; status.push('KO'); } }
+          if (e.id === 'instantKo') {
+            if (t.boss || t.immune.has('ko')) status.push('Resisted');
+            else if (t.has('undead')) p.heal = (p.heal ?? 0) + t.maxHp - t.hp;
+            else { p.ko = true; status.push('KO'); }
+          }
           else if (e.id === 'gravity') { if (!t.boss) p.dmg = Math.min(t.hp, Math.max(1, Math.floor(t.maxHp * Number(a.params?.pct ?? 0.25)))); }
           else if (e.id === 'fullRestore') p.heal = t.maxHp - t.hp;
           else if (e.id === 'wish') p.heal = Math.floor(c.maxHp / 5) * 2;
@@ -1357,6 +1385,8 @@ export class Battle {
       u.mp = Math.min(u.maxMp, u.mp + (u.maxMp - oldMp));
       this.emit({ t: 'levelUp', uid: u.uid, level: u.roster.level });
     }
+    // as addExp: EXP stops at 99 once the level cap is reached
+    if (u.roster.level >= MAX_LEVEL) u.roster.exp = Math.min(99, u.roster.exp);
   }
 
   gainJp(u: BattleUnit, n: number, spill: boolean) {
@@ -1375,7 +1405,7 @@ export class Battle {
   //  HP / status primitives
   // ------------------------------------------------------------------------
   damage(t: BattleUnit, n: number): number {
-    if (t.has('wall')) return 0;
+    if (t.has('wall') || !t.alive) return 0;
     const real = Math.max(0, Math.min(t.hp, Math.floor(n)));
     t.hp -= real;
     if (t.hp <= 0) this.knockOut(t);
@@ -1422,7 +1452,7 @@ export class Battle {
     else this.emit({ t: 'revive', uid: t.uid });
   }
 
-  addStatus(t: BattleUnit, s: StatusId): boolean {
+  addStatus(t: BattleUnit, s: StatusId, by?: BattleUnit): boolean {
     if (t.immune.has(s)) return false;
     if (s === 'ko') { if (!t.alive) return false; this.knockOut(t); return true; }
     if (!t.alive) return false;
@@ -1433,7 +1463,8 @@ export class Battle {
       if (c === 'performing' && t.performing) { t.performing = null; t.statuses.delete('performing'); }
       if (t.has(c) && !t.always.has(c)) t.statuses.delete(c);
     }
-    if (s === 'charm') { t.team = t.baseTeam === 0 ? 1 : 0; this.emit({ t: 'teamChange', uid: t.uid, team: t.team }); }
+    // a charmed unit fights for its charmer's side (three-sided battles), otherwise for the other main side
+    if (s === 'charm') { t.team = by && by.team !== t.baseTeam ? by.team : t.baseTeam === 0 ? 1 : 0; this.emit({ t: 'teamChange', uid: t.uid, team: t.team }); }
     if (s === 'doom') t.doomCount = 3;
     if (s === 'petrify' && t.team === 0) { /* stone counts as out */ }
     if (s === 'chicken') t.brave = Math.min(t.brave, 9);

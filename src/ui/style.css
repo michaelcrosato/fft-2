@@ -77,7 +77,7 @@ html.game-mode, .game-mode body, .game-mode #ui, .game-mode #ui * { overscroll-b
 .game-menu-shell::backdrop { background: rgba(7, 6, 10, .4); }
 .game-menu-home {
   left: 50%; top: calc(50% + 28px); transform: translate(-50%, -50%);
-  width: min(360px, calc(100vw - 48px)); max-height: calc(100dvh - 88px);
+  width: min(360px, calc(100vw - 48px)); max-height: calc(var(--vh) * 100 - 88px);
   display: flex; flex-direction: column; gap: 10px; padding: 20px; overflow-y: auto;
   text-align: center; touch-action: pan-y;
 }
@@ -90,7 +90,7 @@ html.game-mode, .game-mode body, .game-mode #ui, .game-mode #ui * { overscroll-b
 .game-controls-visible .toast { top: max(14vh, calc(var(--controls-clearance) + 76px)); }
 dialog.game-mode-prompt {
   position: fixed; inset: 0; margin: auto; width: min(480px, calc(100vw - 48px));
-  max-height: calc(100dvh - 32px); overflow-y: auto; text-align: center;
+  max-height: calc(var(--vh) * 100 - 32px); overflow-y: auto; text-align: center;
   padding: 22px; font-size: 18px; line-height: 1.35; touch-action: pan-y;
 }
 .game-mode-prompt::backdrop { background: rgba(7, 6, 10, 0.78); }

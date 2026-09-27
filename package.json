@@ -14,6 +14,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "validate": "vite-node tools/validate.ts",
+    "sim": "vite-node tools/simcampaign.ts",
+    "ship": "bash tools/ship.sh",
     "test:e2e": "playwright test",
     "test:e2e:desktop": "playwright test --project=chromium --project=firefox --project=webkit",
     "test:e2e:mobile": "playwright test --project=mobile-chrome --project=mobile-safari --project=small-phone --project=phone-landscape --project=tablet",

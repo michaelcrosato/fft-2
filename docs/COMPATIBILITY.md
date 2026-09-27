@@ -4,6 +4,13 @@ The browser suite uses the production bundle, with desktop Chromium, Firefox and
 WebKit plus Android-phone, iPhone, small-phone, landscape-phone and tablet profiles.
 These are browser/device emulations, not physical-device certification.
 
+## Browser baseline
+
+The code needs Safari/iOS 15.4, Chrome/Edge 93 or Firefox 98 (`<dialog>`, `Object.hasOwn`,
+`Array.prototype.at`). The three.js node renderer (WebGPU and its WebGL 2 backend) uses class
+static blocks, which Safari parses from 16.4. On Safari 15.4–16.3 that module fails to load and
+start-up falls back to the WebGL 1 renderer (low quality), as it does on devices without WebGL 2.
+
 ## Reproducible browser environment
 
 The host's WebKit installation lacked shared libraries. `tools/browser-test.sh`

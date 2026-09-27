@@ -246,6 +246,8 @@ export function buildHumanoid(spec: HumanoidSpec): UnitModel {
   const glowMat = propMaterial({ flat: true, emissive: '#ffd84a', emissiveIntensity: 3 });
   const meshes: Mesh[] = [];
   for (const p of parts) meshes.push(...p.finish(material, glowMat));
+  // held gear takes status tints (stone, frog, stop) along with the body
+  for (const socket of [weaponSocket, shieldSocket, offSocket]) socket.traverse((o) => { if ((o as Mesh).isMesh) meshes.push(o as Mesh); });
 
   // rest pose: arms slightly out
   armR.obj.rotation.z = -0.12; armL.obj.rotation.z = 0.12;

@@ -21,6 +21,7 @@ import { h, uiRoot } from '../ui/dom';
 import { loadOptions } from '../game/state';
 import { CameraControls } from '../ui/cameraControls';
 import { gameClock } from '../core/gameClock';
+import { tapTracker } from '../ui/taps';
 
 const ANIM_MAP: Partial<Record<AnimKind, ClipName>> = {
   swing: 'swing', thrust: 'thrust', shoot: 'bow', bow: 'bow', gun: 'gun', cast: 'cast', pray: 'pray', punch: 'punch', kick: 'kick',
@@ -334,7 +335,7 @@ export class BattleController {
         pop();
         el.removeEventListener('pointermove', onMove);
         el.removeEventListener('pointerup', onUp);
-        el.removeEventListener('pointerdown', onDown);
+        taps.dispose();
         st.clearHighlight(o.kind); st.clearHighlight('pathLine'); st.clearHighlight('aoe');
         st.hideCursor();
         this.hud.tileInfo(null);
@@ -359,19 +360,15 @@ export class BattleController {
         if (a === 'cancel') { audio.sfx('cancel'); finish(null); return true; }
         return true;
       });
-      let downAt: { x: number; y: number; t: number } | null = null;
+      const taps = tapTracker(el);
       let lastTap = '';
-      const onDown = (e: PointerEvent) => { downAt = { x: e.clientX, y: e.clientY, t: performance.now() }; };
       const onMove = (e: PointerEvent) => {
         if (e.pointerType === 'touch' || e.buttons) return; // (a held button = dragging the camera)
         const c = st.pickCell(e.clientX, e.clientY);
         if (c && (c[0] !== cx || c[1] !== cz)) { cx = c[0]; cz = c[1]; st.setCursor(cx, cz); this.hud.tileInfo(st.grid.cell(cx, cz) ?? null); if (valid.has(cx + ',' + cz)) o.hover?.(cx, cz); else { st.clearHighlight('aoe'); this.hud.clearPreview(); } if (o.kind === 'move' && o.from) st.highlight('path', valid.has(cx + ',' + cz) ? this.b.pathFor(o.from, cx, cz) : [], 'pathLine'); if (!o.hover) { const t = this.b.unitAt(cx, cz); this.hud.card(t && t !== o.from ? t : null, 'b', this.b); } }
       };
       const onUp = (e: PointerEvent) => {
-        if (!downAt) return;
-        const moved = Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y);
-        downAt = null;
-        if (moved > 10) return; // drag = camera
+        if (!taps.tap(e)) return; // a drag or pinch moves the camera
         if (e.button === 2) { audio.sfx('cancel'); finish(null); return; } // right-click = back (right-drag pans)
         if (e.button !== 0) return;
         const c = st.pickCell(e.clientX, e.clientY);
@@ -384,7 +381,6 @@ export class BattleController {
       };
       el.addEventListener('pointermove', onMove);
       el.addEventListener('pointerup', onUp);
-      el.addEventListener('pointerdown', onDown);
       update();
     });
   }
@@ -403,7 +399,7 @@ export class BattleController {
       this.hud.backButton(true);
       const start = u.facing;
       const finish = (keep: boolean) => {
-        pop(); el.removeEventListener('pointerup', onUp); el.removeEventListener('pointermove', onMove); el.removeEventListener('pointerdown', onDown);
+        pop(); el.removeEventListener('pointerup', onUp); el.removeEventListener('pointermove', onMove); taps.dispose();
         this.stage.clearHighlight('facing'); this.hud.helpText(''); this.hud.backButton(false);
         if (keep) { audio.sfx('confirm'); resolve(f); } else { audio.sfx('cancel'); v.face(start); resolve(null); }
       };
@@ -426,19 +422,15 @@ export class BattleController {
         if (c[0] === u.x && c[1] === u.z) return 'self';
         return MapGrid.faceToward(u.x, u.z, c[0], c[1], f);
       };
-      let downAt: { x: number; y: number } | null = null;
-      const onDown = (e: PointerEvent) => { downAt = { x: e.clientX, y: e.clientY }; };
+      const taps = tapTracker(el);
       const onMove = (e: PointerEvent) => { if (e.pointerType === 'touch' || e.buttons) return; const d = dirAt(e); if (d && d !== 'self' && d !== f) set(d); };
       const onUp = (e: PointerEvent) => {
-        const moved = downAt ? Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) : 0;
-        downAt = null;
-        if (e.button !== 0 || moved > 10) return; // dragging the camera is not a choice
+        if (!taps.tap(e) || e.button !== 0) return; // dragging or pinching the camera is not a choice
         const d = dirAt(e);
         if (!d) return; // the sky, or off the map: not a choice either
         if (d !== 'self') set(d);
         finish(true);
       };
-      el.addEventListener('pointerdown', onDown);
       el.addEventListener('pointerup', onUp);
       el.addEventListener('pointermove', onMove);
     });
@@ -502,14 +494,17 @@ export class BattleController {
     this.stage.focusTile(u.x, u.z);
     this.hud.card(u, 'a', this.b);
     await this.wait(250);
-    const plan = planTurn(this.b, u);
+    let plan = planTurn(this.b, u);
     const doMove = async () => {
       if (!plan.move || u.moved) return;
+      const [mx, mz] = plan.move;
       this.stage.highlight(u.team === 0 ? 'move' : 'enemyMove', this.b.moveRange(u).map((c) => [c.x, c.z] as [number, number]));
       await this.wait(380);
       this.stage.clearHighlight();
-      const ev = this.b.doMove(u, plan.move[0], plan.move[1]);
+      const ev = this.b.doMove(u, mx, mz);
       await this.playEvents(ev);
+      // a failed Teleport leaves the unit where it stood: choose the action again from there
+      if (!plan.actFirst && plan.act && u.alive && (u.x !== mx || u.z !== mz)) plan = planTurn(this.b, u);
     };
     const doAct = async () => {
       if (!plan.act || this.b.result || u.acted || !u.alive) return;
@@ -678,7 +673,7 @@ export class BattleController {
   }
 
   private async showHit(v: UnitView, hi: HitInfo, delay: number) {
-    await new Promise((r) => setTimeout(r, delay));
+    await gameClock.sleep(delay);
     const u = this.b.unit(hi.uid);
     if (hi.miss) {
       audio.sfx(hi.guard === 'Blocked' ? 'block' : 'miss');

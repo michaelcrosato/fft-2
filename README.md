@@ -103,7 +103,10 @@ tools/          content validator, campaign simulator, screenshot helpers
 ```
 
 Checks: `npm run typecheck`, `npm test`, `npm run validate` (content cross-references),
-`npx vite-node tools/simcampaign.ts` (AI-vs-AI simulation of every battle, including scripted events).
+`npm run sim` (AI-vs-AI simulation of every battle, including scripted events; fails on a stall or exception).
+GitHub Actions (`.github/workflows/ci.yml`) runs these and a Chromium boot smoke test on every push to
+`main` and every pull request. Use Node 22 (`.nvmrc`), the version Vercel builds with.
+Every commit ships immediately: `npm run ship` pushes and merges it into `main` (see `AGENTS.md`).
 
 See the [repository audit](docs/REPO_AUDIT.md) for recent bug fixes, cleanup and deployment checks.
 

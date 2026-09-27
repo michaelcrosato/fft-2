@@ -1,6 +1,5 @@
 {
   "entry": [
-    "src/main.ts",
     "src/dev.ts",
     "src/audio/audio-test.ts",
     "tools/*.{ts,mjs}",

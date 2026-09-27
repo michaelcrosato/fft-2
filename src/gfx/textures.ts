@@ -16,20 +16,33 @@ const cache = new Map<string, { map: Texture; normal: Texture; emissive?: Textur
 // ---------------------------------------------------------------------------
 //  noise helpers
 // ---------------------------------------------------------------------------
-function vnoise(x: number, y: number, seed: number, period: number) {
+// Noise lattices: every pixel re-reads the same few thousand hashed corners, so each
+// (seed, period) table is filled once per texture. Values match calling hash2 directly.
+const lattices = new Map<number, Float64Array>();
+function lattice(seed: number, period: number): Float64Array {
+  const key = seed * 4096 + period;
+  let t = lattices.get(key);
+  if (!t) {
+    t = new Float64Array(period * period);
+    for (let j = 0; j < period; j++) for (let i = 0; i < period; i++) t[j * period + i] = hash2(i, j, seed);
+    lattices.set(key, t);
+  }
+  return t;
+}
+function vnoise(x: number, y: number, t: Float64Array, period: number) {
   const xi = Math.floor(x), yi = Math.floor(y);
   const xf = x - xi, yf = y - yi;
-  const w = (a: number) => ((a % period) + period) % period;
-  const r = (i: number, j: number) => hash2(w(i), w(j), seed);
-  const s = (t: number) => t * t * (3 - 2 * t);
-  const a = r(xi, yi), b = r(xi + 1, yi), c = r(xi, yi + 1), d = r(xi + 1, yi + 1);
-  return a + (b - a) * s(xf) + (c - a) * s(yf) + (a - b - c + d) * s(xf) * s(yf);
+  const x0 = ((xi % period) + period) % period, x1 = (((xi + 1) % period) + period) % period;
+  const y0 = (((yi % period) + period) % period) * period, y1 = ((((yi + 1) % period) + period) % period) * period;
+  const sx = xf * xf * (3 - 2 * xf), sy = yf * yf * (3 - 2 * yf);
+  const a = t[y0 + x0], b = t[y0 + x1], c = t[y1 + x0], d = t[y1 + x1];
+  return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
 }
 /** tileable fbm in [0,1] */
 function fbm(x: number, y: number, seed: number, oct = 4, base = 4) {
   let v = 0, amp = 0.5, f = base, tot = 0;
   for (let i = 0; i < oct; i++) {
-    v += vnoise((x / SIZE) * f, (y / SIZE) * f, seed + i * 17, f) * amp;
+    v += vnoise((x / SIZE) * f, (y / SIZE) * f, lattice(seed + i * 17, f), f) * amp;
     tot += amp; amp *= 0.5; f *= 2;
   }
   return v / tot;
@@ -51,18 +64,40 @@ interface Painter {
   bump?: number;
 }
 
-function cellular(x: number, y: number, cells: number, seed: number): { d1: number; d2: number; id: number } {
+/** Jittered feature point per cell, as offsets [x0, y0, x1, y1, …]. */
+const cellPoints = new Map<number, Float64Array>();
+function features(cells: number, seed: number): Float64Array {
+  const key = seed * 4096 + cells;
+  let t = cellPoints.get(key);
+  if (!t) {
+    t = new Float64Array(cells * cells * 2);
+    for (let wy = 0; wy < cells; wy++) for (let wx = 0; wx < cells; wx++) {
+      t[(wy * cells + wx) * 2] = hash2(wx, wy, seed);
+      t[(wy * cells + wx) * 2 + 1] = hash2(wx, wy, seed + 7);
+    }
+    cellPoints.set(key, t);
+  }
+  return t;
+}
+type Cell = { d1: number; d2: number; id: number };
+// colour, height and emissive usually ask for the same pixel's cell in turn
+let lastCell: Cell = { d1: 0, d2: 0, id: 0 }, lastX = NaN, lastY = NaN, lastCells = NaN, lastSeed = NaN;
+function cellular(x: number, y: number, cells: number, seed: number): Cell {
+  if (x === lastX && y === lastY && cells === lastCells && seed === lastSeed) return lastCell;
+  const pts = features(cells, seed);
   const fx = (x / SIZE) * cells, fy = (y / SIZE) * cells;
   const ix = Math.floor(fx), iy = Math.floor(fy);
   let d1 = 9, d2 = 9, id = 0;
   for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
     const cx = ix + i, cy = iy + j;
     const wx = ((cx % cells) + cells) % cells, wy = ((cy % cells) + cells) % cells;
-    const px = cx + hash2(wx, wy, seed), py = cy + hash2(wx, wy, seed + 7);
+    const k = (wy * cells + wx) * 2;
+    const px = cx + pts[k], py = cy + pts[k + 1];
     const d = Math.hypot(px - fx, py - fy);
     if (d < d1) { d2 = d1; d1 = d; id = wx * 131 + wy; } else if (d < d2) d2 = d;
   }
-  return { d1, d2, id };
+  lastX = x; lastY = y; lastCells = cells; lastSeed = seed;
+  return (lastCell = { d1, d2, id });
 }
 
 function painters(id: TexId): Painter {
@@ -322,9 +357,9 @@ export function getTexture(id: TexId): { map: Texture; normal: Texture; emissive
   const bump = p.bump ?? 1;
   for (let y = 0; y < SIZE; y++) {
     for (let x = 0; x < SIZE; x++) {
-      const h = (xx: number, yy: number) => heights[((yy + SIZE) % SIZE) * SIZE + ((xx + SIZE) % SIZE)];
-      const dx = (h(x + 1, y) - h(x - 1, y)) * bump;
-      const dy = (h(x, y + 1) - h(x, y - 1)) * bump;
+      const row = y * SIZE, left = (x + SIZE - 1) % SIZE, right = (x + 1) % SIZE;
+      const dx = (heights[row + right] - heights[row + left]) * bump;
+      const dy = (heights[((y + 1) % SIZE) * SIZE + x] - heights[((y + SIZE - 1) % SIZE) * SIZE + x]) * bump;
       let nX = -dx, nY = -dy, nZ = 1;
       const l = Math.hypot(nX, nY, nZ);
       nX /= l; nY /= l; nZ /= l;
@@ -348,6 +383,8 @@ export function getTexture(id: TexId): { map: Texture; normal: Texture; emissive
     emissive.colorSpace = THREE.SRGBColorSpace;
     emissive.wrapS = emissive.wrapT = THREE.RepeatWrapping;
   }
+  lattices.clear();
+  cellPoints.clear();
   const res = { map, normal, emissive };
   for (const t of [map, normal, emissive]) if (t) markShared(t);
   cache.set(id, res);

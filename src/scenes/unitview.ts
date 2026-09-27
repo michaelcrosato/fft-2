@@ -39,7 +39,7 @@ export interface UnitViewSpec {
 }
 
 /** enemy palette variation so opposing generics read differently */
-function enemyPalette(job: JobDef, team: number) {
+export function enemyPalette(job: JobDef, team: number) {
   if (team === 0) return undefined;
   const p = job.look.palette;
   const shift = (hex: string, amt: number) => {

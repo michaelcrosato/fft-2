@@ -10,20 +10,26 @@ import { MapGrid } from '../battle/grid';
 import { portrait, portraitCached } from '../gfx/portraits';
 import { buildHumanoid } from '../gfx/models/humanoid';
 import type { UnitModel } from '../gfx/models/rig';
-import { ABILITIES } from '../data/db';
+import { ABILITIES, CHARACTERS } from '../data/db';
 import { input } from './input';
 
-import { getMonsterBuilder } from '../scenes/unitview';
+import { enemyPalette, getMonsterBuilder } from '../scenes/unitview';
 
-export function unitPortraitKey(u: BattleUnit) { return (u.roster.charId ?? u.roster.uid) + ':' + u.roster.job; }
+/** the backdrop follows the current side; the colours follow the model, which keeps its starting side's palette */
+export function unitPortraitKey(u: BattleUnit) { return `${u.roster.charId ?? u.roster.uid}:${u.roster.job}:${u.baseTeam}:${u.team}`; }
 
 export function portraitFor(u: BattleUnit): Promise<string> {
   const key = unitPortraitKey(u);
   const bg = u.team === 0 ? '#3e5a7a' : u.team === 1 ? '#7a3a30' : '#3e6a44';
   return portrait(key, () => {
     const mb = getMonsterBuilder();
-    if (u.job.monster && mb) return mb(u.job.monster);
-    return buildHumanoid({ job: u.job.look, look: u.roster.look, gender: u.gender === 'f' ? 'f' : 'm', weapon: null, shield: null });
+    if (u.job.monster && mb) return mb(u.job.monster, { team: u.baseTeam });
+    // the same look and recolour as the battle model (Game.addBattleView / UnitView)
+    const look = (u.roster.charId ? CHARACTERS.get(u.roster.charId)?.look : undefined) ?? u.roster.look;
+    return buildHumanoid({
+      job: u.job.look, look, gender: u.gender === 'f' ? 'f' : 'm', weapon: null, shield: null, team: u.baseTeam,
+      palette: look.outfit?.palette ? undefined : enemyPalette(u.job, u.baseTeam),
+    });
   }, bg);
 }
 

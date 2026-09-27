@@ -2,6 +2,7 @@
 import './ui/style.css';
 import { initRenderer, onRendererLost } from './gfx/renderer';
 import { loadTSL } from './gfx/materials';
+import { preloadPostEffects } from './gfx/post';
 import { input } from './ui/input';
 import { audio } from './audio/audio';
 import { Game } from './game/game';
@@ -45,6 +46,8 @@ async function boot() {
   await initRenderer(document.getElementById('app')!, pref, (qQuality && QUALITIES.includes(qQuality) ? qQuality : opts.quality) as never);
   onRendererLost(showRendererLost);
   await loadTSL();
+  // downloads while the textures below are painted
+  preloadPostEffects();
   setLoad(0.3, 'Painting the land…');
   const texIds: TexId[] = ['grass', 'dirt', 'cobble', 'rock', 'brick', 'planks', 'roof', 'plaster', 'stoneWall', 'riverbed', 'sand', 'sandstone', 'moss', 'carpet', 'snow', 'marsh'];
   for (let i = 0; i < texIds.length; i++) { getTexture(texIds[i]); setLoad(0.3 + (0.5 * i) / texIds.length); if (i % 4 === 3) await tick(); }

@@ -1,6 +1,7 @@
 import * as THREE from "three/webgpu";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { gameClock } from "../src/core/gameClock";
+import { markShared, releaseTree } from "../src/gfx/dispose";
 import { setThree } from "../src/gfx/three";
 import { UnitView } from "../src/scenes/unitview";
 
@@ -84,4 +85,16 @@ it("pauses in-flight unit tweens and resumes without a wall-clock jump", async (
 	frame(now);
 	await finished;
 	expect(progress).toHaveBeenLastCalledWith(1);
+});
+
+it("keeps shared geometry (the cached world-map land) alive when a scene is released", () => {
+	const shared = markShared(new THREE.BufferGeometry());
+	const own = new THREE.BufferGeometry();
+	const keep = vi.spyOn(shared, "dispose");
+	const free = vi.spyOn(own, "dispose");
+	const root = new THREE.Group();
+	root.add(new THREE.Mesh(shared, new THREE.MeshBasicMaterial()), new THREE.Mesh(own, new THREE.MeshBasicMaterial()));
+	releaseTree(root);
+	expect(keep).not.toHaveBeenCalled();
+	expect(free).toHaveBeenCalledOnce();
 });

@@ -4,6 +4,8 @@ import { addExp, addJp, createCharacter, createGeneric, newUid, randomName, setL
 import { autoEquip } from './setup';
 import { Rng } from '../core/rng';
 import { zodiacFromDate } from '../battle/zodiac';
+import { displayStats } from '../battle/stats';
+import type { ErrandDef } from '../data/types';
 import { STORY, CHARACTERS, ERRANDS, JOBS, NODES } from '../data/db';
 import type { Quality } from '../gfx/renderer';
 
@@ -161,6 +163,17 @@ export function leaveCharacter(s: GameState, charId: string) {
   (s.away ??= {})[charId] = u;
 }
 
+/** How well a soldier suits an errand's favoured attribute, on Brave's scale (a typical soldier scores about 60). */
+export function errandAptitude(u: RosterUnit, stat: ErrandDef['stat']): number {
+  if (stat === 'brave') return u.brave;
+  if (stat === 'faith') return u.faith;
+  if (stat === 'level') return u.level * 3;
+  const job = JOBS.get(u.job);
+  if (!job) return 60;
+  const d = displayStats(u.raw, job);
+  return stat === 'speed' ? d.speed * 9 : d[stat] * 11;
+}
+
 /** Resolve returning errand parties once, including rewards and level growth. */
 export function advanceDay(s: GameState, n: number, rng = new Rng()): Array<{ id: string; success: boolean }> {
   s.day += n;
@@ -172,7 +185,7 @@ export function advanceDay(s: GameState, n: number, rng = new Rng()): Array<{ id
     const units = s.roster.filter((u) => run.units.includes(u.uid));
     for (const u of units) u.errand = undefined;
     if (!e) continue;
-    const score = units.reduce((acc, u) => acc + (e.stat === 'brave' ? u.brave : e.stat === 'faith' ? u.faith : e.stat === 'level' ? u.level * 3 : 60) + ((e.jobs ?? []).includes(u.job) ? 25 : 0), 0) / Math.max(1, units.length);
+    const score = units.reduce((acc, u) => acc + errandAptitude(u, e.stat) + ((e.jobs ?? []).includes(u.job) ? 25 : 0), 0) / Math.max(1, units.length);
     const success = units.length > 0 && rng.pct(Math.min(95, 40 + score * 0.6 + units.length * 8));
     if (success) {
       s.gil += e.reward.gil;
@@ -193,6 +206,8 @@ export function advanceDay(s: GameState, n: number, rng = new Rng()): Array<{ id
 // ---------------------------------------------------------------------------
 const KEY = 'fft-fealty-save-';
 export const SLOTS = 8;
+/** the last slot is written after every story step */
+export const AUTOSAVE_SLOT = SLOTS - 1;
 
 export interface SlotInfo { slot: number; heroName: string; chapter: number; location: string; playtime: number; savedAt: number; level: number; objective: string }
 
@@ -247,6 +262,9 @@ function migrate(s: GameState): GameState {
   s.errands ??= [];
   s.errandsDone ??= [];
   s.chronicle ??= [];
+  // older builds recorded every ambush victory (rand_<node>_<day>) as a flag nothing reads
+  for (const k of Object.keys(s.flags)) if (/^rand_.+_\d+$/.test(k)) delete s.flags[k];
+  delete (s as { __eggs?: unknown }).__eggs;
   for (const u of [...s.roster, ...Object.values(s.away ?? {})]) { u.uid ??= newUid(); u.learned ??= []; u.jp ??= {}; u.totalJp ??= {}; u.equip ??= {}; }
   return s;
 }

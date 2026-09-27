@@ -195,7 +195,8 @@ async function runCmd(c: SceneCmd, host: SceneHost): Promise<void> {
       const [, prompt, opts] = c;
       if (skipAll && (window as any).__autoPlay) { if (opts[0]) await runCmds(opts[0][1], host); return; }
       skipAll = false; // a decision is the player's: stop skipping and show it
-      const box = h('div.panel', { style: { left: '50%', top: '30%', transform: 'translateX(-50%)', textAlign: 'center', padding: '12px 22px' } }, h('div', { style: { fontSize: '1.15em', marginBottom: '6px' } }, fillText(prompt, host)));
+      // .prompt stacks the choice above the last line of dialogue, which stays up as context
+      const box = h('div.panel.prompt', { style: { left: '50%', top: '30%', transform: 'translateX(-50%)', textAlign: 'center', padding: '12px 22px' } }, h('div', { style: { fontSize: '1.15em', marginBottom: '6px' } }, fillText(prompt, host)));
       uiRoot().appendChild(box);
       const m = menu({ items: opts.map(([label], i) => ({ label: fillText(label, host), value: i })), parent: box, cancelable: false });
       m.el.style.position = 'relative';

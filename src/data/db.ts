@@ -24,10 +24,13 @@ function collect<T>(key: string): T[] {
   return out;
 }
 
+/** Ids defined more than once; the later definition replaces the earlier one. The validator rejects these. */
+export const DUPLICATE_IDS: string[] = [];
+
 function index<T extends { id: string }>(arr: T[], kind: string): Map<string, T> {
   const m = new Map<string, T>();
   for (const a of arr) {
-    if (m.has(a.id)) console.warn(`[db] duplicate ${kind} id: ${a.id}`);
+    if (m.has(a.id)) { console.warn(`[db] duplicate ${kind} id: ${a.id}`); DUPLICATE_IDS.push(`${kind} ${a.id}`); }
     m.set(a.id, a);
   }
   return m;

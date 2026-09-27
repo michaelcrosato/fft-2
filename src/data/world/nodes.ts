@@ -22,7 +22,7 @@ const pool = (chapterMin: number, chapterMax: number | undefined, count: [number
 
 /** random-battle table for a field node: always the single map `rand_<id>` */
 const field = (id: string, ...pools: RandomPool[]): NonNullable<WorldNode['random']> =>
-  ({ maps: [`rand_${id}`], pools, rate: 0.35 });
+  ({ maps: [`rand_${id}`], pools, rate: 0.28 });
 
 export const nodes: WorldNode[] = [
   // --------------------------------------------------------------------------
