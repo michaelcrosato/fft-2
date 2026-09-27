@@ -117,7 +117,3 @@ export function tone(hex: string, amt: number): string {
   else c.lerp(new THREE.Color('#000000'), -amt);
   return '#' + c.getHexString();
 }
-
-export function disposeGroup(g: Object3D) {
-  g.traverse((o: any) => { if (o.geometry) o.geometry.dispose(); });
-}

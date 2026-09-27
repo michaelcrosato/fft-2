@@ -1,6 +1,6 @@
 // Battle-map terrain: turns a MapGrid into a textured diorama with baked AO,
 // grass lips, slopes, water, windows, grass blades and props.
-import { THREE, NODES } from './three';
+import { THREE } from './three';
 import { MapGrid, type Cell } from '../battle/grid';
 import { GeoBuilder, hexRgb, mat } from './geo';
 import { terrainMaterial, waterMaterial, grassMaterial, propMaterial } from './materials';
@@ -400,5 +400,3 @@ export class TerrainView {
 
   dispose() { releaseTree(this.group); }
 }
-
-export function nodesAvailable() { return NODES; }

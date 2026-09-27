@@ -25,9 +25,10 @@ export function disposeMaterial(m: Material | null | undefined) {
  */
 export function releaseTree(root: Object3D, materials = true) {
   root.traverse((o) => {
-    const any = o as Object3D & { geometry?: { dispose(): void }; material?: Material | Material[]; isLight?: boolean; dispose?: () => void };
+    const any = o as Object3D & { geometry?: { dispose(): void }; material?: Material | Material[]; isSprite?: boolean; isLight?: boolean; dispose?: () => void };
     (o as unknown as { dispatchEvent(e: { type: string }): void }).dispatchEvent({ type: 'dispose' });
-    any.geometry?.dispose();
+    // Three.js sprites all share one quad. A removed badge does not own that geometry.
+    if (!any.isSprite) any.geometry?.dispose();
     if (materials && any.material) for (const m of Array.isArray(any.material) ? any.material : [any.material]) disposeMaterial(m);
     if (any.isLight) any.dispose?.();
   });

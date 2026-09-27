@@ -131,8 +131,6 @@ export function addItem(s: GameState, id: string, n = 1) {
   if (s.inventory[id] <= 0) delete s.inventory[id];
 }
 
-export function flag(s: GameState, f: string): boolean { return !!s.flags[f]; }
-
 /** Add a named character to the party (idempotent) */
 export function joinCharacter(s: GameState, charId: string, rng = new Rng()) {
   if (s.roster.some((u) => u.charId === charId)) return;
@@ -291,14 +289,34 @@ function validSave(value: unknown): value is GameState {
 const OPT_KEY = 'fft-fealty-options';
 /** in-memory copy: options keep working when storage is blocked, and hot paths don't re-parse localStorage */
 let optCache: Options | null = null;
+/** Saved preferences can outlive an old build or contain valid JSON of the wrong shape. */
+function normalizeOptions(value: unknown): Options {
+  const out = { ...DEFAULT_OPTIONS };
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return out;
+  const raw = value as Record<string, unknown>;
+  const choice = <T extends string>(key: string, values: readonly T[], fallback: T): T =>
+    typeof raw[key] === 'string' && values.includes(raw[key] as T) ? raw[key] as T : fallback;
+  out.difficulty = choice('difficulty', ['easy', 'normal', 'hard'], out.difficulty);
+  out.quality = choice('quality', ['auto', 'ultra', 'high', 'medium', 'low'], out.quality);
+  out.renderer = choice('renderer', ['auto', 'webgpu', 'webgl2', 'webgl1'], out.renderer);
+  for (const key of ['gentle', 'confirmMoves', 'showGrid', 'camShake', 'encounters'] as const) {
+    if (typeof raw[key] === 'boolean') out[key] = raw[key];
+  }
+  for (const [key, min, max] of [['music', 0, 1], ['sfx', 0, 1], ['battleSpeed', 0.5, 2], ['textSpeed', 0.01, 2.5]] as const) {
+    const v = raw[key];
+    if (typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max) out[key] = v;
+  }
+  return out;
+}
+
 export function loadOptions(): Options {
   if (!optCache) {
-    try { const raw = storage()?.getItem(OPT_KEY); if (raw) optCache = { ...DEFAULT_OPTIONS, ...JSON.parse(raw) }; } catch { /* ignore */ }
+    try { const raw = storage()?.getItem(OPT_KEY); if (raw) optCache = normalizeOptions(JSON.parse(raw)); } catch { /* ignore */ }
     optCache ??= { ...DEFAULT_OPTIONS };
   }
   return { ...optCache };
 }
 export function saveOptions(o: Options) {
-  optCache = { ...o };
-  try { storage()?.setItem(OPT_KEY, JSON.stringify(o)); } catch { /* ignore */ }
+  optCache = normalizeOptions(o);
+  try { storage()?.setItem(OPT_KEY, JSON.stringify(optCache)); } catch { /* ignore */ }
 }

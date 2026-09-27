@@ -10,6 +10,7 @@ import { HS } from '../gfx/terrain';
 import type { Group, Mesh, Object3D, Vector3 } from 'three/webgpu';
 import { audio } from '../audio/audio';
 import { releaseTree } from '../gfx/dispose';
+import { gameClock } from '../core/gameClock';
 
 let buildMonsterFn: ((look: any, opts?: any) => UnitModel) | null = null;
 // optional module (glob returns {} when the file doesn't exist)
@@ -126,7 +127,7 @@ export class UnitView {
     const key = icons.join('');
     if (key === this.badgeKey) return;
     this.badgeKey = key;
-    if (this.badge) { this.root.remove(this.badge); (this.badge.material as any).map?.dispose(); this.badge = null; }
+    if (this.badge) { releaseTree(this.badge); this.badge.removeFromParent(); this.badge = null; }
     if (!icons.length) return;
     const c = document.createElement('canvas');
     c.width = 256; c.height = 64;
@@ -271,6 +272,7 @@ export class UnitView {
   }
 
   becomeCrystal(kind: 'crystal' | 'chest') {
+    this.clearCrystal();
     this.model.root.visible = false;
     this.marker.visible = false;
     let obj: Object3D;
@@ -295,15 +297,23 @@ export class UnitView {
   }
 
   removeCrystal() {
-    if (this.crystalObj) { this.root.remove(this.crystalObj); this.crystalObj = null; }
+    this.clearCrystal();
     this.root.visible = false;
+  }
+
+  private clearCrystal() {
+    if (!this.crystalObj) return;
+    releaseTree(this.crystalObj);
+    this.crystalObj.removeFromParent();
+    this.crystalObj = null;
   }
 
   tween(dur: number, fn: (t: number) => void): Promise<void> {
     return new Promise((resolve) => {
-      const t0 = performance.now();
+      const started = gameClock.now();
       const step = () => {
-        const t = Math.min(1, (performance.now() - t0) / 1000 / dur);
+        if (gameClock.paused) { requestAnimationFrame(step); return; }
+        const t = dur <= 0 ? 1 : Math.min(1, (gameClock.now() - started) / 1000 / dur);
         fn(t);
         if (t >= 1) resolve(); else requestAnimationFrame(step);
       };

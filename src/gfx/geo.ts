@@ -106,10 +106,6 @@ export function hexRgb(h: string): [number, number, number] {
   return out;
 }
 
-export function shade(c: [number, number, number], f: number): [number, number, number] {
-  return [c[0] * f, c[1] * f, c[2] * f];
-}
-
 /** matrix helper: translate / rotate(euler xyz) / scale */
 export function mat(tx = 0, ty = 0, tz = 0, rx = 0, ry = 0, rz = 0, sx = 1, sy = sx, sz = sx): Matrix4 {
   const m = new THREE.Matrix4();

@@ -76,6 +76,7 @@ test('denied browser storage still permits a new game and options', async ({
   await press(page, '.title-menu .item:has-text("New Game")', info);
   await expect(page.getByText('Name your hero')).toBeVisible();
   await press(page, '.btn:has-text("Begin the Tale")', info);
+  await press(page, '.game-mode-prompt .btn:has-text("Play in Browser")', info);
   await expect(
     page.locator('.narration, .titlecard, .dialogue').first(),
   ).toBeVisible();

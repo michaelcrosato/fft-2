@@ -31,8 +31,4 @@ function append(el: HTMLElement, children: Child[]) {
 
 export function uiRoot(): HTMLElement { return document.getElementById('ui')!; }
 
-export function clear(el: HTMLElement) { while (el.firstChild) el.removeChild(el.firstChild); }
-
 export const sleep = (ms: number) => gameClock.sleep(ms);
-
-export function nextFrame() { return new Promise<void>((r) => requestAnimationFrame(() => r())); }

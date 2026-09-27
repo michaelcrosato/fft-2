@@ -5,6 +5,21 @@ describe('gameplay pause clock', () => {
   beforeEach(() => vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'performance'] }));
   afterEach(() => vi.useRealTimers());
 
+  it('excludes nested paused intervals from animation time without needing frame samples', async () => {
+    const clock = new GameClock();
+    const start = clock.now();
+    await vi.advanceTimersByTimeAsync(400);
+    const first = clock.pause();
+    await vi.advanceTimersByTimeAsync(5000);
+    const second = clock.pause();
+    first();
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(clock.now() - start).toBe(400);
+    second();
+    await vi.advanceTimersByTimeAsync(300);
+    expect(clock.now() - start).toBe(700);
+  });
+
   it('resumes a partially elapsed delay with its remaining time', async () => {
     const clock = new GameClock();
     const done = vi.fn();

@@ -1006,7 +1006,7 @@ export class Battle {
           break;
         }
         case 'invite': {
-          if (t.boss || t.vip || t.roster.charId || t.job.noInvite) { (h.text ??= []).push('Refused'); break; }
+          if (!t.recruitable) { (h.text ??= []).push('Refused'); break; }
           if (t.team !== c.team) {
             t.team = c.team; t.baseTeam = c.team; t.controlled = c.team === 0; t.statuses.delete('charm');
             if (c.team === 0) this.invited.push(t);
@@ -1053,7 +1053,7 @@ export class Battle {
       t.gone = true;
       (h.text ??= []).push('Poached!');
     }
-    if (t.alive && t.critical && t.isMonster && c.hasSupport('train') && t.team !== c.team && dealtHp > 0 && !t.boss && !t.vip && !t.roster.charId && !t.job.noInvite && this.rng.pct(60)) {
+    if (t.alive && t.critical && t.isMonster && c.hasSupport('train') && t.team !== c.team && dealtHp > 0 && t.recruitable && this.rng.pct(60)) {
       t.team = c.team; t.baseTeam = c.team; t.controlled = c.team === 0; t.statuses.delete('charm');
       if (c.team === 0) this.invited.push(t);
       this.emit({ t: 'teamChange', uid: t.uid, team: t.team });

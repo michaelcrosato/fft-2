@@ -2,19 +2,33 @@
 export class GameClock {
   private holds = 0;
   private listeners = new Set<() => void>();
+  private pausedAt: number | null = null;
+  private pausedMs = 0;
 
   get paused() {
     return this.holds > 0;
   }
 
+  /** Monotonic gameplay milliseconds, including pauses with no animation frames. */
+  now(): number {
+    return (this.pausedAt ?? performance.now()) - this.pausedMs;
+  }
+
   pause(): () => void {
     this.holds++;
-    if (this.holds === 1) for (const listener of this.listeners) listener();
+    if (this.holds === 1) {
+      this.pausedAt = performance.now();
+      for (const listener of this.listeners) listener();
+    }
     let released = false;
     return () => {
       if (released) return;
       released = true;
-      if (--this.holds === 0) for (const listener of [...this.listeners]) listener();
+      if (--this.holds === 0) {
+        this.pausedMs += performance.now() - this.pausedAt!;
+        this.pausedAt = null;
+        for (const listener of [...this.listeners]) listener();
+      }
     };
   }
 

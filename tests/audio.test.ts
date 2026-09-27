@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AudioEngine } from "../src/audio/audio";
-import { manifest } from "../src/audio/manifest";
+import { assetUrl, manifest } from "../src/audio/manifest";
 import { validateAudioAssets } from "../tools/audio-assets";
 
 const REQUIRED_TRACKS =
@@ -35,13 +35,17 @@ describe("single audio manifest", () => {
 			)
 				continue;
 			const source = readFileSync(resolve(file.parentPath, file.name), "utf8");
-			for (const match of source.matchAll(
-				/(?:audio\.sfx\(|\['sfx',\s*)'([^']+)'/g,
-			))
+			// Scene commands have exactly two entries. Longer preference-key arrays
+			// such as ['music', 'sfx', ...] are not requests to play an audio cue.
+			for (const match of [
+				...source.matchAll(/audio\.sfx\(\s*'([^']+)'/g),
+				...source.matchAll(/\['sfx',\s*'([^']+)'\s*\]/g),
+			])
 				expect(manifest.sfx[match[1]], match[1]).toBeDefined();
-			for (const match of source.matchAll(
-				/(?:audio\.playMusic\(|music:\s*|\['music',\s*)'([^']+)'/g,
-			))
+			for (const match of [
+				...source.matchAll(/(?:audio\.playMusic\(|music:\s*)'([^']+)'/g),
+				...source.matchAll(/\['music',\s*'([^']+)'\s*\]/g),
+			])
 				expect(manifest.music[match[1]], match[1]).toBeDefined();
 		}
 	});
@@ -217,12 +221,23 @@ describe("file playback lifecycle", () => {
 		await e.unlock();
 		expect(e.debug().track).toBe("title");
 		expect(Media.all[0].src).toBe(
-			`https://example.test/game/${manifest.assets[manifest.music.title.asset].src}`,
+			`https://example.test/game/${manifest.assets[manifest.music.title.asset].src}?v=${manifest.assets[manifest.music.title.asset].sha256}`,
 		);
 		expect(Media.all[0].loop).toBe(true);
 		e.playMusic("title", { loop: false });
 		expect(Media.all).toHaveLength(1);
 		expect(Media.all[0].loop).toBe(false);
+		vi.unstubAllEnvs();
+	});
+	it("gives replacement audio a new cache key without changing its local path", () => {
+		vi.stubEnv("BASE_URL", "./");
+		const asset = manifest.assets[manifest.music.title.asset];
+		const current = new URL(assetUrl(asset));
+		const replacement = new URL(assetUrl({ ...asset, sha256: "a".repeat(64) }));
+		expect(current.pathname).toBe(`/game/${asset.src}`);
+		expect(current.searchParams.get("v")).toBe(asset.sha256);
+		expect(replacement.pathname).toBe(current.pathname);
+		expect(replacement.href).not.toBe(current.href);
 		vi.unstubAllEnvs();
 	});
 	it("ignores an obsolete music load and cancels pending playback on stop", async () => {
