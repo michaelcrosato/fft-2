@@ -51,15 +51,15 @@ access limitations and adaptation choices behind the expanded content.
 Every **New Game**, **Continue**, and saved-game load asks whether to enable **Fullscreen Game Mode**.
 Choose **Enable Game Mode** for fullscreen, edge-swipe/overscroll protection and a screen wake lock
 where supported, or **Play in Browser** to continue normally. The choice is never remembered or forced.
-Use the **⛶** button, **Esc**, or **Options → Game Mode** to exit; returning to the title also turns it off.
-Options can enable it again during play. Fullscreen covers both the battlefield and all game menus.
+Switch it on or off from the **Menu** (**Fullscreen** / **Exit Fullscreen**), or use **Esc** or **Options → Game Mode**;
+returning to the title also turns it off. Fullscreen covers both the battlefield and all game menus.
 
-The **top-right control bar** keeps **Menu** available during deployment, battles, cutscenes,
-and world-map travel, with **⛶ Exit Game Mode** alongside it while Game Mode is enabled.
+**Menu** sits in the top-right corner during deployment, battles, cutscenes and world-map travel
+(**M**, **Start** or **Y** open it too); **Skip** appears in the top-left corner while a scene plays.
 In battles, cutscenes and during travel, Menu pauses the action while you change Options, read How to Play,
 or return to the title (with confirmation before discarding unsaved progress). Resume returns to
 the same point. On the idle world map, Menu retains the party, chronicle, save and load actions.
-**Skip** uses an opaque background and a full-size touch target beside Menu during cutscenes.
+**Skip** uses an opaque background and a full-size touch target.
 
 Browsers retain their own escape controls and devices can still handle system gestures (such as Home,
 app switching, or OS back swipes). If fullscreen is unsupported or denied, Game Mode keeps the available

@@ -13,6 +13,8 @@ export interface MenuItem<T = string> {
   icon?: string;
   desc?: string;
   sep?: boolean;
+  /** runs inside the click or key press that chooses the item (e.g. fullscreen needs that gesture) */
+  onChoose?: () => void;
 }
 
 export interface MenuOpts<T> {
@@ -104,6 +106,7 @@ export function menu<T = string>(o: MenuOpts<T>): MenuHandle<T> {
     if (!it || it.sep) return;
     if (it.disabled) { audio.sfx('error'); return; }
     audio.sfx('confirm');
+    it.onChoose?.();
     if (o.keepOpenOnChoose) return;
     finish(it.value);
   };

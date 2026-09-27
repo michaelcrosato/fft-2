@@ -18,7 +18,7 @@ import { openFormation } from '../ui/menus/formation';
 import { openShop, openRecruit, openTavern, openFurShop } from '../ui/menus/town';
 import { openChronicle } from '../ui/menus/chronicle';
 import { openOptions, openSaveLoad } from '../ui/menus/system';
-import { gameMode, promptGameMode } from '../ui/gameMode';
+import { fullscreenLabel, gameMode, promptGameMode, toggleFullscreen } from '../ui/gameMode';
 import { setContextMenu, setGameMenuVisible } from '../ui/gameMenu';
 import { loading } from '../ui/loading';
 import { tapTracker } from '../ui/taps';
@@ -389,6 +389,7 @@ async function worldLoop(game: Game): Promise<'title' | 'continue'> {
     try {
       const pick = await menu({ items: [
         { label: 'Formation', value: 'formation' }, { label: 'Chronicle', value: 'chronicle' }, { label: 'Save', value: 'save' }, { label: 'Load', value: 'load' },
+        { label: fullscreenLabel(), value: 'fullscreen', onChoose: toggleFullscreen },
         { label: 'Options', value: 'options' }, { label: 'Return to Title', value: 'title' },
       ], right: 24, y: 'calc(76px + env(safe-area-inset-top, 0px))', title: 'Menu' }).promise;
       if (pick === 'formation') await openFormation(game);

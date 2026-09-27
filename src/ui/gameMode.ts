@@ -1,7 +1,6 @@
 // Browser immersion is opt-in for each campaign entry, never a saved preference.
 import { h } from './dom';
 import { input } from './input';
-import { addGameControl } from './gameToolbar';
 import { toast } from './widgets';
 
 type FullscreenDocument = Document & {
@@ -20,8 +19,6 @@ class GameMode {
   private session = 0;
   private wakeLock: WakeLockSentinel | null = null;
   private wakePending = false;
-  private exitButton: HTMLElement | null = null;
-  private removeExit: (() => void) | null = null;
   private listeners = new Set<() => void>();
 
   onChange(listener: () => void) {
@@ -92,20 +89,7 @@ class GameMode {
     this.active = true;
     this.wasFullscreen = this.fullscreen;
     document.documentElement.classList.add('game-mode');
-    if (!this.exitButton) {
-      this.exitButton = h(
-        'button.game-mode-exit',
-        {
-          type: 'button',
-          title: 'Exit Game Mode',
-          'aria-label': 'Exit Game Mode',
-          onclick: () => this.exit(),
-        },
-        '⛶',
-      );
-      // Outside #ui: scene transitions clear that container. Fullscreen covers the whole document.
-      this.removeExit = addGameControl(this.exitButton);
-    }
+    for (const listener of this.listeners) listener();
     try {
       if (!this.fullscreen) {
         const root = document.documentElement as FullscreenRoot;
@@ -121,7 +105,7 @@ class GameMode {
     }
     if (this.fullscreen) {
       // WebKit can promote the fullscreen root above dialogs that were already
-      // open. Restore their top-layer order so Menu and Exit stay clickable.
+      // open. Restore their top-layer order so the Menu stays clickable.
       const focused = document.activeElement;
       for (const dialog of document.querySelectorAll<HTMLDialogElement>('dialog[open]')) {
         if (!isModal(dialog)) continue;
@@ -135,8 +119,8 @@ class GameMode {
     void this.keepAwake(); // an optional API must never delay starting a campaign
     toast(
       this.fullscreen
-        ? 'Game Mode on. Use ⛶ or Esc to exit.'
-        : 'Game Mode protections on; fullscreen is unavailable. You can retry from Options with a tap or key press. Use ⛶ or Esc to exit.',
+        ? 'Fullscreen on. Exit from the Menu or with Esc.'
+        : 'Game Mode protections on; fullscreen is unavailable. You can retry from the Menu with a tap or key press. Exit from the Menu or with Esc.',
       6500,
     );
   }
@@ -146,9 +130,6 @@ class GameMode {
     this.wasFullscreen = false;
     this.session++;
     document.documentElement.classList.remove('game-mode');
-    this.removeExit?.();
-    this.removeExit = null;
-    this.exitButton = null;
     this.releaseWakeLock();
     this.leaveFullscreen();
     for (const listener of this.listeners) listener();
@@ -196,6 +177,18 @@ class GameMode {
 
 export const gameMode = new GameMode();
 
+/** The Menu's fullscreen entry (Game Mode without fullscreen where the browser has none). */
+export function fullscreenLabel(): string {
+  if (!gameMode.fullscreenAvailable) return gameMode.active ? 'Exit Game Mode' : 'Game Mode';
+  return gameMode.active ? 'Exit Fullscreen' : 'Fullscreen';
+}
+
+/** Call inside the click or key press: browsers only grant fullscreen to a user gesture. */
+export function toggleFullscreen() {
+  if (gameMode.active) gameMode.exit();
+  else void gameMode.enter();
+}
+
 /** Always ask, including when the last campaign used Game Mode. */
 export function promptGameMode(): Promise<void> {
   return new Promise((resolve) => {
@@ -212,7 +205,7 @@ export function promptGameMode(): Promise<void> {
         { id: 'game-mode-description' },
         'Hide browser controls, reduce accidental edge swipes and keep the screen awake while you play, where supported.',
       ),
-      h('p.muted', null, 'Exit anytime with ⛶ or Esc. Your device may still allow system gestures.'),
+      h('p.muted', null, 'Exit anytime from the Menu or with Esc. Your device may still allow system gestures.'),
       ...(!gameMode.fullscreenAvailable
         ? [
             h(

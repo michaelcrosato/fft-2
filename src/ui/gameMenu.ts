@@ -1,7 +1,7 @@
 import { gameClock } from '../core/gameClock';
 import type { Game } from '../game/game';
 import { h } from './dom';
-import { gameMode } from './gameMode';
+import { fullscreenLabel, gameMode, toggleFullscreen } from './gameMode';
 import { addGameControl, gameToolbar, syncGameToolbar } from './gameToolbar';
 import { input } from './input';
 import { openOptions } from './menus/system';
@@ -61,10 +61,13 @@ export function installGameMenu(game: Game) {
     let childOpen = false;
     let confirming = false;
     let closed = false;
+    let fullscreen: HTMLButtonElement | null = null;
+    const offMode = gameMode.onChange(() => { if (fullscreen) fullscreen.textContent = fullscreenLabel(); });
     const close = () => {
       if (closed) return;
       closed = true;
       pop();
+      offMode();
       document.body.appendChild(bar);
       shell.close();
       shell.remove();
@@ -121,12 +124,14 @@ export function installGameMenu(game: Game) {
     };
     function home() {
       confirming = false;
+      fullscreen = action(fullscreenLabel(), toggleFullscreen) as HTMLButtonElement;
       button.textContent = '▶ Resume';
       button.setAttribute('aria-label', 'Resume Game');
       view.replaceChildren(
         h('h2', null, 'Game Menu'),
         h('p.muted', null, 'Game paused'),
         action('Resume Game', close),
+        fullscreen,
         action('Options', () => {
           void submenu((parent) => openOptions(game, parent));
         }),

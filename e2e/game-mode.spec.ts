@@ -3,7 +3,7 @@ import { expect, type Page, type TestInfo, test } from '@playwright/test';
 import { expectInViewport, expectRendering, gameUrl, press, waitForUiText, watchErrors } from './helpers';
 
 const prompt = (page: Page) => page.getByRole('dialog', { name: 'Fullscreen Game Mode?' });
-const exitButton = (page: Page) => page.getByRole('button', { name: 'Exit Game Mode', exact: true });
+const gameModeOn = /(?:^|\s)game-mode(?:\s|$)/;
 
 async function savedCampaign(page: Page) {
   // Content uses import.meta.glob, so generate a real save through Vite's module runner.
@@ -27,8 +27,14 @@ async function continueToPrompt(page: Page, info: TestInfo) {
 async function enable(page: Page, info: TestInfo) {
   await press(page, '.game-mode-prompt .btn:has-text("Enable Game Mode")', info);
   await expect(prompt(page)).toHaveCount(0);
-  await expect(exitButton(page)).toBeVisible();
-  await expect(page.locator('html')).toHaveClass(/game-mode/);
+  await expect(page.locator('html')).toHaveClass(gameModeOn);
+}
+
+/** The world map's Menu lists the fullscreen entry ("Exit Game Mode" where there is no fullscreen). */
+async function exitFromWorldMenu(page: Page, info: TestInfo) {
+  await press(page, '.btn:has-text("☰ Menu")', info);
+  await press(page, '.menu .item:has-text("Exit Fullscreen"), .menu .item:has-text("Exit Game Mode")', info);
+  await expect(page.locator('html')).not.toHaveClass(gameModeOn);
 }
 
 async function returnToTitle(page: Page, info: TestInfo) {
@@ -109,13 +115,12 @@ test('Continue and Load always ask; declining, returning to title, and cancellin
   await enable(page, info);
   await expect(page.locator('.world-status')).toBeVisible();
   await returnToTitle(page, info);
-  await expect(exitButton(page)).toHaveCount(0);
-  await expect(page.locator('html')).not.toHaveClass(/game-mode/);
+  await expect(page.locator('html')).not.toHaveClass(gameModeOn);
   await press(page, '.title-menu .item:has-text("Continue")', info);
   await expect(prompt(page)).toBeVisible();
   await press(page, '.game-mode-prompt .btn:has-text("Play in Browser")', info);
   await expect(page.locator('.world-status')).toBeVisible();
-  await expect(exitButton(page)).toHaveCount(0);
+  await expect(page.locator('html')).not.toHaveClass(gameModeOn);
   await returnToTitle(page, info);
   await press(page, '.title-menu .item:has-text("Load Game")', info);
   await press(page, '.menu .mclose', info);
@@ -149,7 +154,7 @@ for (const kind of ['denied', 'missing', 'webkit'] as const) {
       await expectInViewport(page, '.toast');
     }
     await expect(page.locator('.world-status')).toBeVisible();
-    await expectInViewport(page, '.game-mode-exit');
+    await expectInViewport(page, '.game-menu-button');
     // Only touches starting on the outer edge are reserved, and only while enabled.
     const touchPrevented = (x: number) =>
       page.evaluate((clientX) => {
@@ -166,8 +171,8 @@ for (const kind of ['denied', 'missing', 'webkit'] as const) {
       )
       .toBe(1);
     if (kind === 'denied') await page.keyboard.press('Escape');
-    else await press(page, '.game-mode-exit', info);
-    await expect(page.locator('html')).not.toHaveClass(/game-mode/);
+    else await exitFromWorldMenu(page, info);
+    await expect(page.locator('html')).not.toHaveClass(gameModeOn);
     expect(await touchPrevented(1)).toBe(false);
     expect(
       await page.evaluate(
@@ -214,8 +219,7 @@ test('Options enables Game Mode; browser exits and delayed wake locks release cl
     )
     .toBe(2);
   await page.evaluate(() => document.exitFullscreen());
-  await expect(exitButton(page)).toHaveCount(0);
-  await expect(page.locator('html')).not.toHaveClass(/game-mode/);
+  await expect(page.locator('html')).not.toHaveClass(gameModeOn);
   await expect(page.locator('.menu .item:has-text("Game Mode")')).toContainText('Off');
   await page.evaluate(() => {
     (window as unknown as { __modeAPIs: { holdWake: boolean } }).__modeAPIs.holdWake = true;
@@ -228,7 +232,7 @@ test('Options enables Game Mode; browser exits and delayed wake locks release cl
     )
     .toBe(3);
   await press(page, '.menu .item:has-text("Game Mode")', info);
-  await expect(exitButton(page)).toHaveCount(0);
+  await expect(page.locator('html')).not.toHaveClass(gameModeOn);
   await page.evaluate(() => {
     (window as unknown as { __modeAPIs: { resolveWake: () => void } }).__modeAPIs.resolveWake();
   });
@@ -240,7 +244,7 @@ test('Options enables Game Mode; browser exits and delayed wake locks release cl
   errors.assertClean();
 });
 
-test('trusted keyboard input enters real fullscreen for a new campaign and the exit button works', async ({
+test('trusted keyboard input enters real fullscreen for a new campaign and the Menu leaves it', async ({
   page,
 }, info) => {
   test.skip(
@@ -260,11 +264,12 @@ test('trusted keyboard input enters real fullscreen for a new campaign and the e
   await page.keyboard.press('Enter');
   await expect.poll(() => page.evaluate(() => document.fullscreenElement?.tagName)).toBe('HTML');
   await expect(page.locator('.narration, .titlecard, .dialogue').first()).toBeVisible();
-  await expect(exitButton(page)).toBeVisible();
   await expectRendering(page);
   await page.screenshot({ path: info.outputPath('fullscreen-campaign.png') });
-  await exitButton(page).click();
+  await page.locator('.game-menu-button').click();
+  await page.getByRole('button', { name: 'Exit Fullscreen', exact: true }).click();
   await expect.poll(() => page.evaluate(() => document.fullscreenElement)).toBeNull();
-  await expect(page.locator('html')).not.toHaveClass(/game-mode/);
+  await expect(page.locator('html')).not.toHaveClass(gameModeOn);
+  await page.locator('.game-menu-home .btn:has-text("Resume Game")').click();
   errors.assertClean();
 });

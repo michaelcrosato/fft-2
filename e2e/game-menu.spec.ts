@@ -26,6 +26,21 @@ async function resume(page: Page, info: TestInfo) {
   await expect(page.locator('html')).not.toHaveClass(/game-paused/);
 }
 
+// the Menu's fullscreen entry is "Game Mode" where the browser has no fullscreen
+const ENTER_FULLSCREEN = '.game-menu-home .btn:text-is("Fullscreen"), .game-menu-home .btn:text-is("Game Mode")';
+const EXIT_FULLSCREEN = '.game-menu-home .btn:text-is("Exit Fullscreen"), .game-menu-home .btn:text-is("Exit Game Mode")';
+const gameModeOn = /(?:^|\s)game-mode(?:\s|$)/;
+
+async function assertTopLeft(page: Page, selector: string) {
+  await expectInViewport(page, selector);
+  const box = await page.locator(selector).boundingBox();
+  if (!box) throw new Error(`${selector} has no visible bounds`);
+  expect(box.y).toBeLessThan(64);
+  expect(box.x).toBeLessThan(100);
+  expect(box.width).toBeGreaterThanOrEqual(44);
+  expect(box.height).toBeGreaterThanOrEqual(44);
+}
+
 async function assertTopRight(page: Page, selector: string) {
   await expectInViewport(page, selector);
   const box = await page.locator(selector).boundingBox();
@@ -69,7 +84,7 @@ test('Menu stays reachable during deployment, settings and help, then resumes th
   errors.assertClean();
 });
 
-test('cutscene Menu pauses text; Skip and fullscreen exit stay legible and separate at the top right', async ({
+test('cutscene Menu pauses text and toggles fullscreen; Skip sits top-left, Menu top-right', async ({
   page,
 }, info) => {
   const errors = watchErrors(page);
@@ -92,30 +107,25 @@ test('cutscene Menu pauses text; Skip and fullscreen exit stay legible and separ
   await expect(page.locator('.dialogue .text')).toHaveText(text);
   expect(await playtime(page)).toBe(pausedTime);
   await expect(page.locator('.skipbtn')).toBeHidden();
-  await press(page, '.game-menu-home .btn:has-text("Options")', info);
-  const enableMode = async () => {
-    await press(page, '.game-menu-shell .menu .item:has-text("Game Mode")', info);
-    await press(page, '.game-mode-prompt .btn:has-text("Enable Game Mode")', info);
-    await expect(page.locator('.game-mode-prompt')).toHaveCount(0);
-    await expect(page.locator('.game-mode-exit')).toBeVisible();
-  };
-  await enableMode();
-  await assertTopRight(page, '.game-mode-exit');
-  // Fullscreen exit also remains tappable while the native menu dialog is open.
-  await press(page, '.game-mode-exit', info);
-  await expect(page.locator('html')).not.toHaveClass(/(?:^|\s)game-mode(?:\s|$)/);
+  // The Menu switches Game Mode directly (this browser refuses fullscreen, so only its protections apply)
+  await press(page, ENTER_FULLSCREEN, info);
+  await expect(page.locator('html')).toHaveClass(gameModeOn);
+  await press(page, EXIT_FULLSCREEN, info);
+  await expect(page.locator('html')).not.toHaveClass(gameModeOn);
   await expect(systemMenu(page)).toBeVisible();
-  await enableMode();
+  // Options still offers the Game Mode prompt, and the Menu entry follows it
+  await press(page, '.game-menu-home .btn:has-text("Options")', info);
+  await press(page, '.game-menu-shell .menu .item:has-text("Game Mode")', info);
+  await press(page, '.game-mode-prompt .btn:has-text("Enable Game Mode")', info);
+  await expect(page.locator('.game-mode-prompt')).toHaveCount(0);
+  await expect(page.locator('html')).toHaveClass(gameModeOn);
   await press(page, '.game-menu-button', info);
+  await expect(page.locator(EXIT_FULLSCREEN)).toBeVisible();
   await resume(page, info);
   await expect(page.locator('.skipbtn')).toBeVisible();
-  await assertTopRight(page, '.game-mode-exit');
-  for (const [a, b] of [
-    ['.skipbtn', '.game-menu-button'],
-    ['.skipbtn', '.game-mode-exit'],
-    ['.game-menu-button', '.game-mode-exit'],
-  ])
-    await expectNoOverlap(page, a, b);
+  await assertTopLeft(page, '.skipbtn');
+  await assertTopRight(page, '.game-menu-button');
+  await expectNoOverlap(page, '.skipbtn', '.game-menu-button');
   await expectInViewport(page, '.game-toolbar');
   const skip = await page.locator('.skipbtn').evaluate((el) => {
     const style = getComputedStyle(el),
@@ -131,8 +141,10 @@ test('cutscene Menu pauses text; Skip and fullscreen exit stay legible and separ
   await expect(page.locator('.skipbtn, .dialogue')).toHaveCount(0);
   await expect(page.locator('.game-menu-button')).toBeVisible();
   await expect(systemMenu(page)).toHaveCount(0);
-  await press(page, '.game-mode-exit', info);
-  await expect(page.locator('.game-mode-exit')).toHaveCount(0);
+  await openMenu(page, info);
+  await press(page, EXIT_FULLSCREEN, info);
+  await expect(page.locator('html')).not.toHaveClass(gameModeOn);
+  await resume(page, info);
   errors.assertClean();
 });
 
@@ -183,7 +195,7 @@ test('Return to Title asks before leaving a battle and restores a clean title sc
   errors.assertClean();
 });
 
-test('fullscreen exit works from the top-right toolbar while the real fullscreen menu is open', async ({
+test('the Menu enters and leaves real fullscreen and stays open', async ({
   page,
 }, info) => {
   test.skip(!!info.project.use.hasTouch, 'Native fullscreen needs a desktop browser, not phone emulation.');
@@ -191,16 +203,14 @@ test('fullscreen exit works from the top-right toolbar while the real fullscreen
   await page.goto(gameUrl(info, { test: 'battle', id: 'b_galwyn', quality: 'low' }));
   await waitForUiText(page, 'Begin Battle');
   await openMenu(page, info);
-  await press(page, '.game-menu-home .btn:has-text("Options")', info);
-  await press(page, '.game-menu-shell .menu .item:has-text("Game Mode")', info);
-  await press(page, '.game-mode-prompt .btn:has-text("Enable Game Mode")', info);
+  await press(page, ENTER_FULLSCREEN, info);
   await expect.poll(() => page.evaluate(() => document.fullscreenElement?.tagName)).toBe('HTML');
-  await assertTopRight(page, '.game-mode-exit');
-  await press(page, '.game-mode-exit', info);
+  await expect(systemMenu(page)).toBeVisible();
+  await assertTopRight(page, '.game-menu-button');
+  await press(page, EXIT_FULLSCREEN, info);
   await expect.poll(() => page.evaluate(() => document.fullscreenElement)).toBeNull();
   await expect(systemMenu(page)).toBeVisible();
   await expect(page.locator('html')).toHaveClass(/game-paused/);
-  await press(page, '.game-menu-button', info);
   await resume(page, info);
   await expect(page.locator('.menu.deploy')).toBeVisible();
   errors.assertClean();

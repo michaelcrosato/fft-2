@@ -51,7 +51,7 @@ html.game-mode, .game-mode body, .game-mode #ui, .game-mode #ui * { overscroll-b
 .game-controls-visible { --controls-clearance: calc(64px + env(safe-area-inset-top, 0px)); }
 .game-toolbar {
   position: fixed; top: calc(8px + env(safe-area-inset-top, 0px));
-  right: calc(24px + env(safe-area-inset-right, 0px)); z-index: 70;
+  right: calc(12px + env(safe-area-inset-right, 0px)); z-index: 70;
   display: flex; align-items: center; gap: 8px; pointer-events: none;
 }
 /* Opaque buttons keep the same contrast over bright terrain, dialogue and black fades. */
@@ -64,9 +64,8 @@ html.game-mode, .game-mode body, .game-mode #ui, .game-mode #ui * { overscroll-b
 .game-toolbar button:hover, .game-toolbar button:active { background: #493019; }
 .game-toolbar button:focus-visible { outline: 2px solid var(--gold2); outline-offset: 3px; }
 .game-toolbar button[hidden] { display: none; }
-.game-toolbar .skipbtn { order: 0; }
-.game-toolbar .game-menu-button { order: 1; }
-.game-toolbar .game-mode-exit { order: 2; width: 44px; padding: 0; font: 26px/1 sans-serif; }
+/* Menu keeps the top-right corner; Skip takes the top-left one while a scene plays */
+.game-toolbar .skipbtn { position: fixed; top: calc(8px + env(safe-area-inset-top, 0px)); left: calc(12px + env(safe-area-inset-left, 0px)); }
 .game-paused .skipbtn { visibility: hidden; pointer-events: none; }
 .game-paused #ui * { animation-play-state: paused !important; }
 .game-menu-shell {
