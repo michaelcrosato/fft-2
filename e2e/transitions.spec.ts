@@ -8,6 +8,7 @@ type TestWindow = Window & {
 	__battleFrames: Array<{ actors: number; battle: boolean }>;
 	__screenSwaps: string[];
 	__actorBuildCovered: string[];
+	__loadingReveals: number[];
 };
 
 import {
@@ -268,6 +269,41 @@ test("chapter cards remain visible and subsequent actor setup stays covered", as
 		JSON.stringify(covered),
 	).toBe(true);
 	await expect(page.locator(".fade")).toHaveCSS("opacity", "0");
+	errors.assertClean();
+});
+
+test("skipping chapter cards does not flash an empty scene or restart the loader", async ({
+	page,
+}, info) => {
+	const errors = watchErrors(page);
+	await page.addInitScript(() => {
+		const w = window as unknown as TestWindow & { __game?: Game };
+		w.__loadingReveals = [];
+		new MutationObserver((changes) => {
+			for (const change of changes)
+				for (const node of change.removedNodes) {
+					if (node instanceof HTMLElement && node.id === "loading")
+						w.__loadingReveals.push(w.__game?.stage?.views.size ?? 0);
+				}
+		}).observe(document, { childList: true, subtree: true });
+	});
+	await page.goto(
+		gameUrl(info, { test: "scene", id: "sc_pro_orvelle_pre", autoplay: 1 }),
+	);
+	await expect
+		.poll(() =>
+			page.evaluate(
+				() => (window as unknown as TestWindow).__loadingReveals.length,
+			),
+		)
+		.toBeGreaterThan(0);
+	await expect(page.locator(".skipbtn")).toHaveCount(0);
+	await expect(page.locator("#loading")).toHaveCount(0);
+	const reveals = await page.evaluate(
+		() => (window as unknown as TestWindow).__loadingReveals,
+	);
+	expect(reveals).toHaveLength(1);
+	expect(reveals[0]).toBeGreaterThan(1);
 	errors.assertClean();
 });
 

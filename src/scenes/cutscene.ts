@@ -72,7 +72,9 @@ async function runCmds(cmds: SceneCmd[], host: SceneHost): Promise<void> {
     await gameClock.whenRunning();
     // Setup stays covered. A title/narration is already meaningful content and
     // retains the script's fade; movement, dialogue and waits need the scene visible.
-    if (c[0] === 'title' || c[0] === 'narrate') await host.present?.(false);
+    if (c[0] === 'title' || c[0] === 'narrate') {
+      if (!skipAll) await host.present?.(false);
+    }
     else if (!['map', 'actor', 'remove', 'hide', 'show', 'anim', 'fade', 'music', 'flag', 'chronicle', 'if'].includes(c[0]) && !(c[0] === 'camera' && c[1].time === 0)) {
       await host.present?.(true);
     }
