@@ -276,7 +276,12 @@ dialog.game-mode-prompt {
 .gold-text { color: #8a5a10; font-weight: 600; }
 .toast { position: absolute; left: 50%; top: 14vh; transform: translateX(-50%); padding: 8px 22px; pointer-events: none; font-family: var(--font-head); font-weight: 700; animation: toast 2.2s ease forwards; }
 @keyframes toast { 0% { opacity: 0; transform: translate(-50%, 8px); } 12% { opacity: 1; transform: translate(-50%, 0); } 80% { opacity: 1; } 100% { opacity: 0; } }
-.loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; background: #07060a; color: var(--gold2); font-family: var(--font-head); letter-spacing: 0.2em; z-index: 10; transition: opacity 0.6s; }
+.loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 14px; padding: 70px 24px; background: radial-gradient(ellipse at center, #272018 0%, #100e13 55%, #07060a 100%); color: var(--gold2); font-family: var(--font-head); letter-spacing: 0.12em; text-align: center; z-index: 65; transition: opacity 0.18s ease; }
+.loading-title { font-size: clamp(18px, 4vw, 24px); }
+.loading #loadmsg { max-width: min(420px, 100%); font: 18px/1.4 var(--font-body); letter-spacing: 0; color: #e1d2af; }
+.loading-spinner { width: 30px; height: 30px; border: 2px solid #c9a24a40; border-top-color: #f0d68a; border-radius: 50%; animation: loading-spin 1s linear infinite; }
+@keyframes loading-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .loading { transition: none; } .loading-spinner { animation: none; } }
 .loading .bar { width: 260px; height: 4px; margin-top: 14px; background: rgba(255,255,255,.1); }
 .loading .bar > i { background: linear-gradient(90deg, #8a5c28, #f0d68a); }
 

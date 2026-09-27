@@ -15,6 +15,9 @@ import { addGameControl } from '../ui/gameToolbar';
 export interface SceneHost {
   stage(): Stage;
   changeMap(mapId: string, opts: { time?: EnvTime; weather?: Weather }): Promise<void>;
+  /** Reveal only after the script has placed its initial actors and camera. */
+  present?(reveal: boolean, seconds?: number, color?: string): Promise<boolean>;
+  prepareActors?(): Promise<void>;
   actor(id: string): UnitView | undefined;
   spawn(id: string, charOrJob: string, x: number, z: number, facing: Facing, opts: { job?: string; team?: number; name?: string; hidden?: boolean }): UnitView | undefined;
   despawn(id: string): void;
@@ -55,6 +58,7 @@ export async function runScene(cmds: SceneCmd[], host: SceneHost): Promise<void>
   setSkipHook(() => { skipAll = true; });
   try {
     await runCmds(cmds, host);
+    await host.present?.(true);
   } finally {
     setSkipHook(null);
     removeSkip();
@@ -66,6 +70,14 @@ export async function runScene(cmds: SceneCmd[], host: SceneHost): Promise<void>
 async function runCmds(cmds: SceneCmd[], host: SceneHost): Promise<void> {
   for (const c of cmds) {
     await gameClock.whenRunning();
+    // Setup stays covered. A title/narration is already meaningful content and
+    // retains the script's fade; movement, dialogue and waits need the scene visible.
+    if (c[0] === 'title' || c[0] === 'narrate') {
+      if (!skipAll) await host.present?.(false);
+    }
+    else if (!['map', 'actor', 'remove', 'hide', 'show', 'anim', 'fade', 'music', 'flag', 'chronicle', 'if'].includes(c[0]) && !(c[0] === 'camera' && c[1].time === 0)) {
+      await host.present?.(true);
+    }
     await runCmd(c, host);
   }
 }
@@ -79,6 +91,7 @@ async function runCmd(c: SceneCmd, host: SceneHost): Promise<void> {
     case 'title': if (!skipAll) await titleCard(fillText(c[1], host), c[2] ? fillText(c[2], host) : undefined); return;
     case 'map': await host.changeMap(c[1], c[2] ?? {}); return;
     case 'actor': {
+      await host.prepareActors?.();
       const [, id, who, x, z, facing, opts] = c;
       host.spawn(id, who, x, z, facing ?? 'S', opts ?? {});
       return;
@@ -162,7 +175,11 @@ async function runCmd(c: SceneCmd, host: SceneHost): Promise<void> {
       return;
     }
     case 'wait': await sleep(c[1] * 1000); return;
-    case 'fade': await fade(c[1], skipAll ? 0.05 : c[2] ?? 0.8, c[3]); return;
+    case 'fade': {
+      const seconds = skipAll ? 0.05 : c[2] ?? 0.8;
+      if (c[1] !== 'in' || !await host.present?.(true, seconds, c[3])) await fade(c[1], seconds, c[3]);
+      return;
+    }
     case 'music': if (c[1]) audio.playMusic(c[1], { fade: 1.2 }); else audio.stopMusic(1.2); return;
     case 'sfx': audio.sfx(({ gunshot: 'gun', stone: 'hit', sword: 'swing', slash: 'swing', splash: 'water', fire: 'fire', scream: 'hitHeavy', knock: 'door', footsteps: 'step', crowd: 'bell', thunder: 'thunderclap', lightning: 'bolt', explosion: 'explosion', magic: 'magic', heal: 'heal' } as Record<string, string>)[c[1]] ?? c[1]); return;
     case 'vfx': {
