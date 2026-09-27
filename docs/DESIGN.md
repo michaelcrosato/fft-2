@@ -248,8 +248,9 @@ Epilogue: Alys's "funeral" is empty; Oren sees two riders on kwehbirds on the hi
 
 ### Side quests (flags `sq_*`)
 * **Beorn & Rhosyn** — Colgrave "Ghost of the Colliery" rumour (Ch3+ after `b_lesandre`) → 4 colliery floors → Beorn joins with dragon Rhosyn; **Nevel Temple** battle (Ch4) restores Rhosyn to human form.
-* **Automaton VIII** — Cogsgard, after Beorn joins with Mattis in party: activate Octo.
-* **Kestrel Stryde** — Ch4 after `b_germain`: buy Aline's flower in Zargid, then Cogsgard machine accident brings Kestrel; find him in Zargid.
+* **Automaton VIII** — Cogsgard, after Beorn joins with Mattis in party: the Aquarius Stone recovered from the colliery activates Octo.
+* **Nevel Temple** — after Octo and `ch4_germain_done`, with Beorn and Rhosyn: follow the Zeltmoor rumour to the temple. Defeat the Warden and its one-HP reserve; its Cancer Stone restores Rhosyn.
+* **Kestrel Stryde** — Ch4 after `b_germain`: buy Aline's flower in Zargid; discover Bastian's second machine in Cogsgard after Octo. Returning with the Cancer Stone after Nevel brings Kestrel; rescue him and Aline in Zargid.
 * **The Midnight Deep** — after `b_murondel3`, Wargill Port: 10 dark floors (hidden exit panel each floor), last floor boss **Ophion** (Serpentarius). Grimwald joins after.
 * **Rare battles** — "11 Monks of Grogmoor", "Barrow Hill Beast Parade".
 * **Errands** (taverns from Ch2): 40+ errands.

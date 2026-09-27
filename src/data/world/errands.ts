@@ -27,6 +27,7 @@ export const artefacts: ArtefactDef[] = [
   { id: 'serpentStarChart', name: 'Chart of the Serpent Bearer', desc: 'A copy of a Lost Age star chart showing a thirteenth sign coiled between the twelve: the Serpent Bearer, erased from every chart since Saint Auren\'s day.' },
   { id: 'petrifiedHydraEgg', name: 'Petrified Hydra Egg', desc: 'A stone egg from a hydra\'s lair beneath the Finneth bridge. Scholars disagree on whether it is truly dead; the quartermaster uses it as a doorstop regardless.' },
   { id: 'barrowTorc', name: 'Torc of the Barrow King', desc: 'A torc of twisted red gold taken from the breast of something ancient in the greatest barrow of Barrow Hill. Its runes are older than any Church script.' },
+  { id: 'minersSurveyLens', name: 'The Surveyor\'s Amber Eye', desc: 'An amber lens recovered from a sealed gallery beneath Colgrave. Look through it at a stone wall and fine red lines trace every hidden fracture. The handle bears no royal seal: only the worn names of the miners who passed it from hand to hand.' },
   // ---- wonders (hidden lands discovered) ----
   { id: 'wonderGiantsTable', name: 'The Giants\' Table', desc: 'A wonder of Ivaldis: a flat-topped rock among the Mandrel standing stones, its underside carved with a map of the stars as they stood ten thousand years ago.' },
   { id: 'wonderSingingCaves', name: 'The Singing Caves of Zekla', desc: 'A wonder of Ivaldis: caves beneath the Zekla Dunes where the wind through a hundred narrow shafts makes chords that change with the weather.' },
@@ -37,12 +38,27 @@ export const artefacts: ArtefactDef[] = [
   { id: 'wonderSkyStair', name: 'The Sky Stair', desc: 'A wonder of Ivaldis: nine thousand seamless white steps on the eastern face of Mount Bervaine, ending on a platform above the clouds beside an empty pedestal.' },
   { id: 'wonderSleepingColossus', name: 'The Sleeping Colossus', desc: 'A wonder of Ivaldis: a Lost Age giant three hundred feet long, lying on its back beneath Dolbar Marsh with its arms folded across its chest.' },
   { id: 'wonderLastLighthouse', name: 'The Last Lighthouse', desc: 'A wonder of Ivaldis: a tower of seamless white metal on a lone sea-rock beyond Wargill, whose lamp has burned without keeper or fuel for a thousand years.' },
+  { id: 'wonderHangingArchive', name: 'The Hanging Archive', desc: 'A wonder of Ivaldis: a library cut into the underside of a natural stone arch beyond Dogol Pass. Its shelves hang above the gorge on iron rods. Rain cannot reach the books, but every reader must trust the work of a smith dead for centuries.' },
 ];
 
 export const errands: ErrandDef[] = [
   // ==========================================================================
   //  CHAPTER II — the west and the Lyonesse road
   // ==========================================================================
+  {
+    id: 'erGreyPetrel', title: 'Raise the Grey Petrel',
+    desc: 'A Zelland trading house has lost its only ship on the southern reefs. The licensed salvagers demand more than her cargo is worth. The surviving crew will lend ropes and boats to anyone willing to try the work for a fair share.',
+    towns: ['zelland'], chapterMin: 2, fee: 200, days: 9, stat: 'ma', jobs: ['timeMage', 'geomancer', 'arithmancer', 'mystic'],
+    reward: { gil: 1400, jp: 130 },
+    report: 'Working between tides, your people patched the hull with canvas and floated the Grey Petrel off the reef. Her cargo was ruined, but the crew wept to see their ship upright again. The merchant paid for a salvage; the sailors thanked you for a livelihood.',
+  },
+  {
+    id: 'erFoundryMoulds', title: 'A Company Beneath the Waves',
+    desc: 'The Wargill pewterers\' cooperative entrusted its new casting moulds to a coastal packet that never reached port. Without them the winter orders cannot be filled. Recover the sealed iron cases from the wreck; leave the captain\'s wine to the fish.',
+    towns: ['wargill'], chapterMin: 2, fee: 650, days: 8, stat: 'ma', jobs: ['timeMage', 'geomancer', 'arithmancer', 'mystic'],
+    reward: { gil: 2000, jp: 140 },
+    report: 'The iron cases survived beneath the packet\'s broken deck. The moulds inside were for small drinking cups, each stamped with the mark of its maker. Twenty workshops opened their shutters when the cases returned. The wine had not survived; nobody mourned it long.',
+  },
   {
     id: 'erGiantsTable', title: 'The Giants\' Table',
     desc: 'A lecturer of the Galwyn Academy believes the standing stones of the Mandrel Plains form a calendar older than the Church. She needs escorts with a feel for magick to stand among the stones at the new moon and record what they see. Bring lanterns, and do not let the goblins eat the lecturer.',
@@ -174,6 +190,20 @@ export const errands: ErrandDef[] = [
   //  CHAPTER III — the capital, the colliery and the northern road
   // ==========================================================================
   {
+    id: 'erCollierySurvey', title: 'Hands for the Reopened Seam',
+    desc: 'The Brood is gone from Colgrave, but fear still keeps the colliers above ground. The pit committee asks a reliable company to inspect the props, clear the haulage road and mark a safe way into the abandoned galleries.',
+    towns: ['colgrave'], chapterMin: 3, needs: ['sq_colliery'], fee: 150, days: 6, stat: 'pa', jobs: ['monk', 'geomancer', 'archer'],
+    reward: { gil: 1200, jp: 130, flag: 'errand_collierySurvey' },
+    report: 'Your people shored up the road and led the first shift down with fresh lamps. Behind a collapsed timber wall they found an older gallery whose numbered doors matched no mine plan. The committee will post another request once the ordinary workings are safe.',
+  },
+  {
+    id: 'erSealedSurveyRoom', title: 'The Surveyor Behind the Wall',
+    desc: 'The safe route your company marked reaches an ancient survey room. Its door is bent shut, and the miners would rather know what lies behind it before swinging their picks. Bring strong arms and someone who can read old measuring marks.',
+    towns: ['colgrave'], chapterMin: 3, needs: ['errand_collierySurvey'], fee: 400, days: 8, stat: 'ma', jobs: ['geomancer', 'monk', 'arithmancer'],
+    reward: { gil: 1700, jp: 170, artefact: 'minersSurveyLens' },
+    report: 'The room held an empty chair, a survey book and an amber lens. Through the lens, cracks shone red inside solid rock. Your people mapped the faults before bringing it home. A name scratched on the handle matched the oldest name in Colgrave\'s burial ledger.',
+  },
+  {
     id: 'erLostShift', title: 'The Lost Shift of Pit Seven',
     desc: 'A fall of rock has sealed eight miners in the seventh pit, and the colliery owners have declared the shaft too dangerous to reopen. The miners\' wives have pooled their wages to hire someone who disagrees. Strong backs wanted.',
     towns: ['colgrave'], chapterMin: 3, fee: 500, days: 6, stat: 'pa', jobs: ['monk', 'geomancer', 'knight'],
@@ -296,6 +326,20 @@ export const errands: ErrandDef[] = [
   // ==========================================================================
   //  CHAPTER IV — the east, the war-torn south and the deep places
   // ==========================================================================
+  {
+    id: 'erCountingLessons', title: 'A Patient Tutor',
+    desc: 'A Galwyn schoolchild knows the names of every star but cannot divide twelve loaves among four tables. His mother can offer only her thanks. Bring chalk and patience; he has already had enough shouting.',
+    towns: ['galwyn'], chapterMin: 4, fee: 50, days: 10, stat: 'faith', jobs: ['chemist', 'ninja'],
+    reward: { gil: 0, jp: 250 },
+    report: 'Your people taught with bread, buttons and the steps of the courtyard stair. On the last day the boy divided the loaves correctly, then asked how many families the academy kitchens could feed. There were no wages; the question stayed with his teachers.',
+  },
+  {
+    id: 'erSurveyorsJournal', title: 'Names in an Explorer\'s Journal',
+    desc: 'A Bervaine expedition is preparing a book of places absent from the royal maps. Their next journey follows a ruined aqueduct above Dogol Pass. They need scouts to find a path along the gorge, and promise every assistant a place in the record.',
+    towns: ['bervaine'], chapterMin: 4, fee: 300, days: 12, stat: 'speed', jobs: ['archer', 'lancer', 'geomancer'],
+    reward: { gil: 1800, jp: 200, artefact: 'wonderHangingArchive', flag: 'hidden_hangingArchive' },
+    report: 'Beneath a stone arch they found a library suspended over the gorge. The approach had fallen away, leaving the shelves beyond the reach of fire and soldiers. Your scouts rigged a rope bridge. In the expedition journal their names stand beside the discovery, each written with equal care.',
+  },
   {
     id: 'erMidnightDeepMap', title: 'Charting the Midnight Deep',
     desc: 'Beneath Wargill\'s oldest quay lies the Midnight Deep, where no torch burns bright. A company of cartographers has gone in twice and come out with nothing but bad dreams. They will pay any company that brings back a map of even the first few levels.',

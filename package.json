@@ -16,7 +16,9 @@
     "validate": "vite-node tools/validate.ts",
     "test:e2e": "vite build --logLevel warn && playwright test",
     "test:e2e:desktop": "vite build --logLevel warn && playwright test --project=chromium --project=firefox --project=webkit",
-    "test:e2e:mobile": "vite build --logLevel warn && playwright test --project=mobile-chrome --project=mobile-safari --project=small-phone --project=phone-landscape --project=tablet"
+    "test:e2e:mobile": "vite build --logLevel warn && playwright test --project=mobile-chrome --project=mobile-safari --project=small-phone --project=phone-landscape --project=tablet",
+    "audio:catalog": "vite-node tools/audio-catalog.ts",
+    "audio:verify": "node tools/verify-audio.mjs"
   },
   "dependencies": {
     "@fontsource/cinzel": "^5.3.0",

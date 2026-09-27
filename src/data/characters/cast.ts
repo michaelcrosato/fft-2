@@ -31,6 +31,8 @@ export const characters: CharacterDef[] = [
       ['b_ziekhold', 'At Fort Ziekhold he watched his own brother trade a commoner girl\'s life for a point of pride. He laid down the Valorne name that day and walked away from Ygress without looking back.'],
       ['b_zirkel', 'A year a sellsword under Garmond\'s banner, he found Delan alive at Zirkel Falls — and chose, for the first time in his life, whose side he stood on.'],
       ['b_lesandre', 'For slaying a Cardinal who was no longer a man, the Glorian Church has branded him a heretic. He carries the charge the way he once carried his name.'],
+      ['b_orvelle_b1', 'Brother Simeon entrusted him with the Germaine Scriptures. Saving Alys and preserving the testimony the Church wished to destroy became parts of the same struggle.'],
+      ['b_riverain_roof', 'Rana\'s stone restored Malik without taking possession of her. Rhen had seen nobles turn the relics toward domination; now he had seen a sister use one to save a life. He could no longer call the stones themselves wholly evil.'],
       ['b_altessa', 'The Church records that Rhen Valorne died a heretic and was forgotten. The Church has been wrong before.'],
     ],
   },
@@ -44,6 +46,7 @@ export const characters: CharacterDef[] = [
       ['', 'Rhen\'s younger sister, a student at Orvelle Abbey. Kind and stubborn in equal measure, she writes to her brother every month whether he answers or not.'],
       ['b_lesandre', 'Branded a heretic\'s accomplice for standing at her brother\'s side in Lesandre. She did not hesitate for a moment.'],
       ['b_orvelle_b1', 'Taken from Orvelle by Isidore Tengel. The Sanctum Knights call her "the Vessel", and will not say of what.'],
+      ['b_beleth', 'Even in captivity at Riverain she tended the wounded Isidore, the knight who had taken her from home. His doubts did not save him from his father, but Alys heard them before he died.'],
       ['b_altessa', 'Altessa, the Crimson Seraph, was reborn through her body — and yet at the last it was Alys\'s own voice that spoke through the light. Her grave at Orvelle is empty.'],
     ],
   },
@@ -109,6 +112,7 @@ export const characters: CharacterDef[] = [
       ['b_orvelle', 'At Orvelle Abbey a rider with a dead man\'s face carried off the princess on a kwehbo. Rhen knew him at once.'],
       ['b_ziekhold', 'He held Tessa as she died, shot by a noble\'s bolt from his own side of the line. Then the fort burned, and Delan Harrow was gone.'],
       ['b_cogsgard', '"Everyone is swept along by the current. I\'m swimming against it." He guards Oriane now — or guards his claim upon her.'],
+      ['b_bervaine', 'He exposed the Church\'s design to let both Lions exhaust themselves and then choose the victor. He means to escape the place allotted to him by birth by mastering the very bargains that destroyed Tessa.'],
       ['b_bethel_sluice', 'At Bethel he put a knife in the Black Lion and took his army for his own. The commoner cadet stands a single step from the throne. In time he will be King Delan of Ivaldis, and the histories will call him the hero who ended the Pride War.'],
     ],
   },
@@ -199,6 +203,7 @@ export const characters: CharacterDef[] = [
       ['', 'Princess of Ivaldis, raised quietly behind the walls of Orvelle Abbey, far from a court that has little use for her. She believes no one in the world truly wants her.'],
       ['b_orvelle', 'Carried off from Orvelle by a rider in Black Lion colours — who was, in truth, Delan Harrow.'],
       ['b_vepar', 'Delan brought her to Duke Galtran, who named her the rightful heir. Her name became the banner of the Pride War.'],
+      ['b_bethel_sluice', 'With the two Lions dead, the woman each faction had treated as a claim to the throne stood beside the man who had taken their place. A crown offered no assurance that anyone had begun to regard her as a person.'],
       ['b_altessa', 'Queen Oriane of Ivaldis, wife to King Delan. The histories are silent on whether she was ever happy, and on the knife.'],
     ],
   },
@@ -275,6 +280,8 @@ export const characters: CharacterDef[] = [
       ['b_zelland', 'A young artificer from Cogsgard with a relic gun and a secret, rescued from Baird Company thugs in Zelland. Cheerful, talkative, and a better shot than he lets on.'],
       ['b_cogsgard', 'The stone he carried was a Zodiac Stone — Taurus — and the Baird Company would kill for it. With his father safe, he chose to stay at Rhen\'s side.'],
       ['b_vepar', 'He saw the Cardinal become a demon. He does not talk about it, which for Mattis is saying a great deal.'],
+      ['sq_colliery_bastian', 'His father\'s urgent summons brought the company back to the workshop and toward the troubled Colgrave coal mines. Mattis remains the link between Rhen\'s journeys and Bastian\'s excavations.'],
+      ['sq_octo', 'He named the newly awakened Automaton VIII "Octo". A relic that might have been sold as a weapon left the workshop as a member of the company.'],
     ],
   },
   {
@@ -287,6 +294,10 @@ export const characters: CharacterDef[] = [
     bio: [
       ['b_zelland', 'Mattis\'s father, a master artificer of Cogsgard who has spent his life coaxing the relics of the Lost Age back to life.'],
       ['b_cogsgard', 'Held hostage by the Baird Trading Company for his son\'s stone. He tells anyone who will listen that the old machines are only dreaming.'],
+      ['sq_colliery_bastian', 'After eleven years excavating an ancient war engine, he had recovered its body but not the means to wake it. The failure of Colgrave\'s coal shipments drew his visitors into the search for the white creature below the mines.'],
+      ['sq_octo', 'Aquarius supplied the power his sleeping automaton lacked. He let the machine leave with Rhen, content to have heard it speak after all those silent years.'],
+      ['sq_kestrel_machine', 'His next discovery was a brass-and-glass ring bearing the Cancer sign. He believes it a doorway; until its empty socket receives the right stone, he can only repair its coils.'],
+      ['sq_kestrel_arrived', 'The recovered Cancer Stone opened the ring, and Kestrel Stryde fell out of it. Bastian had repaired a door without knowing where its other side was.'],
     ],
   },
   {
@@ -326,6 +337,7 @@ export const characters: CharacterDef[] = [
     color: '#2a4a6a',
     bio: [
       ['b_colgrave', 'Scholar, stargazer and adopted son of the Thunder Saint. Rhen saved him from thieves in the coal streets of Colgrave.'],
+      ['b_grogmoor', 'His work takes him between armies, collecting testimony that their commanders would prefer never reached paper. His father\'s standing among the Southsky gives that testimony an audience and makes it dangerous.'],
       ['b_zeltmoor', 'He tried to clear his father\'s name, and came within a knife\'s edge of Delan\'s ambitions.'],
       ['b_altessa', 'He wrote down everything. The Church burned him for it. His chronicle survived him, and is the root of this tale.'],
     ],
@@ -365,6 +377,7 @@ export const characters: CharacterDef[] = [
       ['b_yardale', 'A Heaven Knight of the Galthane line, trained as an assassin by Grand Duke Barrington. Her brother tried to kill her in Yardale; Rhen would not let him.'],
       ['b_riverain_gate', 'She fought her way to Riverain\'s gate beside Rhen, resolved to end the man who destroyed her family.'],
       ['b_riverain_roof', 'Over her fallen brother she held a Zodiac Stone and wished — and Malik breathed again.'],
+      ['b_riverain_roof', 'Neither the Duke\'s training nor the Church\'s account of miracles prepared her for that answer. Her wish preserved her brother without surrendering herself, showing the company another face of the stones.'],
     ],
   },
   {
@@ -377,6 +390,7 @@ export const characters: CharacterDef[] = [
       ['b_grogmoor', 'A Hell Knight in the Grand Duke\'s service. He came to Dorhaven with a demand: the Germaine Scriptures, in exchange for Alys\'s life.'],
       ['b_yardale', 'He tried to kill his own sister in Yardale, to keep her from betraying their master.'],
       ['b_riverain_roof', 'He took the Grand Duke\'s bullet meant for Rana. A Zodiac Stone, answering her wish, brought him back.'],
+      ['b_riverain_roof', 'He follows his sister now by choice. Barrington\'s claim that the siblings owed him their lives ended upon the roof; the second life Malik received belonged to no lord.'],
     ],
   },
   {
@@ -455,6 +469,7 @@ export const characters: CharacterDef[] = [
       ['b_dogol', 'Volmar\'s daughter, a Divine Knight of the Sanctum. She hunted Rhen for her brother\'s death, certain it was his doing.'],
       ['b_bervaine', 'She withdrew from Bervaine unconvinced, but troubled.'],
       ['b_zepar', 'She saw Zepar with her own eyes in Limbourne\'s chapel. Then she believed — and joined Rhen to learn the truth about her father.'],
+      ['b_murondel2', 'Rolf called Alys only a vessel. Melisande remembered that Isidore had called her by name. Her brother\'s final doubt had become a better guide than the certainty with which the Sanctum had armed her.'],
     ],
   },
   {
@@ -466,6 +481,7 @@ export const characters: CharacterDef[] = [
     bio: [
       ['b_zeltmoor', 'Count Cedric Orland, the Thunder Saint: greatest swordsman of the Fifty Winters\' War, Lord Baldric\'s oldest friend, and Oren\'s adoptive father. Arrested by the Black Lion on a charge of treason.'],
       ['b_bethel_sluice', 'Freed from the cells at Bethel, he joined Rhen — and the whole balance of the war tilted with him.'],
+      ['b_bethel_sluice', 'He had served the Southsky through the Fifty Winters\' War, but would not let loyalty to its banner excuse another war spent upon the poor. His decision to follow Rhen put the judgement of a veteran above a duke\'s command.'],
       ['b_altessa', 'The histories record that the Thunder Saint was executed for treason at Bethel. The histories are mistaken.'],
     ],
   },
@@ -588,9 +604,11 @@ export const characters: CharacterDef[] = [
     look: { skin: '#e8c39e', hair: '#c09050', hairStyle: 'shaggy', eyes: '#4a6a8a', beard: 'stubble', height: 1.08, bulk: 1.08 },
     color: '#6a7a4a',
     bio: [
+      ['sq_colliery_hunter', 'A Temple Knight who recognised Rhen in a Lesandre tavern and declined to claim the bounty. He seeks the white creature beneath Colgrave and the sorcerer Vorgund Hask who holds it.'],
       ['sq_colliery', 'A Temple Knight of the old orders who hunts heretics for bounty — and a heretic himself, for loving a woman the Church cursed.'],
       ['sq_colliery', 'He tracked the "Ghost of the Colliery" to its lair beneath Colgrave, and found an old enemy there, and his dragon.'],
-      ['sq_nevel', 'At Nevel Temple he broke the curse on Rhosyn with a Zodiac Stone and a prayer. He has not stopped smiling since.'],
+      ['sq_colliery', 'For three years he financed his search by delivering other people to the inquisitors. Freeing Rhosyn did not make that service innocent; it gave him a reason to put his sword beside a man the same Church condemned.'],
+      ['sq_nevel', 'At Nevel Temple the Cancer Stone broke Rhosyn\'s curse. Beorn had sought the woman he loved, not the destruction of everything she had become: her remaining kinship with dragons did not trouble him.'],
     ],
   },
   {
@@ -601,7 +619,9 @@ export const characters: CharacterDef[] = [
     color: '#f0ecd8',
     bio: [
       ['sq_colliery', 'A white dragon who follows Beorn Kadmas with a knight\'s loyalty. Beorn swears she was a noblewoman once, before the Church\'s curse.'],
+      ['sq_colliery', 'Her family delivered her to the Church\'s judgement for loving Beorn. Vorgund Hask changed her shape and kept her chained below Colgrave. The voice the miners feared was that of a captive woman.'],
       ['sq_nevel', 'Restored to her own shape at Nevel Temple, Rhosyn is slowly remembering how to be a woman — but dragons still bow their heads to her.'],
+      ['sq_nevel', 'She has laid aside the title of the house that surrendered her. As a Dragonkin she retains the wyrm\'s bond with her scaled kin, a part of her life the cure did not erase.'],
     ],
   },
   {
@@ -610,8 +630,9 @@ export const characters: CharacterDef[] = [
     look: {},
     color: '#8a7a4a',
     bio: [
-      ['sq_octo', 'Automaton VIII, a war engine of the Lost Age, woken beneath Cogsgard by the light of a Zodiac Stone. It follows Rhen, and speaks — when it speaks — in numbers.'],
+      ['sq_octo', 'Automaton VIII, a war engine of the Lost Age, woken in Bastian\'s Cogsgard workshop by the Aquarius Stone recovered beneath Colgrave. It follows Rhen, and speaks — when it speaks — in numbers.'],
       ['sq_octo', 'Bastian Brunel believes there were once many such machines. Octo will not say what became of the others.'],
+      ['sq_nevel', 'Automaton VII, the guardian of Nevel, supplied an answer: another engine had remained at its appointed post long after the people who ordered it there were gone. Octo travels with living companions instead.'],
     ],
   },
   {
@@ -633,8 +654,10 @@ export const characters: CharacterDef[] = [
     look: { skin: '#f1d3b3', hair: '#e8e0a0', hairStyle: 'spiky', eyes: '#7ac8e8', height: 1.02 },
     color: '#26345a',
     bio: [
+      ['sq_kestrel_arrived', 'A stranger brought into Cogsgard through Bastian\'s ancient ring when the Cancer Stone supplied its power. Disoriented, he fled in search of someone he remembered selling flowers.'],
       ['sq_kestrel', 'A spiky-haired swordsman who staggered out of a Cogsgard machine accident carrying a sword taller than a man, with no memory of how he came to Ivaldis.'],
       ['sq_kestrel', 'He speaks, rarely, of a city of iron and a flower girl he could not save. He is looking for a way home. He is no longer sure there is one.'],
+      ['sq_kestrel', 'In Zargid he defended Aline from the Brotherhood of the Scales before Rhen reached him. He knew almost nothing of this kingdom; he knew enough to stand between a flower seller and armed men.'],
     ],
   },
   {

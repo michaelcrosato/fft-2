@@ -311,12 +311,12 @@ export class Game {
     if (result === 'victory') {
       audio.playMusic('victory', { fade: 0.3, loop: false } as any);
       await this.victoryPose(stage, b);
-      const { lost } = applyResults(this.state, b, setup);
+      const results = applyResults(this.state, b, setup);
       this.state.battlesWon++;
       this.state.flags[def.id] = true;
       if (def.rewards?.gil) this.state.gil += def.rewards.gil;
       for (const it of def.rewards?.items ?? []) addItem(this.state, it, 1);
-      await this.resultsScreen(b, def, lost);
+      await this.resultsScreen(b, def, results);
       for (const k of [...stage.views.keys()]) stage.removeUnit(k);
       return 'victory';
     }
@@ -498,7 +498,7 @@ export class Game {
   }
 
   // ============================================================ results & game over
-  private async resultsScreen(b: import('../battle/battle').Battle, def: BattleDef, lost: number) {
+  private async resultsScreen(b: import('../battle/battle').Battle, def: BattleDef, { lost, defected, recruited }: ReturnType<typeof applyResults>) {
     const party = b.units.filter((u) => u.baseTeam === 0 && u.controlled);
     const rows = party.map((u) => h('div.kv', null, h('span', null, `${u.name}${u.levelUps ? ` — Lv ${u.level} ▲` : ''}`), h('span', null, `EXP +${u.expGained} · JP +${u.jpGained}`)));
     const loot = [...b.loot, ...(def.rewards?.items ?? [])].map((i) => ITEMS.get(i)?.name ?? i);
@@ -511,9 +511,10 @@ export class Game {
       h('div.kv', null, h('span', null, 'Gil'), h('span.gold-text', null, `+${(def.rewards?.gil ?? 0) + b.lootGil}`)),
       loot.length ? h('div.kv', null, h('span', null, 'Items'), h('span', null, loot.join(', '))) : null,
       learned.length ? h('div.muted', null, 'Crystals: ' + learned.join('; ')) : null,
-      b.invited.length ? h('div.good', null, `Joined: ${b.invited.map((u) => u.name).join(', ')}`) : null,
+      recruited.length ? h('div.good', null, `Joined: ${recruited.map((u) => u.name).join(', ')}`) : null,
       b.poached.length ? h('div.muted', null, `Poached: ${b.poached.map((i) => ITEMS.get(i)?.name ?? i).join(', ')}`) : null,
       lost ? h('div.bad', null, `${lost} ${lost === 1 ? 'soul was' : 'souls were'} lost to the crystals.`) : null,
+      defected ? h('div.bad', null, `${defected} ${defected === 1 ? 'soldier left' : 'soldiers left'} the company for the enemy.`) : null,
       (this.state as any).__eggs?.length ? h('div.good', null, `An egg hatched: a young ${(this.state as any).__eggs.join(', ')} joins the company!`) : null,
       h('div', { style: { textAlign: 'center', marginTop: '10px' } }, h('span.btn', null, 'Continue')),
     );

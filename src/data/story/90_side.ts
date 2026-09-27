@@ -54,7 +54,7 @@ export const side: SideQuestStep[] = [
   },
   {
     id: 'sq_colliery_f4', quest: 'colliery', at: 'colgrave', needs: ['sq_colliery3'], chapterMin: 3,
-    pre: 'sq_col4_pre', battle: 'b_colliery4', post: 'sq_col4_post', flags: ['sq_colliery'],
+    pre: 'sq_col4_pre', battle: 'b_colliery4', post: 'sq_col4_post', flags: ['sq_colliery', 'sq_aquarius_stone'],
     objective: 'The bottom of the colliery: the Wyrm\'s Hollow, and Vorgund Hask.',
   },
 
@@ -77,13 +77,18 @@ export const side: SideQuestStep[] = [
   },
   {
     id: 'sq_nevel', quest: 'nevel', at: 'nevel', needs: ['sq_nevel_rumor'], chapterMin: 4, needChar: ['beorn', 'rhosyn'],
-    pre: 'sq_nevel_pre', battle: 'b_nevel', post: 'sq_nevel_post', flags: ['sq_nevel'],
+    pre: 'sq_nevel_pre', battle: 'b_nevel', post: 'sq_nevel_post', flags: ['sq_nevel', 'sq_cancer_stone'],
     objective: 'Cross the frozen lake to Nevel Temple, and seek a cure for Rhosyn\'s curse.',
   },
 
   // ==========================================================================
   //  A Flower for a Stranger (Chapter IV): Aline & Kestrel
   // ==========================================================================
+  {
+    id: 'sq_kestrel_machine', quest: 'kestrel', at: 'cogsgard', needs: ['sq_octo'], chapterMin: 4,
+    pre: 'sq_kestrel_machine', flags: ['sq_kestrel_machine'],
+    objective: 'Bastian has found a second machine. Its empty socket bears the sign of the Crab.',
+  },
   {
     id: 'sq_flower_offer', quest: 'flower', at: 'zargid', needs: ['ch4_germain_done'], chapterMin: 4,
     pre: 'sq_flower_offer', flags: ['sq_flower_offered'],
@@ -95,9 +100,11 @@ export const side: SideQuestStep[] = [
     objective: 'Aline still sells her flowers in Zargid, for a single gil.',
   },
   {
-    id: 'sq_kestrel_arrival', quest: 'kestrel', at: 'cogsgard', needs: ['sq_flower'], chapterMin: 4,
+    // Gate on the established completion flags, so older saves need not replay
+    // the colliery or temple to acquire the new stone-discovery flags.
+    id: 'sq_kestrel_arrival', quest: 'kestrel', at: 'cogsgard', needs: ['sq_flower', 'sq_nevel', 'sq_kestrel_machine'], chapterMin: 4,
     pre: 'sq_kestrel_arrival', flags: ['sq_kestrel_arrived'],
-    objective: 'Bastian Brunel has unearthed another marvel in Cogsgard.',
+    objective: 'Bring the Cancer Stone from Nevel Temple to Bastian\'s second machine in Cogsgard.',
   },
   {
     id: 'sq_kestrel', quest: 'kestrel', at: 'zargid', needs: ['sq_kestrel_arrived'], chapterMin: 4,

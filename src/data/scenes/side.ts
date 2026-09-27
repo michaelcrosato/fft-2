@@ -2,7 +2,7 @@
 //  Side-quest scenes.
 //   · The Ghost of the Colliery — Bastian's workshop, the Colgrave rumour, the
 //     hunter in Lesandre, four colliery floors; Beorn & Rhosyn join.
-//   · Octo — Automaton VIII wakes to the light of the Taurus stone.
+//   · Octo — Automaton VIII wakes to the light of the Aquarius stone.
 //   · Nevel Temple — the cursed isle; Rhosyn's curse is broken.
 //   · A Flower for a Stranger — Aline, a machine accident, Kestrel Stryde.
 //   · The Midnight Deep — ten landings beneath Wargill; Ophion; Grimwald.
@@ -53,9 +53,9 @@ export const scenes: SceneDef[] = [
       ['say', 'mattis', 'The Eighth... Father, does it move?'],
       ['say', 'bastian', 'Not a twitch. Its heart is a hollow of crystal, dark as a cold lamp. Something fed it once — something the ancients had and we don\'t.'],
       ['face', 'bastian', 'rhen'],
-      ['say', 'bastian', 'But I\'ll tell you a strange thing. The night you boys brought the Bull\'s stone into this house, the hollow flickered. Just once. I saw it.'],
+      ['say', 'bastian', 'The Bull\'s stone made the hollow flicker, but it would not fit. Look at the mark beneath it: a man pouring water from a jar.'],
       ['emote', 'rhen', '...'],
-      ['say', 'rhen', 'The Zodiac Stone of Taurus... Every time I think I understand what these stones are, they show me another face.', { mood: 'think' }],
+      ['say', 'rhen', 'Aquarius. The Water Bearer. Then each machine may answer to a different stone.', { mood: 'think' }],
       ['say', 'mattis', 'You want to put a Zodiac Stone into a war machine. Father, the Church burns people for less.'],
       ['say', 'bastian', 'The Church burns people for breakfast, son. I only want to see if it wakes.'],
       ['say', 'rhen', 'Not yet. I\'ve seen what the stones do to men who reach for them. Give me time to think on it.'],
@@ -305,6 +305,9 @@ export const scenes: SceneDef[] = [
       ['say', 'beorn', 'Break the curse. There are stories — old stones, older temples. Somewhere in Ivaldis there must be a thing the Church did not make and cannot unmake.'],
       ['say', 'beorn', 'And you walk a heretic\'s road, which I\'d wager passes more old stones than mine ever would. Would you have a Temple Knight and a dragon in your company?'],
       ['say', 'rhen', 'I\'d be a fool to refuse either one.'],
+      ['narrate', 'Rhosyn uncurls a claw. In her palm lies a blue crystal, worn smooth where she has held it through the years beneath the earth.'],
+      ['say', 'beorn', 'The Aquarius Stone. She kept it hidden from Hask. Take it, {hero}; she would have it carried out of this darkness.'],
+      ['say', 'rhen', 'The Water Bearer. The same sign Bastian found on the sleeping machine in Cogsgard.'],
       ['emote', 'rhosyn', 'note'],
       ['say', 'beorn', 'She says you have a kind face. ...She didn\'t, strictly. But she thinks it. I can tell.'],
       ['join', 'beorn'],
@@ -329,7 +332,7 @@ export const scenes: SceneDef[] = [
       ['move', 'rhen', 5, 4],
       ['move', 'mattis', 4, 4, { wait: true }],
       ['say', 'bastian', 'Back again! And by the look on your face, lad, you\'ve done your thinking.'],
-      ['say', 'rhen', 'I have. If the Bull\'s stone can wake something made to guard rather than to devour... I would rather that than leave it in a satchel, waiting for the next Cardinal to want it.'],
+      ['say', 'rhen', 'Rhosyn kept this stone safe in the colliery. Aquarius: the sign on the machine\'s breast. Let us see if it can give something back to the world.'],
       ['say', 'bastian', 'Spoken like an artificer. Hold it to the crystal — there, beneath the breastplate. Gently. It\'s older than every one of your ancestors put together.'],
       ['move', 'rhen', 5, 2, { wait: true }],
       ['anim', 'rhen', 'raise'],
@@ -430,7 +433,8 @@ export const scenes: SceneDef[] = [
       ['actor', 'rhosyn', 'rhosyn', 6, 2, 'S'],
       ['fade', 'in', 1.5],
       ['narrate', 'The Warden fell silent. Beyond it a sanctum of pale metal opened, and in its heart a basin of still, cold light.'],
-      ['say', 'beorn', 'The Ram\'s stone, that came to us at Riverain. Rhosyn was born beneath the Ram.'],
+      ['narrate', 'Among the broken plates a crystal gleams. Its face bears the sign of the Crab: the Cancer Stone, which had sustained the Warden\'s long watch.'],
+      ['say', 'beorn', 'Another stone. And Rhosyn is reaching for it... Look, {hero}. The light follows her claws.'],
       ['say', 'beorn', 'If any of these cursed stones has a single kind thought in it... let it be this one.'],
       ['anim', 'beorn', 'raise'],
       ['vfx', 'holy', 'rhosyn'],
@@ -458,6 +462,7 @@ export const scenes: SceneDef[] = [
       ['say', 'rhosynH', 'Something of the wyrm remains in me. I can feel them still — the dragons. Their thoughts, like bells ringing far away.'],
       ['say', 'rhosynH', 'I don\'t believe that part of me will ever leave.'],
       ['say', 'beorn', 'Then it\'s a part of you I\'ll love as well. I\'ve had the practice.'],
+      ['say', 'rhosynH', 'Keep the Cancer Stone, {hero}. It has already given me everything I asked of it. Perhaps it has another kindness left.'],
       ['narrate', 'Rhosyn\'s curse is broken. The wyrm\'s blood still sings in her veins: dragons heed her call, and she fights now as one of the Dragonkin.'],
       ['fade', 'out', 1.5],
     ],
@@ -466,6 +471,24 @@ export const scenes: SceneDef[] = [
   // ==========================================================================
   //  A FLOWER FOR A STRANGER
   // ==========================================================================
+  {
+    id: 'sq_kestrel_machine', map: 'sq_cogsgard_works', music: 'town',
+    cmds: [
+      ['actor', 'bastian', 'bastian', 8, 4, 'W'],
+      ['actor', 'rhen', 'rhen', 5, 8, 'N'],
+      ['fade', 'in', 1.0],
+      ['move', 'rhen', 5, 5, { wait: true }],
+      ['say', 'bastian', 'The Eighth was only the beginning. The same seam held this ring of brass and glass. Its makers numbered the stars upon the rim.'],
+      ['camera', { at: [9, 4], zoom: 1.3, time: 1.2 }],
+      ['say', 'rhen', 'Another war engine?'],
+      ['say', 'bastian', 'No arms, no armour. A doorway, I think. There is a socket here, like the Eighth\'s, but marked with the Crab.'],
+      ['say', 'rhen', 'Cancer. We needed Aquarius to wake Octo. This one needs its own stone.'],
+      ['say', 'bastian', 'Bring it if you find it. Until then I can mend the coils, but I cannot make the ring answer.'],
+      ['say', 'rhen', 'If it is a doorway, promise me you will first learn how to close it.'],
+      ['say', 'bastian', 'A fair request. A very fair request. Tomas! Add a second switch!'],
+      ['fade', 'out', 1.0],
+    ],
+  },
   {
     id: 'sq_flower_offer', map: 'sq_zargid_square', music: 'town',
     cmds: [
@@ -533,7 +556,10 @@ export const scenes: SceneDef[] = [
       ['narrate', 'Cogsgard. The Brunel workshop, some days later.'],
       ['move', 'rhen', 5, 5, { wait: true }],
       ['say', 'bastian', 'Ah, {hero}! You\'re just in time to witness history — or a very expensive explosion. One or the other.'],
-      ['say', 'bastian', 'Dug it out of the same seam as the Eighth. A ring of brass and glass, twice my height. I believe the ancients used it to... well. I don\'t know what.'],
+      ['say', 'rhen', 'The Cancer Stone. It powered Nevel\'s guardian, then broke Rhosyn\'s curse. Its mark matches the socket you showed me.'],
+      ['anim', 'rhen', 'raise'],
+      ['vfx', 'glyph', 'rhen'],
+      ['say', 'bastian', 'There! The rings are turning. The stone has joined a circuit that lay broken for a thousand years.'],
       ['say', 'bastian', 'But look into the glass at night, and you see elsewhere. Other skies. Cities of iron under a green light.'],
       ['say', 'rhen', 'Elsewhere?'],
       ['say', 'bastian', 'Mad, I know. Watch — I\'ve only to join the last coil. Tomas, the clamp!'],

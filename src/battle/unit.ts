@@ -210,8 +210,8 @@ export class BattleUnit {
     for (const s of this.statuses.keys()) if (STATUS[s].noTurn) return false;
     return true;
   }
-  get canMove() { return this.alive && !this.has('immobilize') && !this.jumping; }
-  get canAct() { return this.alive && !this.has('disable') && !this.jumping; }
+  get canMove() { return this.canTakeTurn && !this.has('immobilize') && !this.jumping; }
+  get canAct() { return this.canTakeTurn && !this.has('disable') && !this.jumping; }
 
   // ---- abilities ----
   knows(id: string) { return this.roster.learned.includes(id) || ABILITIES.get(id)?.jp === 0; }
@@ -253,8 +253,13 @@ export class BattleUnit {
   monsterActions(secretOk = true): AbilityDef[] {
     const known = new Set(this.roster.learned);
     const skills = this.job.monsterSkills ?? [];
-    skills.forEach(([a, lv], i) => { if (lv <= this.level && (secretOk || i < skills.length - 1 || skills.length < 4)) known.add(a); });
-    if (!secretOk && skills.length >= 4) known.delete(skills[skills.length - 1][0]);
+    skills.forEach(([a, lv], i) => {
+      // Families with only two regular arts still have a secret final art.
+      // Named monsters may store every art in learned, so enforce the gate there too.
+      const secret = i === skills.length - 1 && lv > 1;
+      if (lv <= this.level && (secretOk || !secret)) known.add(a);
+      else known.delete(a);
+    });
     return [...known].map((a) => ABILITIES.get(a)).filter((a): a is AbilityDef => !!a && a.kind === 'action' && a.special !== 'passive');
   }
 

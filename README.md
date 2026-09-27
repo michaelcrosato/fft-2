@@ -5,8 +5,8 @@ A complete, low‑poly tactical RPG for the browser, built with **three.js (r186
 war‑drama tactics games of the late '90s: a youngest son of a noble house and his low‑born best friend,
 a war of succession between two Lions, a Church that burns heretics, and demons sleeping in holy stones.
 
-Everything — story, dialogue, maps, models, music and sound — is original and generated procedurally
-in code. No external art or audio files.
+Story, dialogue, maps and models are generated in code. This **internal, non-commercial test build**
+uses third-party **Final Fantasy Tactics audio placeholders**. See the complete asset catalogue below.
 
 ## Running
 
@@ -40,6 +40,12 @@ WebGL 2 for the rest of the session if it happens twice.
   a calendar and errands.
 * **Save slots** (8, incl. autosave), options, "How to Play".
 
+The Chronicle also includes a **48-species bestiary** with arts, resistances, recruitment,
+poach rewards and known habitats, plus an **atlas** of unlocked places and their services.
+Optional quest milestones, character biographies and Zodiac Stone records fill in as you
+progress. See [content reference notes](docs/CONTENT_SOURCES.md) for the research sources,
+access limitations and adaptation choices behind the expanded content.
+
 ## Controls
 
 | | Keyboard | Mouse / Touch | Gamepad (Xbox layout) |
@@ -72,7 +78,8 @@ src/game/       game state, saves, battle setup, story flow, world travel
 src/gfx/        renderer bootstrap, post-processing (TSL), terrain, props, models, animation, VFX, portraits
 src/scenes/     battle stage, unit views, battle controller, cutscene runner, world map
 src/ui/         DOM UI: widgets, battle HUD, menus (formation, town, chronicle, options)
-src/audio/      Web Audio synthesizer, sequencer, original score and sound effects
+src/audio/      file playback engine and the single audio manifest
+public/audio/   bundled Final Fantasy Tactics audio placeholders
 docs/DESIGN.md  naming bible, story outline, content conventions
 tools/          content validator, campaign simulator, screenshot helpers
 ```
@@ -96,6 +103,34 @@ Headless Chromium renders WebGL 2 with software GL (set `E2E_RENDERER=webgpu` on
 working GPU). Real iOS Safari can't run on Linux/Windows: the WebKit iPhone/iPad profiles are the closest automated
 check; use a real device for the final word.
 
+On Linux or WSL with Docker, the compatibility runner supplies the browsers, their native libraries,
+and a virtual X display from the [official Playwright image](https://playwright.dev/docs/docker).
+The image version matches the installed Playwright package (currently 1.63.0). Xvfb plus software
+Mesa makes WebGL available in Firefox and WebKit even when the host's headless setup cannot provide it.
+No GUI is required. Audio playback tests additionally use a userspace `pulseaudio` binary;
+the runner creates a private null sink and removes it on exit. This supplies the output device
+Firefox needs to advance its Web Audio clock without playing sound on the host desktop.
+
+```bash
+./tools/browser-test.sh --probe       # boot the game in all 3 engines, in both WebGL 2 and WebGL 1
+./tools/browser-test.sh               # full desktop + phone/tablet suite
+./tools/browser-test.sh --project=webkit -g 'boots to the title'
+npx playwright show-report tools/out/compatibility/docker-report
+```
+
+Run `npm install` first and keep the Docker daemon running. The runner installs locked dependencies
+inside a cache beneath `~/.cache/final-fealty-tactics/` (`XDG_CACHE_HOME` is respected), with separate
+build output so it does not replace the host's `dist/` or `node_modules/`. Its anonymous Docker config
+also avoids broken Windows credential helpers on WSL. Screenshots, traces and reports are written to
+`tools/out/compatibility/`; one container run per project can use that output at a time. Tests use one
+worker by default; set `E2E_WORKERS=2` to increase concurrency. These runs verify software-rendered
+WebGL and emulated mobile layouts; WebGPU, physical controllers and actual iOS Safari still need
+hardware checks.
+
+For faster interaction regression runs after the default-quality graphics sweep, use
+`E2E_QUALITY=low E2E_WORKERS=2 ./tools/browser-test.sh`. Without that override, tests retain
+their normal automatic quality selection.
+
 Debug URLs. The `?test=`, `auto`, `autoplay` and `quickwin` hooks start throwaway parties that overwrite the
 autosave, so they only work on the dev server or a local `npm run preview` (localhost); a deployed site ignores
 them. `dev.html` and `audio-test.html` are dev-server pages and are not part of the production build.
@@ -106,6 +141,126 @@ them. `dev.html` and `audio-test.html` are dev-server pages and are not part of 
 | `?test=battle&id=b_galwyn&lv=8&auto=1` | play one battle (auto = AI controls your side too) |
 | `?test=scene&id=sc_pro_alazar` | play one cutscene |
 | `?test=side&id=sq_rare_monks&lv=38` | play one side-quest step |
+| `?test=chronicle` | browse the Chronicle with a fresh throwaway party |
 | `?test=campaign&autoplay=1&quickwin=1` | run the whole story unattended (quickwin skips the fighting) |
 | `dev.html?map=orvelle_court&jobs=knight,wizard` | map / model viewer |
 | `audio-test.html` | audition every music track and sound effect |
+
+
+## Placeholder audio (internal testing)
+
+All audio is selected through [`src/audio/manifest.json`](src/audio/manifest.json). Its `music` and
+`sfx` maps preserve stable gameplay cue names; `assets` records local paths and exact provenance.
+There are no external audio requests at runtime and no synthesized fallback. Unknown SFX use the
+manifest's `fallbackSfx` cue. Music streams from local MP3 files; short effects are decoded and
+cached after the first user gesture. Music crossfades, volume controls, ducking, pan, pitch,
+background suspension and the dev audition page remain available.
+
+The music and five reward stings come from **Final Fantasy Tactics (PlayStation, 1997)** via
+[Zophar’s Domain](https://www.zophar.net/music/playstation-psf/final-fantasy-tactics).
+The UI and event effects come from **Final Fantasy Tactics: The Ivalice Chronicles (PC, 2025)** via
+The Sounds Resource’s [User Interface pack](https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/)
+and [Atmospheric Sounds pack](https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488629/).
+Both Sounds Resource packs were uploaded by **Dark_Ansem**.
+These are temporary third-party assets, not original or permissively licensed project audio.
+Square / Square Enix retain their rights. Soundtrack composers: Hitoshi Sakimoto and Masaharu Iwata.
+Replace these files with cleared original audio before public or commercial distribution.
+
+The available remaster effects are deliberately reused across some battle cues: for example,
+`fire` and `ice` share the magic event, and `hitHeavy` and `meteor` share the Worker 8 attack.
+These are functional stand-ins, not a claim of exact original-game cue matching. `roar` pitches
+the chocobo effect down; `textBlip` selects its first 30 ms. The manifest records these adjustments.
+Music retains the source tracks' fade tails, so whole-track looping includes that fade rather than
+claiming seamless original sequence loops. The table lists **every bundled audio file**, including
+all the cues that share it, the exact archive member or soundtrack filename, and its source links.
+
+To replace placeholders without editing gameplay or playback code:
+
+1. Put replacement browser-compatible MP3/WAV files in `public/audio/` (other supported formats
+   also work). Retain cue names in `music`/`sfx`; change their `asset` references as needed.
+2. Edit only the JSON manifest: set each asset's `src` relative to `public/`, title, game/project,
+   source/credit information, processing notes, duration in seconds and SHA-256. `source.sha256`
+   identifies the original downloaded file or extracted archive member; `sha256` identifies the
+   bundled file. For your own audio, use your source repository/asset URL and original master hash.
+   Compute a file hash with `sha256sum path/to/file`; read duration with `ffprobe`.
+3. Adjust cue `gain`, music `loop`, and SFX `pitch`, `gapMs`, `offset`/`duration` in the same manifest.
+   Remove unused old asset entries and files. No call-site changes are necessary.
+4. Run `npm run audio:catalog`, then `npm run build` and `npm test`. The build checks file hashes,
+   missing references, stray audio files and README catalogue drift. A rebuild picks up JSON changes.
+   Audition the replacements at `audio-test.html` using `npm run dev`.
+
+Audio-specific browser checks:
+
+```bash
+npm run audio:verify -- http://127.0.0.1:5173/  # use the actual running dev-server URL
+# Decodes all 61 assets, checks every effect excerpt, plays all 24 tracks through
+# the real mixer, and stresses SFX cleanup. Results: tools/out/audio-verification/.
+E2E_QUALITY=low ./tools/browser-test.sh e2e/audio.spec.ts
+# Checks production playback in desktop and emulated mobile browser profiles.
+```
+
+<!-- audio-catalogue:start -->
+| Bundled placeholder | Cue(s) | Original source file / archive member | Source | Processing |
+|---|---|---|---|---|
+| `public/audio/fft/ost-101.mp3` | `music.title` | 101 Bland Logo ~ Title Back.mp3 | [Source](https://www.zophar.net/music/playstation-psf/final-fantasy-tactics) · [Download](https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/101%20Bland%20Logo%20~%20Title%20Back.mp3) | Full track; MP3 128 kbps stereo; source fade retained. |
+| `public/audio/fft/ost-102.mp3` | `music.prologue` | 102 Backborn Story.mp3 | [Source](https://www.zophar.net/music/playstation-psf/final-fantasy-tactics) · [Download](https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/102%20Backborn%20Story.mp3) | Full track; MP3 128 kbps stereo; source fade retained. |
+| `public/audio/fft/ost-109.mp3` | `music.battle1` | 109 Trisection.mp3 | [Source](https://www.zophar.net/music/playstation-psf/final-fantasy-tactics) · [Download](https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/109%20Trisection.mp3) | Full track; MP3 128 kbps stereo; source fade retained. |
+| `public/audio/fft/ost-112.mp3` | `music.battle2` | 112 Unavoidable Battle.mp3 | [Source](https://www.zophar.net/music/playstation-psf/final-fantasy-tactics) · [Download](https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/112%20Unavoidable%20Battle.mp3) | Full track; MP3 128 kbps stereo; source fade retained. |
+| `public/audio/fft/ost-113.mp3` | `music.victory` | 113 Mission Complete.mp3 | [Source](https://www.zophar.net/music/playstation-psf/final-fantasy-tactics) · [Download](https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/113%20Mission%20Complete.mp3) | Full track; MP3 128 kbps stereo; source fade retained. |
+| `public/audio/fft/ost-114.mp3` | `music.heroic` | 114 Hero's Theme.mp3 | [Source](https://www.zophar.net/music/playstation-psf/final-fantasy-tactics) · [Download](https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/114%20Hero%27s%20Theme.mp3) | Full track; MP3 128 kbps stereo; source fade retained. |
+| `public/audio/fft/ost-115.mp3` | `music.church` | 115 A Chapel.mp3 | [Source](https://www.zophar.net/music/playstation-psf/final-fantasy-tactics) · [Download](https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/115%20A%20Chapel.mp3) | Full track; MP3 128 kbps stereo; source fade retained. |
+| `public/audio/fft/ost-117.mp3` | `music.worldmap` | 117 World Map.mp3 | [Source](https://www.zophar.net/music/playstation-psf/final-fantasy-tactics) · [Download](https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/117%20World%20Map.mp3) | Full track; MP3 128 kbps stereo; source fade retained. |
+| `public/audio/fft/ost-118.mp3` | `music.town` | 118 Shop.mp3 | [Source](https://www.zophar.net/music/playstation-psf/final-fantasy-tactics) · [Download](https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/118%20Shop.mp3) | Full track; MP3 128 kbps stereo; source fade retained. |
+| `public/audio/fft/ost-121.mp3` | `music.formation` | 121 Team Making.mp3 | [Source](https://www.zophar.net/music/playstation-psf/final-fantasy-tactics) · [Download](https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/121%20Team%20Making.mp3) | Full track; MP3 128 kbps stereo; source fade retained. |
+| `public/audio/fft/ost-123.mp3` | `music.tavern` | 123 Pub.mp3 | [Source](https://www.zophar.net/music/playstation-psf/final-fantasy-tactics) · [Download](https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/123%20Pub.mp3) | Full track; MP3 128 kbps stereo; source fade retained. |
+| `public/audio/fft/ost-128.mp3` | `music.boss` | 128 Decisive Battle.mp3 | [Source](https://www.zophar.net/music/playstation-psf/final-fantasy-tactics) · [Download](https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/128%20Decisive%20Battle.mp3) | Full track; MP3 128 kbps stereo; source fade retained. |
+| `public/audio/fft/ost-130.mp3` | `music.somber` | 130 Remnants.mp3 | [Source](https://www.zophar.net/music/playstation-psf/final-fantasy-tactics) · [Download](https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/130%20Remnants.mp3) | Full track; MP3 128 kbps stereo; source fade retained. |
+| `public/audio/fft/ost-132.mp3` | `music.tension` | 132 Tension 1.mp3 | [Source](https://www.zophar.net/music/playstation-psf/final-fantasy-tactics) · [Download](https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/132%20Tension%201.mp3) | Full track; MP3 128 kbps stereo; source fade retained. |
+| `public/audio/fft/ost-133.mp3` | `music.defeat` | 133 Game Over.mp3 | [Source](https://www.zophar.net/music/playstation-psf/final-fantasy-tactics) · [Download](https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/133%20Game%20Over.mp3) | Full track; MP3 128 kbps stereo; source fade retained. |
+| `public/audio/fft/ost-136.mp3` | `music.romance` | 136 Ovelia's Theme.mp3 | [Source](https://www.zophar.net/music/playstation-psf/final-fantasy-tactics) · [Download](https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/136%20Ovelia%27s%20Theme.mp3) | Full track; MP3 128 kbps stereo; source fade retained. |
+| `public/audio/fft/ost-139.mp3` | `music.battle3` | 139 Run Past Through the Plain.mp3 | [Source](https://www.zophar.net/music/playstation-psf/final-fantasy-tactics) · [Download](https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/139%20Run%20Past%20Through%20the%20Plain.mp3) | Full track; MP3 128 kbps stereo; source fade retained. |
+| `public/audio/fft/ost-210.mp3` | `music.campfire` | 210 Under the Stars.mp3 | [Source](https://www.zophar.net/music/playstation-psf/final-fantasy-tactics) · [Download](https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/210%20Under%20the%20Stars.mp3) | Full track; MP3 128 kbps stereo; source fade retained. |
+| `public/audio/fft/ost-219.mp3` | `music.umbral` | 219 The Impure.mp3 | [Source](https://www.zophar.net/music/playstation-psf/final-fantasy-tactics) · [Download](https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/219%20The%20Impure.mp3) | Full track; MP3 128 kbps stereo; source fade retained. |
+| `public/audio/fft/ost-226.mp3` | `music.finalBoss` | 226 Ultema, the Perfect Body.mp3 | [Source](https://www.zophar.net/music/playstation-psf/final-fantasy-tactics) · [Download](https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/226%20Ultema%2C%20the%20Perfect%20Body.mp3) | Full track; MP3 128 kbps stereo; source fade retained. |
+| `public/audio/fft/ost-227.mp3` | `music.chapter` | 227 Fanfare.mp3 | [Source](https://www.zophar.net/music/playstation-psf/final-fantasy-tactics) · [Download](https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/227%20Fanfare.mp3) | Full track; MP3 128 kbps stereo; source fade retained. |
+| `public/audio/fft/ost-229.mp3` | `music.credits` | 229 Staff Credit.mp3 | [Source](https://www.zophar.net/music/playstation-psf/final-fantasy-tactics) · [Download](https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/229%20Staff%20Credit.mp3) | Full track; MP3 128 kbps stereo; source fade retained. |
+| `public/audio/fft/ost-903.mp3` | `sfx.victory` | 903 Award 1 - Completed.mp3 | [Source](https://www.zophar.net/music/playstation-psf/final-fantasy-tactics) · [Download](https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/903%20Award%201%20-%20Completed.mp3) | Full track; MP3 128 kbps stereo; source fade retained. |
+| `public/audio/fft/ost-904.mp3` | `sfx.defeat` | 904 Award 2 - Unlucky.mp3 | [Source](https://www.zophar.net/music/playstation-psf/final-fantasy-tactics) · [Download](https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/904%20Award%202%20-%20Unlucky.mp3) | Full track; MP3 128 kbps stereo; source fade retained. |
+| `public/audio/fft/ost-905.mp3` | `sfx.jobUp` | 905 Job Level Up S.mp3 | [Source](https://www.zophar.net/music/playstation-psf/final-fantasy-tactics) · [Download](https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/905%20Job%20Level%20Up%20S.mp3) | Full track; MP3 128 kbps stereo; source fade retained. |
+| `public/audio/fft/ost-911.mp3` | `sfx.levelUp` | 911 Level Up S.mp3 | [Source](https://www.zophar.net/music/playstation-psf/final-fantasy-tactics) · [Download](https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/911%20Level%20Up%20S.mp3) | Full track; MP3 128 kbps stereo; source fade retained. |
+| `public/audio/fft/ost-915.mp3` | `sfx.learn` | 915 Job Change.mp3 | [Source](https://www.zophar.net/music/playstation-psf/final-fantasy-tactics) · [Download](https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/915%20Job%20Change.mp3) | Full track; MP3 128 kbps stereo; source fade retained. |
+| `public/audio/fft/ost-969.mp3` | `music.ending` | 969 Epilogue.mp3 | [Source](https://www.zophar.net/music/playstation-psf/final-fantasy-tactics) · [Download](https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/969%20Epilogue.mp3) | Full track; MP3 128 kbps stereo; source fade retained. |
+| `public/audio/fft/ost-980.mp3` | `music.dungeon` | 980 Deep Dungeon.mp3 | [Source](https://www.zophar.net/music/playstation-psf/final-fantasy-tactics) · [Download](https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/980%20Deep%20Dungeon.mp3) | Full track; MP3 128 kbps stereo; source fade retained. |
+| `public/audio/fft/ui-031.wav` | `sfx.cursor` | FFTIC UI Sounds/sound_enhanced_ui#31 (sound_enhanced_ui-se_ui_world_cursor_stick).wav | [Source](https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/) · [Download](https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568) | PCM WAV mono 22050 Hz; full effect. |
+| `public/audio/fft/ui-001.wav` | `sfx.confirm` | FFTIC UI Sounds/sound_enhanced_ui#1 (sound_enhanced_ui-se_ui_com_decision_mini).wav | [Source](https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/) · [Download](https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568) | PCM WAV mono 22050 Hz; full effect. |
+| `public/audio/fft/ui-034.wav` | `sfx.cancel` | FFTIC UI Sounds/sound_enhanced_ui#34 (sound_enhanced_ui-se_ui_sortie_cancel_unit).wav | [Source](https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/) · [Download](https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568) | PCM WAV mono 22050 Hz; full effect. |
+| `public/audio/fft/ui-054.wav` | `sfx.error` | FFTIC UI Sounds/sound_enhanced_ui#54 (sound_enhanced_ui-se_ui_battle_map_display_warning_signs).wav | [Source](https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/) · [Download](https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568) | PCM WAV mono 22050 Hz; full effect. |
+| `public/audio/fft/ui-044.wav` | `sfx.menuOpen` | FFTIC UI Sounds/sound_enhanced_ui#44 (sound_enhanced_ui-se_ui_battle_menu_open).wav | [Source](https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/) · [Download](https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568) | PCM WAV mono 22050 Hz; full effect. |
+| `public/audio/fft/ui-101.wav` | `sfx.turn` | FFTIC UI Sounds/sound_enhanced_ui#101 (sound_enhanced_ui-se_ui_battle_active_turn).wav | [Source](https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/) · [Download](https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568) | PCM WAV mono 22050 Hz; full effect. |
+| `public/audio/fft/ui-006.wav` | `sfx.textBlip` | FFTIC UI Sounds/sound_enhanced_ui#6 (sound_enhanced_ui-se_ui_com_value_input).wav | [Source](https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/) · [Download](https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568) | PCM WAV mono 22050 Hz; full effect. |
+| `public/audio/fft/ui-055.wav` | `sfx.step` | FFTIC UI Sounds/sound_enhanced_ui#55 (sound_enhanced_ui-se_ui_battle_map_chara_walk).wav | [Source](https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/) · [Download](https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568) | PCM WAV mono 22050 Hz; full effect. |
+| `public/audio/fft/ui-009.wav` | `sfx.jump` | FFTIC UI Sounds/sound_enhanced_ui#9 (sound_enhanced_ui-se_ui_formation_unit_hold).wav | [Source](https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/) · [Download](https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568) | PCM WAV mono 22050 Hz; full effect. |
+| `public/audio/fft/ui-010.wav` | `sfx.land` | FFTIC UI Sounds/sound_enhanced_ui#10 (sound_enhanced_ui-se_ui_formation_unit_down).wav | [Source](https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/) · [Download](https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568) | PCM WAV mono 22050 Hz; full effect. |
+| `public/audio/fft/ui-108.wav` | `sfx.hit` | FFTIC UI Sounds/sound_enhanced_ui#108 (sound_enhanced_ui-se_ui_battle_display_attack_result).wav | [Source](https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/) · [Download](https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568) | PCM WAV mono 22050 Hz; full effect. |
+| `public/audio/fft/ui-107.wav` | `sfx.miss` | FFTIC UI Sounds/sound_enhanced_ui#107 (sound_enhanced_ui-se_ui_battle_display_attack_result_out).wav | [Source](https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/) · [Download](https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568) | PCM WAV mono 22050 Hz; full effect. |
+| `public/audio/fft/ui-017.wav` | `sfx.block` | FFTIC UI Sounds/sound_enhanced_ui#17 (sound_enhanced_ui-se_ui_myset_set_equip).wav | [Source](https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/) · [Download](https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568) | PCM WAV mono 22050 Hz; full effect. |
+| `public/audio/fft/ui-083.wav` | `sfx.item`, `sfx.chest` | FFTIC UI Sounds/sound_enhanced_ui#83 (sound_enhanced_ui-se_ui_item_get).wav | [Source](https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/) · [Download](https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568) | PCM WAV mono 22050 Hz; full effect. |
+| `public/audio/fft/ui-077.wav` | `sfx.crystal`, `sfx.stone` | FFTIC UI Sounds/sound_enhanced_ui#77 (sound_enhanced_ui-se_ui_bravestory_sacredstone_cursor_stick).wav | [Source](https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/) · [Download](https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568) | PCM WAV mono 22050 Hz; full effect. |
+| `public/audio/fft/ui-104.wav` | `sfx.gil` | FFTIC UI Sounds/sound_enhanced_ui#104 (sound_enhanced_ui-se_ui_battle_display_result_reward_money).wav | [Source](https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/) · [Download](https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568) | PCM WAV mono 22050 Hz; full effect. |
+| `public/audio/fft/ui-078.wav` | `sfx.bell` | FFTIC UI Sounds/sound_enhanced_ui#78 (sound_enhanced_ui-se_ui_trophy_notice).wav | [Source](https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/) · [Download](https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568) | PCM WAV mono 22050 Hz; full effect. |
+| `public/audio/fft/ui-018.wav` | `sfx.steal` | FFTIC UI Sounds/sound_enhanced_ui#18 (sound_enhanced_ui-se_ui_item_delete).wav | [Source](https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/) · [Download](https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568) | PCM WAV mono 22050 Hz; full effect. |
+| `public/audio/fft/ui-048.wav` | `sfx.ko` | FFTIC UI Sounds/sound_enhanced_ui#48 (sound_enhanced_ui-se_ui_battle_notice_estrangement).wav | [Source](https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/) · [Download](https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568) | PCM WAV mono 22050 Hz; full effect. |
+| `public/audio/fft/ui-116.wav` | `sfx.buff` | FFTIC UI Sounds/sound_enhanced_ui#116 (sound_enhanced_ui-se_ui_battle_ramza_jobrank_lvup).wav | [Source](https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/) · [Download](https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568) | PCM WAV mono 22050 Hz; full effect. |
+| `public/audio/fft/ui-040.wav` | `sfx.status` | FFTIC UI Sounds/sound_enhanced_ui#40 (sound_enhanced_ui-se_ui_battle_mark_on).wav | [Source](https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/) · [Download](https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568) | PCM WAV mono 22050 Hz; full effect. |
+| `public/audio/fft/ui-005.wav` | `sfx.dance` | FFTIC UI Sounds/sound_enhanced_ui#5 (sound_enhanced_ui-se_ui_com_sort_execute).wav | [Source](https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/) · [Download](https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568) | PCM WAV mono 22050 Hz; full effect. |
+| `public/audio/fft/event-016.wav` | `sfx.swing`, `sfx.arrow`, `sfx.throw`, `sfx.wind` | FFTIC Novel/sound_enhanced_event#16 (sound_enhanced_event-FID_SOUND_EV0880_RUSH_WAV).wav | [Source](https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488629/) · [Download](https://sounds.spriters-resource.com/media/assets/473/488629.zip?updated=1760875717) | PCM WAV mono 22050 Hz; full effect. |
+| `public/audio/fft/event-010.wav` | `sfx.hitHeavy`, `sfx.crit`, `sfx.earth`, `sfx.explosion`, `sfx.meteor` | FFTIC Novel/sound_enhanced_event#10 (sound_enhanced_event-FID_SOUND_EV5025_WORKER8_ATTACK_WAV).wav | [Source](https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488629/) · [Download](https://sounds.spriters-resource.com/media/assets/473/488629.zip?updated=1760875717) | PCM WAV mono 22050 Hz; full effect. |
+| `public/audio/fft/event-017.wav` | `sfx.gun`, `sfx.gunshot`, `sfx.bolt`, `sfx.thunderclap` | FFTIC Novel/sound_enhanced_event#17 (sound_enhanced_event-FID_SOUND_EV1280_GUNSHOT_WAV).wav | [Source](https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488629/) · [Download](https://sounds.spriters-resource.com/media/assets/473/488629.zip?updated=1760875717) | PCM WAV mono 22050 Hz; full effect. |
+| `public/audio/fft/event-002.wav` | `sfx.magic`, `sfx.fire`, `sfx.ice`, `sfx.poison`, `sfx.debuff` | FFTIC Novel/sound_enhanced_event#2 (sound_enhanced_event-FID_SOUND_EV1940_MAGIC_WAV).wav | [Source](https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488629/) · [Download](https://sounds.spriters-resource.com/media/assets/473/488629.zip?updated=1760875717) | PCM WAV mono 22050 Hz; full effect. |
+| `public/audio/fft/event-004.wav` | `sfx.charge`, `sfx.summon`, `sfx.holy` | FFTIC Novel/sound_enhanced_event#4 (sound_enhanced_event-FID_SOUND_EV1880_MAGICSTART_WAV).wav | [Source](https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488629/) · [Download](https://sounds.spriters-resource.com/media/assets/473/488629.zip?updated=1760875717) | PCM WAV mono 22050 Hz; first 2.5s with 80 ms fade-out. |
+| `public/audio/fft/event-009.wav` | `sfx.water` | FFTIC Novel/sound_enhanced_event#9 (sound_enhanced_event-FID_SOUND_ENV_WATER_FALL_01_WAV).wav | [Source](https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488629/) · [Download](https://sounds.spriters-resource.com/media/assets/473/488629.zip?updated=1760875717) | PCM WAV mono 22050 Hz; first 2s with 80 ms fade-out. |
+| `public/audio/fft/event-003.wav` | `sfx.dark`, `sfx.time`, `sfx.demon` | FFTIC Novel/sound_enhanced_event#3 (sound_enhanced_event-FID_SOUND_EV1880_DEZONE_WAV).wav | [Source](https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488629/) · [Download](https://sounds.spriters-resource.com/media/assets/473/488629.zip?updated=1760875717) | PCM WAV mono 22050 Hz; full effect. |
+| `public/audio/fft/event-001.wav` | `sfx.heal`, `sfx.song` | FFTIC Novel/sound_enhanced_event#1 (sound_enhanced_event-FID_SOUND_EV1960_SYNCRONICITY_WAV).wav | [Source](https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488629/) · [Download](https://sounds.spriters-resource.com/media/assets/473/488629.zip?updated=1760875717) | PCM WAV mono 22050 Hz; full effect. |
+| `public/audio/fft/event-015.wav` | `sfx.door` | FFTIC Novel/sound_enhanced_event#15 (sound_enhanced_event-FID_SOUND_EV1700_DOOR_WAV).wav | [Source](https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488629/) · [Download](https://sounds.spriters-resource.com/media/assets/473/488629.zip?updated=1760875717) | PCM WAV mono 22050 Hz; full effect. |
+| `public/audio/fft/event-005.wav` | `sfx.kweh`, `sfx.roar` | FFTIC Novel/sound_enhanced_event#5 (sound_enhanced_event-FID_SOUND_EV0700_CHOCOBO_GO_WAV).wav | [Source](https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488629/) · [Download](https://sounds.spriters-resource.com/media/assets/473/488629.zip?updated=1760875717) | PCM WAV mono 22050 Hz; full effect. |
+<!-- audio-catalogue:end -->

@@ -94,18 +94,20 @@ export const battles: BattleDef[] = [
   },
   {
     id: 'b_colliery4', name: 'The Wyrm\'s Hollow', map: 'colliery4', music: 'boss',
-    hint: 'Defeat Vorgund Hask, Warden of the Brood. His beasts guard the stair to his dais.',
+    hint: 'Defeat Vorgund Hask and keep Rhosyn alive. Reach the captive wyrm before the Brood closes around her.',
     units: [
       { char: 'beorn', level: '+1', at: [6, 11], facing: 'N', team: 0, ai: 'aggressive' },
+      { char: 'rhosyn', level: '+1', at: [7, 0], facing: 'S', team: 0, ai: 'coward', vip: true },
       { id: 'vorgund', job: 'summoner', name: 'Vorgund Hask', level: '+3', at: [6, 2], facing: 'S', team: 1, boss: true, hpMult: 2.5,
         secondary: 'wizard', reaction: 'counterMagic', support: 'halfMp', movement: 'teleport', brave: 60, faith: 75 },
-      { job: 'hydra', name: 'Brood-Wyrm', level: '+1', at: [9, 4], facing: 'S', team: 1 },
+      { job: 'hydra', name: 'Brood-Wyrm', level: '+1', at: [9, 7], facing: 'N', team: 1 },
       { job: 'minotaur', level: '+1', at: [3, 5], facing: 'S', team: 1 },
       { job: 'bullDemon', level: '+1', at: [10, 6], facing: 'S', team: 1 },
       { job: 'wizard', name: 'Brood Acolyte', level: '+2', at: [2, 3], facing: 'S', team: 1, reaction: 'counterMagic' },
       { job: 'priest', name: 'Brood Chanter', level: '+2', at: [11, 3], facing: 'S', team: 1, reaction: 'regenerator' },
     ],
     victory: { type: 'defeat', ids: ['vorgund'] },
+    protect: ['rhosyn'],
     events: [
       { when: { hpBelow: ['vorgund', 50] }, once: true, script: [
         ['say', 'vorgund', 'Kill me, then! It changes nothing. The curse was written in the Church\'s own ink, Kadmas — and the Church does not cross out its own words.'],
@@ -126,15 +128,18 @@ export const battles: BattleDef[] = [
   {
     id: 'b_nevel', name: 'Nevel Temple', map: 'nevel', music: 'boss',
     forced: ['beorn', 'rhosyn'],
-    hint:'Silence the Warden, an ancient automaton. Treasures of the Lost Age lie atop the tall pillars — only a great Jump or teleportation will reach them, and only Move-Find will uncover them.',
+    hint: 'Silence the Warden and its emergency reserve. Move-Find uncovers the treasures on the tall pillars; bring enough Jump or teleportation to reach them.',
     units: [
-      { id: 'warden', job: 'automaton', name: 'Automaton VII, the Warden', level: '+4', at: [6, 1], facing: 'S', team: 1, boss: true, hpMult: 3, brave: 80 },
+      { id: 'warden', job: 'automaton', name: 'Automaton VII, the Warden', level: '+4', at: [6, 1], facing: 'S', team: 1, boss: true, hpMult: 3, brave: 80, noLoot: true },
+      // The reserve can restart the broken shell only once, at 1 HP. The
+      // multiplier stays below one HP even at level 99; the engine floors to 1.
+      { id: 'wardenReserve', job: 'automaton', name: 'Automaton VII, Emergency Reserve', level: '+4', at: [6, 1], facing: 'S', team: 1, boss: true, hpMult: 0.0001, brave: 80, hidden: true, noLoot: true },
       { job: 'steelHawk', level: '+2', at: [3, 1], facing: 'S', team: 1 },
       { job: 'steelHawk', level: '+2', at: [10, 1], facing: 'S', team: 1 },
       { job: 'cockatrice', level: '+2', at: [4, 4], facing: 'S', team: 1 },
       { job: 'cockatrice', level: '+2', at: [9, 4], facing: 'S', team: 1 },
     ],
-    victory: { type: 'defeat', ids: ['warden'] },
+    victory: { type: 'defeat', ids: ['warden', 'wardenReserve'] },
     events: [
       { when: { start: true }, once: true, script: [
         ['say', 'warden', '...Seven. Seven. Zero. Zero. Zero.'],
@@ -146,6 +151,14 @@ export const battles: BattleDef[] = [
         ['emote', 'rhosyn', '!'],
         ['say', 'beorn', 'It\'s counting down to something. Finish it — now!', { mood: 'shout' }],
       ] },
+      { when: { ko: 'warden' }, once: true, script: [
+        ['sfx', 'charge'],
+        ['say', 'warden', 'Seven... Reserve... One.'],
+        ['flash', '#d8e8ff', 0.5],
+        ['retreat', 'warden'],
+        ['reveal', 'wardenReserve'],
+        ['say', 'beorn', 'Still moving! One last spark in its breast — strike before it gathers strength!', { mood: 'shout' }],
+      ] },
     ],
     treasure: [[3, 3, 'phoenixDown', 'gungnir'], [10, 3, 'hiEther', 'chaosBlade'], [3, 10, 'elixir', 'ribbon'], [10, 10, 'elixir', 'masamune']],
     rewards: { gil: 5000, items: ['dragonRod'] },
@@ -156,10 +169,10 @@ export const battles: BattleDef[] = [
   // ==========================================================================
   {
     id: 'b_zargid_kestrel', name: 'The Flower Market', map: 'sq_zargid_square', music: 'battle1',
-    hint: 'Drive off the Brotherhood of the Scales. Aline must not fall.',
+    hint: 'Drive off the Brotherhood of the Scales. Protect both Aline and the disoriented Kestrel.',
     units: [
       { char: 'aline', level: '+0', at: [6, 4], facing: 'N', team: 0, ai: 'coward', vip: true },
-      { char: 'kestrel', level: '+2', at: [5, 4], facing: 'N', team: 0, ai: 'aggressive' },
+      { char: 'kestrel', level: '+2', at: [5, 4], facing: 'N', team: 0, ai: 'defensive', vip: true },
       { id: 'mallow', job: 'knight', name: 'Dirk Mallow', level: '+2', at: [5, 1], facing: 'S', team: 1, boss: true, hpMult: 1.5, reaction: 'counter' },
       { job: 'knight', name: 'Scales Bravo', level: '+1', at: [10, 3], facing: 'W', team: 1 },
       { job: 'thief', name: 'Scales Cutpurse', level: '+1', at: [3, 1], facing: 'S', team: 1 },
@@ -168,7 +181,7 @@ export const battles: BattleDef[] = [
       { job: 'monk', name: 'Scales Bruiser', level: '+1', at: [1, 3], facing: 'E', team: 1 },
     ],
     victory: { type: 'defeatAll' },
-    protect: ['aline'],
+    protect: ['aline', 'kestrel'],
     events: [
       { when: { start: true }, once: true, script: [
         ['say', 'kestrel', 'Stay behind me. ...Please.'],

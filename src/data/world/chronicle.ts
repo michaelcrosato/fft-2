@@ -2,8 +2,8 @@
 //  The Chronicle — "Events" entries, written in the voice of the historian
 //  Alazar Durant, who pieced the true tale together from the Durant Papers
 //  (the journals of his ancestor Oren Durant). Ids equal the battle ids of
-//  DESIGN.md §2, or `ev_*` for turning points that are not battles.
-//  Unlock with the scene command ['chronicle', id].
+//  DESIGN.md §2, `sq_*` side-quest flags, or `ev_*` for other turning points.
+//  Unlock with the scene command ['chronicle', id] or the matching story flag.
 // ============================================================================
 import type { ChronicleEvent } from '../types';
 
@@ -165,7 +165,7 @@ export const chronicle: ChronicleEvent[] = [
   },
   {
     id: 'b_grogmoor', chapter: 3, title: 'Grogmoor Hill',
-    text: 'On the drovers\' road over Grogmoor Hill, a band of monks and chemists in the Church\'s pay tried to take the Scriptures by force, and failed. In Dorhaven afterwards, a Hell Knight named Malik Galthane came to Rhen with a demand: the Scriptures, in exchange for his sister, whom he claimed Rhen\'s friends were hiding. It was a lie, but it was the first thread of a larger knot.',
+    text: 'On the drovers\' road over Grogmoor Hill, a band of monks and chemists in the Church\'s pay tried to take the Scriptures by force, and failed. In Dorhaven afterwards, a Hell Knight named Malik Galthane came with Grand Duke Barrington\'s demand: the Scriptures, in exchange for Alys, held at Riverain Castle. Barrington had stayed outside the Lions\' war, selling supplies to both. Now he meant to bargain with the Church itself, using a captive novice and a forbidden book.',
   },
   {
     id: 'b_yardale', chapter: 3, title: 'Yardale',
@@ -189,7 +189,7 @@ export const chronicle: ChronicleEvent[] = [
   },
   {
     id: 'b_riverain_roof', chapter: 3, title: 'The Rooftop of Riverain',
-    text: 'On the high roof of Riverain Castle, Grand Duke Barrington shot Malik Galthane down for failing him — and was himself thrown from the parapet by Cerise and Lida, the smiling assassin-maids of the Marquis Elmond. The Marquis, the very man Rhen had once rescued from Sandrat Cellar, stepped from the shadows to claim what Barrington had held. Rhen\'s company fought him and his maids to a standstill. When the smoke cleared, a Zodiac Stone blazed over Malik\'s body, and he rose, living, to stand beside his sister.',
+    text: 'On the high roof of Riverain Castle, Malik Galthane put himself between his sister and Grand Duke Barrington\'s gun. Barrington shot him and was himself thrown from the parapet by Cerise, a handmaiden of the Marquis Elmond. Rhen fought the Marquis and his maids back from Rana. Afterwards a Zodiac Stone answered her grief and restored Malik to life without claiming either sibling. The stones could preserve a life as well as consume one: neither the Church\'s account nor Rhen\'s first judgement had told their whole truth.',
   },
 
   // ==========================================================================
@@ -269,7 +269,7 @@ export const chronicle: ChronicleEvent[] = [
   },
   {
     id: 'b_orvelle_b4', chapter: 4, title: 'The Fourth Vault',
-    text: 'Returning to the ruin of Orvelle Abbey, the company descended past the vaults they had fought through a year before, to a fourth level they had never seen. Barrick Fendsor of the Sanctum Knights held it. He was a huge man with a huge voice, and he fought as though the stair behind him led to heaven. It did not.',
+    text: 'Returning to the ruin of Orvelle Abbey, the company descended beyond the three vaults where Alys had been taken, to a fourth level they had never seen. Barrick Fendsor of the Sanctum Knights held it. He was a huge man with a huge voice, and he fought as though the stair behind him led to heaven. It did not.',
   },
   {
     id: 'b_orvelle_b5', chapter: 4, title: 'The Fifth Vault',
@@ -294,5 +294,113 @@ export const chronicle: ChronicleEvent[] = [
   {
     id: 'ev_epilogue', chapter: 4, title: 'An Empty Grave',
     text: 'The Church held a funeral for Alys Valorne, and buried an empty coffin. Oren Durant attended, and afterwards, on the hill above the graveyard, he saw two riders on kwehbos — a young man and a young woman — who raised their hands to him and rode away west. In Lesandre, King Delan and Queen Oriane were crowned with the Church\'s blessing; and on a flowered hillside not long after, the Queen drew a knife upon her husband, and what passed between them then the chronicles do not say. The Church seized Oren\'s Papers and burned them, and — so my family has always said — their author with them. I have spent my life gathering what the fire missed: this is the tale the Church burned, and you must judge it as you will.',
+  },
+
+  // ==========================================================================
+  //  OPTIONAL JOURNEYS — unlocked by the same flags as the journeys themselves
+  // ==========================================================================
+  {
+    id: 'sq_colliery_bastian', chapter: 3, title: 'The Sleeping Eighth',
+    text: 'Bastian Brunel summoned his son and Rhen to Cogsgard to show them a machine excavated beneath the east forge. Its breastplate bore the number eight; no living pilot could fit inside it. Bastian believed a Zodiac Stone might wake it, but Rhen, remembering Lyonesse, hesitated. A second matter sent them onward: coal shipments had stopped because the colliers of Colgrave feared something in the deep workings.',
+  },
+  {
+    id: 'sq_colliery_hunter', chapter: 3, title: 'The Hunter at Lesandre',
+    text: 'The ghost stories of Colgrave led to Beorn Kadmas, a Temple Knight drinking in Lesandre. He knew Rhen\'s face from the Church\'s bounty notices and chose to let him sit beside him. Beorn had followed the white creature for three years. A sorcerer named Vorgund Hask held it below the mines, and the knight needed companions to reach it. The heretic and his appointed hunter took the same road.',
+  },
+  {
+    id: 'b_colliery1', chapter: 3, title: 'Colliery: The Pithead Gallery',
+    text: 'At the first gallery beneath Colgrave, the company fought scavengers in Hask\'s service. Their leader, Snuff Karrow, had found a better wage in feeding the Warden\'s creatures than in hewing coal. Inside the mine carts Beorn found fingernail marks. The missing colliers had been carried deeper alive; the white apparition was only one part of the town\'s misfortune.',
+  },
+  {
+    id: 'b_colliery2', chapter: 3, title: 'Colliery: The Second Seam',
+    text: 'The Second Seam had been abandoned after a collapse. Hask\'s acolytes had made it a shrine to their Brood, among creatures of flame and the stink of firedamp. When they were driven off, Rhen asked what the sorcerer had taken from Beorn. The knight corrected the question: not what, but who. He would say no more until there was a sky above them.',
+  },
+  {
+    id: 'b_colliery3', chapter: 3, title: 'Colliery: The Drowned Gallery',
+    text: 'Below the ruined seam, a spring had flooded the workings and left a dark menagerie in the colliers\' place. The company overcame Hask\'s beast-tamer and heard a cry rising through the stone. Beorn recognised it at once. What the miners called a ghost\'s lament was the voice he had spent three years following.',
+  },
+  {
+    id: 'b_colliery4', chapter: 3, title: 'Colliery: The Woman in the Wyrm',
+    text: 'In the Wyrm\'s Hollow, Vorgund Hask held a white dragon chained to a dais. She was Rhosyn, punished by her family and the Church for loving Beorn. The company defeated Hask and freed her; the Aquarius Stone was recovered with her. Beorn confessed that his years as a heretic-hunter had financed this search. He and Rhosyn joined Rhen to seek a cure, carrying away a rescued life and the weight of those he had delivered to the inquisitors.',
+  },
+  {
+    id: 'sq_octo', chapter: 3, title: 'Automaton VIII Awakens',
+    text: 'Back in the Brunel workshop, the Aquarius Stone roused the ancient engine. It counted, gave its number, and turned toward the hand that had woken it. Mattis called it Octo. Bastian let it go with the company: the discovery he had laboured over for years had become a companion who could choose no road until someone opened the workshop door. Artifice had given the stones another use beyond the ambitions of priests.',
+  },
+  {
+    id: 'sq_nevel_rumor', chapter: 4, title: 'The Road to Nevel',
+    text: 'A pilgrim in Zeltmoor spoke of a temple beyond Mount Bervaine, standing upon an island in a lake that never thawed. Its guardians were sleepless, its doors older than the Church, and the cursed were said to seek healing there. Beorn asked the company to make the journey for Rhosyn. Rhen agreed: a companion\'s hope had as much claim upon their swords as his own quarrel.',
+  },
+  {
+    id: 'b_nevel', chapter: 4, title: 'The Curse Broken at Nevel',
+    text: 'Automaton VII still guarded Nevel Temple after the civilisation that commanded it had vanished. Defeating the machine opened the sanctum and yielded the Cancer Stone. Its light restored Rhosyn\'s human form. She remembered Beorn\'s voice through three years of captivity, and the dragons still sounded in her thoughts. The woman who left Nevel had regained her hands without losing all that the wyrm had known.',
+  },
+  {
+    id: 'sq_flower', chapter: 4, title: 'A Flower for the Road',
+    text: 'In Zargid, Rhen paid one gil to a flower seller named Aline. She spoke of the sky as a door and asked him to remember her if he met someone truly lost. The transaction scarcely belonged in an account of kings and armies. Yet it was her face, and that strange request, which would give direction to the next accident in Bastian Brunel\'s workshop.',
+  },
+  {
+    id: 'sq_kestrel_machine', chapter: 4, title: 'The Unfinished Door',
+    text: 'After waking Octo, Bastian turned to another find from the old workings: a ring of brass and glass, with the Cancer sign beside an empty socket. He believed it a doorway, but could not make it answer. The artificer had reached the limit of what wire and patience could mend. Rhen asked him to discover how to close the thing before opening it, and Bastian ordered a second switch.',
+  },
+  {
+    id: 'sq_kestrel_arrived', chapter: 4, title: 'The Door in the Glass',
+    text: 'The Cancer Stone supplied what Bastian\'s second machine lacked. Within its ring of brass and glass was a glimpse of another sky; when the circuit closed, a swordsman stumbled out. Kestrel Stryde knew neither Cogsgard nor Ivaldis. He remembered flowers, or someone who had sold them, and fled before his rescuers could question him. Rhen followed the only clue he had, toward Aline\'s stall in Zargid.',
+  },
+  {
+    id: 'b_zargid_kestrel', chapter: 4, title: 'The Stranger in Zargid',
+    text: 'The company found Kestrel defending Aline against the Brotherhood of the Scales. Whatever world he had left, he recognised extortion well enough to draw his enormous sword against it. After the street fight he joined Rhen\'s company. The Papers contain no reliable chart of the road by which he came to Ivaldis, nor of any road home; they record only that a stranger had chosen to help another stranger.',
+  },
+  {
+    id: 'sq_deep_open', chapter: 4, title: 'The Midnight Deep Unsealed',
+    text: 'After the fighting at Murondel, the holy seals beneath Wargill\'s old quay blackened and the iron doors opened. Harbourmaster Tobin asked the company to investigate. A docker had already descended and failed to return. Below lay ten landings with names facing the wrong way, as though the inscriptions had been made for travellers coming up from beneath the sea.',
+  },
+  {
+    id: 'b_deep1', chapter: 4, title: 'The Deep I: Nywlag',
+    text: 'The first landing bore Galwyn\'s name reversed. Here the company learned the rule of the descent: the hidden sigil upon the floor opened the next stair. Killing the creatures that guarded a landing would not alone reveal the way. Even the beginning of Rhen\'s road had found a reflection beneath Wargill.',
+  },
+  {
+    id: 'b_deep2', chapter: 4, title: 'The Deep II: Aranel',
+    text: 'Lenara became Aranel upon the second landing. Its inscription warned that the highest climber had the furthest to fall. The company found the next sigil and passed below. I preserve the names as the travellers copied them; whether the Deep remembered these places or had taught the living world their names, the Papers do not establish.',
+  },
+  {
+    id: 'b_deep3', chapter: 4, title: 'The Deep III: Eladray',
+    text: 'The third landing turned Yardale upon itself. An inscription counselled a light tread, for the darkness kept what it swallowed. The company searched the floor while holding back its defenders, and opened the stair. By then the sequence of familiar names could no longer be dismissed as a carver\'s fancy.',
+  },
+  {
+    id: 'b_deep4', chapter: 4, title: 'The Deep IV: Lehteb',
+    text: 'Bethel\'s reversed name marked the fourth landing. Its words concerned soldiers who held a wall because no one had relieved them. After the armies and sluices of the living Bethel, the resemblance troubled the company. Their answer here was to find the sigil and continue; no herald below the harbour could discharge these ancient watchmen.',
+  },
+  {
+    id: 'b_deep5', chapter: 4, title: 'The Deep V: Lekriz',
+    text: 'Zirkel became Lekriz at the midpoint of the descent. The inscription spoke of water keeping its memory while its level rose. Far above was the harbour; further away still, the falls where Rhen and Delan had met again. The company reached the next sigil without learning who had arranged these echoes of their journey.',
+  },
+  {
+    id: 'b_deep6', chapter: 4, title: 'The Deep VI: Digraz',
+    text: 'The sixth landing carried Zargid\'s name backwards and called itself a market where beasts set their own prices. There was no trade to be made there. The company fought for the time needed to search the floor, then opened another stair beneath the world they knew.',
+  },
+  {
+    id: 'b_deep7', chapter: 4, title: 'The Deep VII: Sidlavi',
+    text: 'On the seventh landing the name was that of the whole kingdom, Ivaldis, reversed. The inscription likened a realm to a bridge supported by the drowned. Rhen had seen enough of the Pride War to understand the comparison. He would not accept it as an excuse to stop, and the company found the way below.',
+  },
+  {
+    id: 'b_deep8', chapter: 4, title: 'The Deep VIII: Lligraw',
+    text: 'Wargill\'s own name greeted the company on the eighth landing, turned back upon the port above. Its inscription offered a voyage only two endings: harbour or the bottom. The next sigil led further down, toward the latter. The travellers still carried the harbourmaster\'s unanswered question with them.',
+  },
+  {
+    id: 'b_deep9', chapter: 4, title: 'The Deep IX: Nerua',
+    text: 'At the ninth landing even Saint Auren\'s name was reversed. Here the company opened the last hidden stair. The sequence had passed from towns, through kingdom and harbour, to the centre of the Church\'s faith. Whatever waited below had arranged its approach as an accusation.',
+  },
+  {
+    id: 'b_deep10', chapter: 4, title: 'The Deep X: The Thirteenth Sign',
+    text: 'The last landing was named END, facing the reader at last. Ophion waited there, an Umbral Lord of Serpentarius, the sign omitted from the Church\'s reckoning. When the company defeated him, the thirteenth stone remained and the echo of Twelvefold taught their summoners its shape. A living grimoire, Grimwald, emerged from the dust and followed them out. The Deep had yielded a companion, a forbidden art, and evidence that the familiar twelvefold legend was incomplete.',
+  },
+  {
+    id: 'b_rare_monks', chapter: 4, title: 'The Eleven Yield',
+    text: 'Eleven martial ascetics under Brother Hesk barred the road over Grogmoor. They had spent eleven winters seeking an opponent who could teach them defeat. Rhen\'s company supplied the lesson. Hesk surrendered his founder\'s gauntlet, and the Eleven bowed and left the moor. They were among the few defeated people in these Papers who regarded the result as a reason to go home content.',
+  },
+  {
+    id: 'b_rare_beasts', chapter: 4, title: 'The Barrow Kings\' Menagerie',
+    text: 'On Barrow Hill the burial mounds opened and a procession of behemoths and dragons crossed the Lyonesse road. Old Crownhorn led them. The company defeated the creatures; the earth closed again, leaving treasures of the vanished court in the grass. Rhen thought the kings had taken their menageries into the tomb. It remains a conjecture, but a more practical one than the local assurance that those graves were empty.',
   },
 ];

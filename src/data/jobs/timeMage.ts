@@ -83,13 +83,13 @@ export const abilities: AbilityDef[] = [
     effects: [{ type: 'ct', set: 100 }], ai: { buff: true },
   },
   {
-    ...T, id: 'gravity', name: 'Gravity', desc: 'Crushes all in the area beneath their own weight: a quarter of current HP. Success: (MA + 190) × Faith.', jp: 250,
+    ...T, id: 'gravity', name: 'Gravity', desc: 'Crushes all in the area beneath their own weight: a quarter of maximum HP. Success: (MA + 190) × Faith.', jp: 250,
     mp: 24, ct: 6, aoe: 2, aoeV: 1, target: 'enemy', calc: true, vfx: 'gravity', color: '#5a3a8a',
     hit: F.hitMa(190), params: { pct: 0.25 },
     effects: [{ type: 'special', id: 'gravity' }],
   },
   {
-    ...T, id: 'graviga', name: 'Graviga', desc: 'A crushing well of weight over a wide area: half of current HP. Success: (MA + 120) × Faith.', jp: 550,
+    ...T, id: 'graviga', name: 'Graviga', desc: 'A crushing well of weight over a wide area: half of maximum HP. Success: (MA + 120) × Faith.', jp: 550,
     mp: 50, ct: 9, aoe: 2, aoeV: 3, target: 'enemy', vfx: 'gravity', color: '#3a2060', calc: true,
     hit: F.hitMa(120), params: { pct: 0.5 },
     effects: [{ type: 'special', id: 'gravity' }],

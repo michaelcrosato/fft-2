@@ -158,7 +158,7 @@ export const SPECIALS: Record<string, Special> = {
     },
   },
 
-  /** Demi-like: percentage of current HP */
+  /** Gravity: percentage of maximum HP */
   gravity: {
     effect: (b, c, t, a, h) => {
       const p = Number(a.params?.pct ?? 0.25);

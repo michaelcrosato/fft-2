@@ -164,6 +164,16 @@ export function setLevel(u: RosterUnit, lv: number) {
   u.level = target;
 }
 
+/** Award EXP outside battle, applying the same job growth at each level. */
+export function addExp(u: RosterUnit, amount: number) {
+  u.exp += amount;
+  while (u.exp >= 100 && u.level < 99) {
+    u.exp -= 100;
+    setLevel(u, u.level + 1);
+  }
+  if (u.level === 99) u.exp = Math.min(99, u.exp);
+}
+
 export function unitJobLevel(u: RosterUnit, jobId: string) {
   let lv = jobLevel(u.totalJp[jobId] ?? 0);
   // the hero's unique squire job counts as Squire for the job tree

@@ -1,60 +1,101 @@
-// "How to Play" — rules primer & controls.
-import { menu } from '../widgets';
-import { h } from '../dom';
-import { overlay } from './common';
+// "How to Play" — field manual, reference tables and controls.
 
-const TOPICS: Array<[string, string]> = [
-  ['Controls', `Keyboard: arrows/WASD move the cursor, Enter/Space confirm, Esc/Backspace go back. Camera: Q/E rotate, R toggles a high angle, +/- zoom, F recenters. When no menu is open in battle (for example during an enemy turn) the arrows pan the camera. Tab shows the turn order; hold Shift to fast-forward animations and text.
-
-Mouse: hover a tile to inspect it, click to confirm, right-click to go back. Drag to orbit the camera (it settles on the nearest corner), right-drag or Shift+drag to pan, wheel or trackpad pinch to zoom.
-
-Touch: tap a tile to select it and tap again to confirm. Drag with one finger to orbit; pinch to zoom and drag two fingers to pan. The round buttons at the bottom of the battlefield rotate, zoom (hold), tilt and recenter the camera.
-
-Gamepad (Xbox layout; on PlayStation A=✕ B=○ X=□ Y=△): D-pad or left stick move, A confirm, B back, Start/Y menu, View turn order. Camera: right stick orbits and tilts, LT/RT zoom, LB/RB rotate 90°, L3 high angle, R3 recenter. Hold X to fast-forward.`],
-  ['Turns & CT', `Every unit has a Charge Time (CT) gauge. Each clocktick it fills by the unit's Speed; at 100 the unit acts.
-
-On your turn you may Move and Act once each, in either order, then choose a facing. Moving and acting costs the full 100 CT; doing only one leaves 20 CT in reserve, and simply Waiting leaves 40 — so waiting brings your next turn sooner.
-
-Spells and some arts must charge before they resolve. The Turn Order list (Tab) shows when charged actions will land — a slow spell aimed at a quick foe may strike empty ground.`],
-  ['Height & Facing', `Terrain height matters. A unit can climb or drop as many steps as its Jump, and can leap small gaps. Archers shoot farther from high ground.
-
-Units can evade attacks that come from the front; shields also guard the flanks. From behind, only accessories help. Strike from the side or back, and end your turns facing danger.`],
-  ['Brave & Faith', `Brave governs how often reaction abilities trigger and how hard bare fists and knight's swords hit. A unit whose Brave falls below 10 turns chicken.
-
-Faith sets the power of magic — both the spells a unit casts and the spells it suffers. High Faith makes a fine healer and a fragile target.
-
-Speechcraft can raise or lower both. A quarter of any change made in battle becomes permanent.`],
-  ['The Zodiac', `Everyone is born under one of the twelve signs. Signs a triangle apart are Good together (+25%); signs a square apart are Bad (−25%). Opposite signs are Best (+50%) between a man and a woman, Worst (−50%) between two of the same sex. Monsters count as neither.
-
-Compatibility affects damage, healing and the success of most abilities. It is shown on a target's card.`],
-  ['Jobs & JP', `Every action earns Job Points in the unit's current job, and a quarter of that spills over to allies in the same job. Spend JP in Formation → Learn Abilities.
-
-Job levels unlock new jobs: Squire and Chemist lead to Knight, Archer, Cleric and Wizard, and on through twenty classes. Each unit carries its job's skillset, one secondary skillset, and one reaction, support and movement ability learned in any job.`],
-  ['Falling in Battle', `A unit reduced to 0 HP collapses; a counter above them counts down three of their turns. Revive them before it runs out, or they become a crystal (or leave a chest) and are lost forever.
-
-Stepping onto an enemy's crystal teaches you the abilities they knew. Gentle mode (Options) lets fallen allies retreat instead of crystallizing.`],
-  ['Towns & Travel', `Travel along roads on the world map; each stop is a day. Green sites may hold wandering foes. Towns offer an Outfitter, a Soldier Office for recruits, and a Tavern with rumours and errands.
-
-Errands send idle soldiers away for some days in exchange for gil, JP and discoveries recorded in the Chronicle. Poach monsters with the Poach support to stock the Fur Shop.`],
-  ['Monsters', `Monsters can be recruited with the Orator's Invite (they need Beast Speech to understand you). Monsters in your company sometimes lay eggs after a victory. They cannot change jobs or equipment, but they learn their secret techniques as they grow.`],
-];
+import { fieldManual } from "../../data/guides/fieldManual";
+import { h } from "../dom";
+import { menu } from "../widgets";
+import { overlay } from "./common";
 
 export async function openHelp() {
-  const ov = overlay('How to Play');
-  let body = null as HTMLElement | null;
-  const show = (i: number) => {
-    body?.remove();
-    const [title, text] = TOPICS[i];
-    body = h('div.panel.detail.titled', { style: { right: '16px', top: '64px', width: 'min(620px, 60vw)', maxHeight: 'calc(78 * var(--vh))', display: 'flex', flexDirection: 'column' } }, h('div.title-plate', null, title), h('div', { style: { whiteSpace: 'pre-wrap', lineHeight: '1.55', marginTop: '6px', overflowY: 'auto', minHeight: '0' } }, text));
-    ov.root.appendChild(body);
-  };
-  try {
-    // choosing a topic keeps it open (on touch the first tap selects, the second chooses); Back leaves
-    let last = 0;
-    for (;;) {
-      const pick = await menu({ items: TOPICS.map(([t], i) => ({ label: t, value: i })), x: 16, y: 64, title: 'Topics', parent: ov.root, initial: last, onHover: (i) => { if (i !== null) show(i as number); } }).promise;
-      if (pick === null) break;
-      last = pick;
-    }
-  } finally { body?.remove(); ov.close(); }
+	const ov = overlay("How to Play");
+	const topics = fieldManual();
+	let body = null as HTMLElement | null;
+	let textPane = null as HTMLElement | null;
+	let shown = -1;
+	const show = (i: number) => {
+		// Re-selecting a topic preserves its text scroll position.
+		if (shown === i) return;
+		shown = i;
+		body?.remove();
+		const topic = topics[i];
+		textPane = h(
+			"div",
+			{
+				role: "region",
+				"aria-label": topic.title,
+				style: {
+					lineHeight: "1.55",
+					marginTop: "6px",
+					overflowY: "auto",
+					minHeight: "0",
+				},
+			},
+			h("div", { style: { whiteSpace: "pre-wrap" } }, topic.text),
+			...(topic.links ?? []).map((link) =>
+				h(
+					"p",
+					{ style: { margin: "10px 0 0" } },
+					h(
+						"a",
+						{
+							href: link.url,
+							target: "_blank",
+							rel: "noopener noreferrer",
+							style: { color: "inherit", textDecoration: "underline" },
+						},
+						link.title,
+					),
+				),
+			),
+		);
+		body = h(
+			"div.panel.detail.titled",
+			{
+				style: {
+					right: "16px",
+					top: "64px",
+					width: "min(620px, 60vw)",
+					maxHeight: "calc(78 * var(--vh))",
+					display: "flex",
+					flexDirection: "column",
+				},
+			},
+			h("div.title-plate", null, topic.title),
+			h(
+				"div.muted",
+				{ style: { fontSize: ".82em", flexShrink: "0" } },
+				"Scroll text: ←/→ · Page Up/Down · wheel · swipe",
+			),
+			textPane,
+		);
+		ov.root.appendChild(body);
+	};
+	try {
+		// Choosing keeps the topic open; Back leaves. Reference text scrolls
+		// independently of the topic selector with keyboard, gamepad or touch.
+		await menu({
+			items: topics.map((t, i) => ({ label: t.title, value: i })),
+			x: 16,
+			y: 64,
+			title: "Topics",
+			parent: ov.root,
+			keepOpenOnChoose: true,
+			maxHeight: "calc(70 * var(--vh))",
+			onHover: (i) => {
+				if (i !== null) show(i as number);
+			},
+			onAction: (a) => {
+				if (a !== "left" && a !== "right" && a !== "prev" && a !== "next")
+					return false;
+				textPane?.scrollBy({
+					top:
+						(a === "left" || a === "prev" ? -1 : 1) *
+						Math.max(80, textPane.clientHeight * 0.7),
+				});
+				return true;
+			},
+		}).promise;
+	} finally {
+		body?.remove();
+		ov.close();
+	}
 }

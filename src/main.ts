@@ -98,6 +98,12 @@ async function runDebugHooks(game: Game): Promise<boolean> {
     await openFormation(game);
     return true;
   }
+  if (test === 'chronicle') {
+    game.state = newGame('Rhen', [4, 12]);
+    const { openChronicle } = await import('./ui/menus/chronicle');
+    await openChronicle(game);
+    return true;
+  }
   if (test === 'town') {
     // open one town service (shop | tavern | recruit | fur) at a node
     const town = await import('./ui/menus/town');

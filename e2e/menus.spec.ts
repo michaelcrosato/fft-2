@@ -79,3 +79,27 @@ test('new game with only a gamepad: birthday, gentle mode, begin', async ({ page
   expect(await uiText(page)).not.toContain('Name your hero');
   w.assertClean();
 });
+
+test('stationary mouse hover preserves keyboard selection and moving the mouse selects again', async ({ page }, info) => {
+  test.skip(!!info.project.use.hasTouch, 'mouse and keyboard');
+  const w = watchErrors(page);
+  await page.goto(gameUrl(info, { quality: 'low' }));
+  await waitForUiText(page, 'New Game');
+  const options = page.locator('.title-menu .item:has-text("Options")');
+  await options.hover();
+  await expect(page.locator('.title-menu .item.sel')).toHaveText('Options');
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.press('ArrowUp');
+  await expect(page.locator('.title-menu .item.sel')).toHaveText('New Game');
+  // Browsers emit these when layout/scroll places a row under a stationary mouse.
+  await options.dispatchEvent('pointerenter', { pointerType: 'mouse' });
+  await expect(page.locator('.title-menu .item.sel')).toHaveText('New Game');
+  const box = (await options.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2 + 5, box.y + box.height / 2);
+  await expect(page.locator('.title-menu .item.sel')).toHaveText('Options');
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.press('Enter');
+  await expect(page.getByText('Name your hero')).toBeVisible();
+  w.assertClean();
+});

@@ -8,6 +8,9 @@ import { expect, type Page, type TestInfo } from '@playwright/test';
  */
 export function gameUrl(info: TestInfo, params: Record<string, string | number> = {}): string {
   const q = new URLSearchParams();
+  // Optional fast regression pass after the default-quality graphics sweep.
+  // Omit E2E_QUALITY to exercise each device's normal quality selection.
+  if (process.env.E2E_QUALITY) q.set('quality', process.env.E2E_QUALITY);
   const forced = process.env.E2E_RENDERER;
   if (forced) q.set('renderer', forced);
   else if (info.project.use.browserName === 'chromium' || info.project.use.defaultBrowserType === 'chromium') q.set('renderer', 'webgl2');
