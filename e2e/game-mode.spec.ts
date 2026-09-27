@@ -107,14 +107,14 @@ test('Continue and Load always ask; declining, returning to title, and cancellin
   await continueToPrompt(page, info);
   await expectInViewport(page, '.game-mode-prompt');
   await enable(page, info);
-  await waitForUiText(page, '☰ Menu');
+  await expect(page.locator('.world-status')).toBeVisible();
   await returnToTitle(page, info);
   await expect(exitButton(page)).toHaveCount(0);
   await expect(page.locator('html')).not.toHaveClass(/game-mode/);
   await press(page, '.title-menu .item:has-text("Continue")', info);
   await expect(prompt(page)).toBeVisible();
   await press(page, '.game-mode-prompt .btn:has-text("Play in Browser")', info);
-  await waitForUiText(page, '☰ Menu');
+  await expect(page.locator('.world-status')).toBeVisible();
   await expect(exitButton(page)).toHaveCount(0);
   await returnToTitle(page, info);
   await press(page, '.title-menu .item:has-text("Load Game")', info);
@@ -124,7 +124,7 @@ test('Continue and Load always ask; declining, returning to title, and cancellin
   await press(page, '.menu .item:has-text("Mode Tester")', info);
   await expect(prompt(page)).toBeVisible();
   await press(page, '.game-mode-prompt .btn:has-text("Play in Browser")', info);
-  await waitForUiText(page, '☰ Menu');
+  await expect(page.locator('.world-status')).toBeVisible();
   // Loading a chronicle from within a running campaign asks too.
   await press(page, '.btn:has-text("☰ Menu")', info);
   await press(page, '.menu .item:has-text("Load")', info);
@@ -148,7 +148,7 @@ for (const kind of ['denied', 'missing', 'webkit'] as const) {
       await expect(page.locator('.toast')).toHaveCSS('animation-duration', '6.5s');
       await expectInViewport(page, '.toast');
     }
-    await waitForUiText(page, '☰ Menu');
+    await expect(page.locator('.world-status')).toBeVisible();
     await expectInViewport(page, '.game-mode-exit');
     // Only touches starting on the outer edge are reserved, and only while enabled.
     const touchPrevented = (x: number) =>

@@ -3,6 +3,7 @@
 // them discoverable and give touch players a way to do everything without gestures.
 import { h, uiRoot } from './dom';
 import type { Stage } from '../scenes/stage';
+import { gameClock } from '../core/gameClock';
 
 const svg = (d: string) => `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const ICONS = {
@@ -54,6 +55,7 @@ export class CameraControls {
     const t0 = last;
     this.stage.cam.zoom(dir < 0 ? 0.9 : 1.11);
     const tick = () => {
+      if (gameClock.paused) { this.stopHold?.(); return; }
       const now = performance.now();
       if (now - t0 > 250) this.stage.cam.zoom(Math.exp(dir * ((now - last) / 1000) * 1.5));
       last = now;

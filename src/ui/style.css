@@ -48,14 +48,46 @@ body { font-family: var(--font-body); color: var(--ink); -webkit-font-smoothing:
 
 /* Opt-in immersion: contain nested scroll areas as well as the page itself. */
 html.game-mode, .game-mode body, .game-mode #ui, .game-mode #ui * { overscroll-behavior: none; }
-.game-mode-exit {
-  position: fixed; right: calc(24px + env(safe-area-inset-right, 0px));
-  bottom: calc(8px + env(safe-area-inset-bottom, 0px)); z-index: 65;
-  width: 44px; height: 44px; padding: 0; border: 1px solid var(--gold); border-radius: 8px;
-  background: rgba(14, 10, 18, 0.85); color: var(--gold2); font: 26px/1 sans-serif;
-  cursor: pointer; touch-action: manipulation;
+.game-controls-visible { --controls-clearance: calc(64px + env(safe-area-inset-top, 0px)); }
+.game-toolbar {
+  position: fixed; top: calc(8px + env(safe-area-inset-top, 0px));
+  right: calc(24px + env(safe-area-inset-right, 0px)); z-index: 70;
+  display: flex; align-items: center; gap: 8px; pointer-events: none;
 }
-.game-mode-exit:focus-visible { outline: 2px solid var(--gold2); outline-offset: 3px; }
+/* Opaque buttons keep the same contrast over bright terrain, dialogue and black fades. */
+.game-toolbar button {
+  display: inline-flex; justify-content: center; align-items: center;
+  min-width: 44px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--gold); border-radius: 7px;
+  background: #21180f; color: #fff1ce; font: 700 14px/1.2 var(--font-head);
+  box-shadow: 0 2px 7px #0009; cursor: pointer; touch-action: manipulation; pointer-events: auto;
+}
+.game-toolbar button:hover, .game-toolbar button:active { background: #493019; }
+.game-toolbar button:focus-visible { outline: 2px solid var(--gold2); outline-offset: 3px; }
+.game-toolbar button[hidden] { display: none; }
+.game-toolbar .skipbtn { order: 0; }
+.game-toolbar .game-menu-button { order: 1; }
+.game-toolbar .game-mode-exit { order: 2; width: 44px; padding: 0; font: 26px/1 sans-serif; }
+.game-paused .skipbtn { visibility: hidden; pointer-events: none; }
+.game-paused #ui * { animation-play-state: paused !important; }
+.game-menu-shell {
+  position: fixed; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none;
+  margin: 0; padding: 0; border: 0; background: rgba(7, 6, 10, .88); color: var(--ink);
+  font-family: var(--font-body); font-size: calc(17px * var(--ui-scale));
+}
+.game-menu-shell::backdrop { background: rgba(7, 6, 10, .4); }
+.game-menu-home {
+  left: 50%; top: calc(50% + 28px); transform: translate(-50%, -50%);
+  width: min(360px, calc(100vw - 48px)); max-height: calc(100dvh - 88px);
+  display: flex; flex-direction: column; gap: 10px; padding: 20px; overflow-y: auto;
+  text-align: center; touch-action: pan-y;
+}
+.game-menu-home[hidden] { display: none; }
+.game-menu-home p { margin: 0 0 4px; }
+.game-menu-home .btn { min-height: 44px; flex-shrink: 0; }
+.game-controls-visible .tileinfo, .game-controls-visible .atlist, .game-controls-visible .dialogue.top,
+.game-controls-visible.touch .helpbar, .game-controls-visible .touch .helpbar { top: var(--controls-clearance); }
+.game-controls-visible .banner { top: max(5vh, var(--controls-clearance)); }
+.game-controls-visible .toast { top: max(14vh, calc(var(--controls-clearance) + 76px)); }
 dialog.game-mode-prompt {
   position: fixed; inset: 0; margin: auto; width: min(480px, calc(100vw - 48px));
   max-height: calc(100dvh - 32px); overflow-y: auto; text-align: center;
@@ -292,9 +324,9 @@ dialog.game-mode-prompt {
   .menu.deploy .scroll { max-height: calc(30 * var(--vh)) !important; }
   .camctl, .touch .camctl { left: auto; right: 8px; bottom: auto; top: 50%; transform: translateY(-50%); flex-direction: column; }
 }
-/* landscape phones: no room between the unit cards; a 2×3 block at the top right (below the Skip button) */
+/* landscape phones: no room between the unit cards; a 2×3 block below the top-right controls */
 @media (orientation: landscape) and (max-height: 520px) {
-  .camctl, .touch .camctl { left: auto; right: 8px; bottom: auto; top: 46px; transform: none; display: grid; grid-template-columns: repeat(2, auto); }
+  .camctl, .touch .camctl { left: auto; right: 8px; bottom: auto; top: var(--controls-clearance, 46px); transform: none; display: grid; grid-template-columns: repeat(2, auto); }
   .preview { right: 100px; }
   /* short screens: detail panels sit beside the list rather than under it */
   .panel.detail { left: auto !important; right: 8px !important; top: 48px !important; bottom: 8px !important; width: min(50vw, 440px) !important; min-width: 0 !important; max-height: none !important; overflow-y: auto !important; }

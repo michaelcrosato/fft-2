@@ -20,6 +20,7 @@ import { THREE } from '../gfx/three';
 import { h, uiRoot } from '../ui/dom';
 import { loadOptions } from '../game/state';
 import { CameraControls } from '../ui/cameraControls';
+import { gameClock } from '../core/gameClock';
 
 const ANIM_MAP: Partial<Record<AnimKind, ClipName>> = {
   swing: 'swing', thrust: 'thrust', shoot: 'bow', bow: 'bow', gun: 'gun', cast: 'cast', pray: 'pray', punch: 'punch', kick: 'kick',
@@ -62,7 +63,10 @@ export class BattleController {
   }
 
   view(uid: number) { return this.stage.views.get(uid); }
-  private wait(ms: number) { return new Promise<void>((r) => setTimeout(r, ms / (this.speed * (input.fast ? 3 : 1)))); }
+  private wait(ms: number) {
+    this.speed = (window as any).__autoPlay ? 8 : loadOptions().battleSpeed;
+    return gameClock.sleep(ms / (this.speed * (input.fast ? 3 : 1)));
+  }
 
   // ================================================================ main loop
   async run(): Promise<'victory' | 'defeat'> {
@@ -88,6 +92,7 @@ export class BattleController {
     await this.playEvents(start);
     let guard = 0;
     while (!this.b.result && guard++ < 100000) {
+      await gameClock.whenRunning();
       const { events, unit } = this.b.advance();
       await this.playEvents(events);
       if (this.b.result) break;
@@ -527,6 +532,7 @@ export class BattleController {
   // ================================================================ event playback
   async playEvents(events: BEvent[]) {
     for (let i = 0; i < events.length; i++) {
+      await gameClock.whenRunning();
       const e = events[i];
       if (e.t === 'act') {
         // pair with the following hits event

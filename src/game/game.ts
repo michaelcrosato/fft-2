@@ -24,6 +24,8 @@ import { Rng, hashStr } from '../core/rng';
 import { randomLook } from './roster';
 import { CameraControls } from '../ui/cameraControls';
 import { backBtn, portraitFor } from '../ui/battleHud';
+import { gameClock } from '../core/gameClock';
+import { installGameMenu } from '../ui/gameMenu';
 
 export interface Screen {
   update(dt: number): void;
@@ -45,6 +47,7 @@ export class Game {
 
   constructor() {
     this.options = loadOptions();
+    installGameMenu(this);
     renderer.setAnimationLoop(() => this.frame());
     window.addEventListener('resize', () => this.onResize());
     // the canvas can change size without a window resize (mobile toolbars, split view, rotation)
@@ -85,9 +88,12 @@ export class Game {
     const rawDt = (now - this.last) / 1000;
     const dt = Math.min(0.05, rawDt);
     this.last = now;
-    this.autoQuality(rawDt);
-    if (this.state) this.state.playtime += dt;
-    if (this.screen) { this.screen.update(dt); this.screen.render(); }
+    if (!gameClock.paused) {
+      this.autoQuality(rawDt);
+      if (this.state) this.state.playtime += dt;
+      this.screen?.update(dt);
+    }
+    this.screen?.render();
     (window as any).__frames = ((window as any).__frames ?? 0) + 1;
   }
 
@@ -413,7 +419,7 @@ export class Game {
     stage.highlight('deploy', cells);
     stage.cam.snap(stage.tileWorld(cells[0][0], cells[0][1]), Math.max(stage.grid.w, stage.grid.d) * 2.1);
     if (def.hint) toast(def.hint, 4000);
-    const briefing = h('div.panel', { style: { left: '50%', top: '10px', transform: 'translateX(-50%)', textAlign: 'center', padding: '6px 18px' } },
+    const briefing = h('div.panel.battle-briefing', { style: { left: '50%', top: 'var(--controls-clearance, 10px)', transform: 'translateX(-50%)', textAlign: 'center', padding: '6px 18px' } },
       h('h2', null, def.name), h('div.muted', null, victoryText(def)));
     uiRoot().appendChild(briefing);
     const camUi = new CameraControls(stage);

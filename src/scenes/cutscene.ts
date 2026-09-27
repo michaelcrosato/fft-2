@@ -9,6 +9,8 @@ import { audio } from '../audio/audio';
 import { h, uiRoot } from '../ui/dom';
 import { input } from '../ui/input';
 import { loadOptions } from '../game/state';
+import { gameClock } from '../core/gameClock';
+import { addGameControl } from '../ui/gameToolbar';
 
 export interface SceneHost {
   stage(): Stage;
@@ -45,14 +47,17 @@ let skipAll = false;
 export async function runScene(cmds: SceneCmd[], host: SceneHost): Promise<void> {
   skipAll = !!(window as any).__autoPlay;
   // skip button
-  const skip = h('div.btn.ghost.skipbtn', { style: { position: 'absolute', right: '14px', top: '12px', color: '#efe3c6', borderColor: 'rgba(240,210,140,.4)', fontSize: '0.8em', padding: '3px 10px' }, onclick: () => { skipAll = true; input.dispatch('menu'); } }, 'Skip ⏭');
-  uiRoot().appendChild(skip);
+  const skip = h('button.btn.skipbtn', { type: 'button', 'aria-label': 'Skip cutscene', onclick: () => {
+    if (gameClock.paused) return;
+    skipAll = true; input.dispatch('menu');
+  } }, 'Skip ⏭');
+  const removeSkip = addGameControl(skip);
   setSkipHook(() => { skipAll = true; });
   try {
     await runCmds(cmds, host);
   } finally {
     setSkipHook(null);
-    skip.remove();
+    removeSkip();
     // the last line of dialogue stays up between lines; clear it when the scene is over
     closeDialogue();
   }
@@ -60,11 +65,12 @@ export async function runScene(cmds: SceneCmd[], host: SceneHost): Promise<void>
 
 async function runCmds(cmds: SceneCmd[], host: SceneHost): Promise<void> {
   for (const c of cmds) {
+    await gameClock.whenRunning();
     await runCmd(c, host);
   }
 }
 
-function sleep(ms: number) { return new Promise<void>((r) => setTimeout(r, skipAll ? 0 : ms / (input.fast ? 3 : 1))); }
+function sleep(ms: number) { return gameClock.sleep(skipAll ? 0 : ms / (input.fast ? 3 : 1)); }
 
 async function runCmd(c: SceneCmd, host: SceneHost): Promise<void> {
   const st = () => host.stage();
@@ -107,6 +113,7 @@ async function runCmd(c: SceneCmd, host: SceneHost): Promise<void> {
       if (v && v.anim.baseClip === 'idle') v.anim.setBase('talk');
       // never hold a line of dialogue for a portrait that is slow to render (it stays cached for later lines)
       const portrait = await Promise.race([host.portraitOf(id), new Promise<null>((r) => setTimeout(() => r(null), 1200))]);
+      await gameClock.whenRunning();
       // Skip may have been pressed while the portrait was rendering.
       if (!skipAll) await say(host.nameOf(id), fillText(text, host), { mood: opts?.mood, pos: opts?.pos, portrait, speed: loadOptions().textSpeed });
       if (v && v.anim.baseClip === 'talk') v.anim.setBase('idle');

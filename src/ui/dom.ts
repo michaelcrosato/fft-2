@@ -1,4 +1,5 @@
 // Tiny DOM helpers.
+import { gameClock } from '../core/gameClock';
 type Child = Node | string | number | null | undefined | false | Child[];
 
 export function h<K extends keyof HTMLElementTagNameMap>(tag: K | string, attrs: Record<string, unknown> | null = null, ...children: Child[]): HTMLElement {
@@ -32,6 +33,6 @@ export function uiRoot(): HTMLElement { return document.getElementById('ui')!; }
 
 export function clear(el: HTMLElement) { while (el.firstChild) el.removeChild(el.firstChild); }
 
-export const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+export const sleep = (ms: number) => gameClock.sleep(ms);
 
 export function nextFrame() { return new Promise<void>((r) => requestAnimationFrame(() => r())); }

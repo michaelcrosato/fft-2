@@ -100,7 +100,7 @@ test('reaches the first player turn with a usable HUD', async ({ page }, info) =
   await press(page, '.menu .item:has-text("Begin Battle")', info);
   // skip the opening scene; wait for our first turn (enemies may act first)
   await expect.poll(async () => {
-    const skip = page.locator('.btn.ghost:has-text("Skip")');
+    const skip = page.locator('.skipbtn');
     if (await skip.isVisible().catch(() => false)) {
       // Software-rendered WebKit may need several frames for actionability.
       // Use the device's real interaction mode and allow the tap/click to land.
@@ -126,7 +126,7 @@ test('a whole turn by touch or mouse: move, wait, face', async ({ page }, info) 
   await waitForUiText(page, 'Begin Battle');
   await press(page, '.menu .item:has-text("Begin Battle")', info);
   await expect.poll(async () => {
-    const skip = page.locator('.btn.ghost:has-text("Skip")');
+    const skip = page.locator('.skipbtn');
     if (await skip.isVisible().catch(() => false)) {
       await (info.project.use.hasTouch ? skip.tap({ timeout: 10_000 }) : skip.click({ timeout: 10_000 })).catch(() => {});
     }
@@ -137,6 +137,12 @@ test('a whole turn by touch or mouse: move, wait, face', async ({ page }, info) 
   const u0 = await active();
   await press(page, '.menu .item:has-text("Move")', info);
   await expect(page.locator('.hudback')).toBeVisible();
+  // The persistent menu must preserve an in-progress destination selection.
+  await press(page, '.game-menu-button', info);
+  await expect(page.getByRole('dialog', { name: 'Game Menu', exact: true })).toBeVisible();
+  await press(page, '.game-menu-home .btn:has-text("Resume Game")', info);
+  await expect(page.locator('.hudback')).toBeVisible();
+  expect((await active()).uid).toBe(u0.uid);
   // the camera glides to the unit first; measure tile positions once it has settled
   let prev = '';
   await expect.poll(async () => { const c = (await camState(page))!; const k = [c.x, c.z, c.yaw, c.dist].map((v) => v.toFixed(2)).join(); const still = k === prev; prev = k; return still; }, { timeout: 30_000, intervals: [500] }).toBe(true);
@@ -147,7 +153,7 @@ test('a whole turn by touch or mouse: move, wait, face', async ({ page }, info) 
     cells.sort((p: any, q: any) => (Math.abs(q.x - u.x) + Math.abs(q.z - u.z)) - (Math.abs(p.x - u.x) + Math.abs(p.z - u.z)));
     for (const c of cells.slice(0, 12)) {
       const s = st.toScreen(st.tileWorld(c.x, c.z));
-      if (s.visible && s.x > 40 && s.y > 40 && s.x < innerWidth - 40 && s.y < innerHeight - 160) {
+      if (s.visible && s.x > 40 && s.y > 40 && s.x < innerWidth - 40 && s.y < innerHeight - 160 && document.elementFromPoint(s.x, s.y)?.id === 'gl') {
         const hit = st.pickCell(s.x, s.y);
         if (hit && hit[0] === c.x && hit[1] === c.z) return { x: c.x, z: c.z, sx: s.x, sy: s.y };
       }

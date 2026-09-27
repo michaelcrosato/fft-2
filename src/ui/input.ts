@@ -54,6 +54,7 @@ export interface PadState { connected: boolean; lx: number; ly: number; rx: numb
 
 class InputManager {
   private stack: Handler[] = [];
+  private modalStack: Handler[] = [];
   private padPrev: boolean[] = [];
   private padRepeat = new Map<number, number>();
   private kbFast = false;
@@ -106,14 +107,16 @@ class InputManager {
     window.setInterval(() => this.pollPad(), 12);
   }
 
-  push(h: Handler): () => void {
-    this.stack.push(h);
-    return () => { const i = this.stack.lastIndexOf(h); if (i >= 0) this.stack.splice(i, 1); };
+  push(h: Handler, modal = false): () => void {
+    const stack = modal ? this.modalStack : this.stack;
+    stack.push(h);
+    return () => { const i = stack.lastIndexOf(h); if (i >= 0) stack.splice(i, 1); };
   }
 
   dispatch(a: Action, e?: KeyboardEvent) {
-    for (let i = this.stack.length - 1; i >= 0; i--) {
-      const r = this.stack[i](a, e);
+    const stack = this.modalStack.length ? this.modalStack : this.stack;
+    for (let i = stack.length - 1; i >= 0; i--) {
+      const r = stack[i](a, e);
       if (r !== false) return; // consumed (handlers return false to pass through)
     }
   }
