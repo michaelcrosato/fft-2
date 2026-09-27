@@ -225,8 +225,14 @@ test('Menu stays usable while the party travels on the world map', async ({ page
   await expect(page.locator('#loading')).toHaveCount(0);
   await page.keyboard.press('ArrowUp'); // the only other unlocked node is north of Orvelle
   await waitForUiText(page, 'Murondel');
-  await page.keyboard.press('Enter');
-  await openMenu(page, info);
+  // Start travel and pause in the same browser task. With software rendering,
+  // a Playwright click round trip can otherwise take longer than the journey.
+  await page.evaluate(() => {
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true, cancelable: true }));
+    document.querySelector<HTMLButtonElement>('.game-menu-button')?.click();
+  });
+  await expect(systemMenu(page)).toBeVisible();
+  await expect(page.locator('html')).toHaveClass(/game-paused/);
   const location = () => page.evaluate(() => (window as unknown as { __game: Game }).__game.state.location);
   expect(await location()).toBe('orvelle');
   // Longer than the whole journey: pausing must stop its independent RAF movement, too.
