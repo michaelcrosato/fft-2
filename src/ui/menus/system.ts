@@ -34,8 +34,8 @@ export async function openSaveLoad(game: Game, mode: 'save' | 'load'): Promise<G
   } finally { ov.close(); }
 }
 
-export async function openOptions(game: Game) {
-  const ov = overlay('Options');
+export async function openOptions(game: Game, parent?: HTMLElement) {
+  const ov = overlay('Options', parent);
   const o: Options = game.options;
   let last: string | undefined;
   try {
@@ -47,8 +47,8 @@ export async function openOptions(game: Game) {
         { label: 'Effects volume', value: 'sfx', right: pct(o.sfx) },
         { label: 'Battle speed', value: 'speed', right: `${o.battleSpeed}×` },
         { label: 'Text speed', value: 'text', right: `${o.textSpeed}×` },
-        { label: 'Difficulty', value: 'difficulty', right: { easy: 'Squire (easy)', normal: 'Knight (normal)', hard: 'Lord (hard)' }[o.difficulty ?? 'normal'], desc: 'Enemy level and vigour relative to your company.' },
-        { label: 'Gentle mode', value: 'gentle', right: o.gentle ? 'On' : 'Off', desc: 'Fallen allies retreat instead of crystallizing.' },
+        { label: 'Difficulty', value: 'difficulty', right: { easy: 'Squire (easy)', normal: 'Knight (normal)', hard: 'Lord (hard)' }[o.difficulty ?? 'normal'], desc: 'Enemy level and vigour relative to your company. Applies to the next battle.' },
+        { label: 'Gentle mode', value: 'gentle', right: o.gentle ? 'On' : 'Off', desc: 'Fallen allies retreat instead of crystallizing. Applies to the next battle.' },
         { label: 'Random encounters', value: 'encounters', right: o.encounters === false ? 'Off' : 'On', desc: 'Wandering foes may ambush the company in open country.' },
         { label: 'Camera shake', value: 'shake', right: o.camShake ? 'On' : 'Off' },
         { label: 'Graphics quality', value: 'quality', right: `${o.quality} (${rinfo?.quality ?? ''})` },
@@ -70,7 +70,7 @@ export async function openOptions(game: Game) {
       if (pick === 'help') {
         const { openHelp } = await import('./help');
         ov.root.style.visibility = 'hidden';
-        try { await openHelp(); } finally { ov.root.style.visibility = ''; }
+        try { await openHelp(parent); } finally { ov.root.style.visibility = ''; }
         continue;
       }
       const cycle = <T,>(arr: T[], v: T) => arr[(arr.indexOf(v) + 1) % arr.length];

@@ -3,6 +3,7 @@
 import { h, uiRoot, sleep } from './dom';
 import { input, type Action } from './input';
 import { audio } from '../audio/audio';
+import { gameClock } from '../core/gameClock';
 
 export interface MenuItem<T = string> {
   label: string;
@@ -133,7 +134,7 @@ export function menu<T = string>(o: MenuOpts<T>): MenuHandle<T> {
       case 'cancel': if (o.cancelable !== false) { audio.sfx('cancel'); finish(null); } return true;
       default: return true;
     }
-  });
+  }, !!o.parent?.closest('.game-menu-shell'));
   (o.parent ?? uiRoot()).appendChild(el);
   // now that the list is in the document, bring the initial choice into view
   rows[sel]?.scrollIntoView?.({ block: 'nearest' });
@@ -191,6 +192,7 @@ export function say(speaker: string, text: string, o: SayOpts = {}): Promise<voi
     let raf = 0;
     const tick = () => {
       const now = performance.now();
+      if (gameClock.paused) { last = now; raf = requestAnimationFrame(tick); return; }
       acc += ((now - last) / 1000) * cps * (input.fast ? 4 : 1);
       last = now;
       const n = Math.min(text.length, Math.floor(acc));
@@ -198,7 +200,7 @@ export function say(speaker: string, text: string, o: SayOpts = {}): Promise<voi
         if (n - shown >= 1 && (n % 3 === 0)) audio.sfx('textBlip', { volume: 0.25 });
         shown = n; txt.textContent = text.slice(0, shown);
       }
-      if (shown >= text.length) { done = true; next.style.visibility = 'visible'; if (o.auto) setTimeout(finish, o.auto); return; }
+      if (shown >= text.length) { done = true; next.style.visibility = 'visible'; if (o.auto) gameClock.schedule(finish, o.auto); return; }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -243,6 +245,7 @@ export async function narrate(text: string): Promise<void> {
   await new Promise<void>((resolve) => {
     let done = false;
     const t = setInterval(() => {
+      if (gameClock.paused) return;
       if (i >= words.length) { clearInterval(t); done = true; return; }
       p.textContent += words[i++];
     }, input.fast ? 5 : 45);
@@ -268,9 +271,9 @@ export async function titleCard(t1: string, t2?: string, hold = 2600): Promise<v
   el.style.opacity = '1';
   audio.sfx('bell', { volume: 0.6 });
   await new Promise<void>((resolve) => {
-    const t = setTimeout(done, hold + 900);
+    const cancelTimer = gameClock.schedule(done, hold + 900);
     const pop = input.push((a) => { if (a === 'menu' && skipHook) skipHook(); if (a === 'confirm' || a === 'cancel' || (a === 'menu' && skipHook)) done(); return true; });
-    function done() { clearTimeout(t); pop(); resolve(); }
+    function done() { cancelTimer(); pop(); resolve(); }
   });
   el.style.opacity = '0';
   await sleep(900);
@@ -296,7 +299,7 @@ export function banner(text: string, enemy = false, ms = 1400): Promise<void> {
   b.style.opacity = '0'; b.style.transition = 'opacity 0.18s';
   uiRoot().appendChild(b);
   requestAnimationFrame(() => (b.style.opacity = '1'));
-  return new Promise((r) => setTimeout(() => { b.style.opacity = '0'; setTimeout(() => { b.remove(); r(); }, 200); }, ms));
+  return new Promise((r) => gameClock.schedule(() => { b.style.opacity = '0'; gameClock.schedule(() => { b.remove(); r(); }, 200); }, ms));
 }
 
 export function floater(x: number, y: number, text: string, cls: string, delay = 0) {

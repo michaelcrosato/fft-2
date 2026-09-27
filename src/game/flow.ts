@@ -19,6 +19,7 @@ import { openShop, openRecruit, openTavern, openFurShop } from '../ui/menus/town
 import { openChronicle } from '../ui/menus/chronicle';
 import { openOptions, openSaveLoad } from '../ui/menus/system';
 import { gameMode, promptGameMode } from '../ui/gameMode';
+import { setContextMenu, setGameMenuVisible } from '../ui/gameMenu';
 
 export const MONTHS = ZODIAC_ORDER.map((z) => ZODIAC_NAMES[z]);
 export function dateText(day: number) { const d = day - 1; return `${MONTHS[Math.floor(d / 30) % 12]} ${(d % 30) + 1}`; }
@@ -27,6 +28,7 @@ export function dateText(day: number) { const d = day - 1; return `${MONTHS[Math
 //  Title
 // ============================================================================
 export async function runTitle(game: Game) {
+  setGameMenuVisible(false);
   const world = new WorldView();
   await world.init();
   world.camDist = 60; world.camPitch = 0.75;
@@ -61,6 +63,7 @@ export async function runTitle(game: Game) {
     await promptGameMode();
     logo.remove(); footer.remove();
     game.state = state;
+    setGameMenuVisible(true);
     await fade('out', 0.8);
     game.setScreen(null);
     world.dispose();
@@ -136,6 +139,7 @@ async function newGameSetup(): Promise<GameState | null> {
 //  Main loop: story chain + world map
 // ============================================================================
 export async function mainLoop(game: Game) {
+  setGameMenuVisible(true);
   game.options = loadOptions(); // New Game may have changed Gentle mode
   for (;;) {
     // run steps that trigger immediately (no location, chained)
@@ -243,8 +247,8 @@ async function worldLoop(game: Game): Promise<'title' | 'continue'> {
   const hud = h('div.passthru', { style: { position: 'absolute', inset: '0' } });
   uiRoot().appendChild(hud);
   worldHud = hud;
-  // (leaves room for the ☰ Menu button on narrow screens)
-  const top = h('div.panel', { style: { left: '12px', top: '12px', padding: '6px 14px', fontSize: '0.9em', maxWidth: 'calc(100% - 130px)' } });
+  // Status stays below the persistent controls, including on narrow screens.
+  const top = h('div.panel.world-status', { style: { left: '12px', top: 'var(--controls-clearance, 12px)', padding: '6px 14px', fontSize: '0.9em', maxWidth: 'calc(100% - 24px)' } });
   const label = h('div.panel', { style: { display: 'none', padding: '3px 12px', fontFamily: 'Cinzel, serif', fontWeight: '700', transform: 'translate(-50%, -100%)', pointerEvents: 'none' } });
   hud.appendChild(top); hud.appendChild(label);
   const refreshTop = () => {
@@ -365,8 +369,6 @@ async function worldLoop(game: Game): Promise<'title' | 'continue'> {
     return true;
   });
   cleanupFns.push(pop);
-  const menuBtn = h('span.btn', { style: { position: 'absolute', right: '12px', top: '12px' }, onclick: () => openWorldMenu() }, '☰ Menu');
-  hud.appendChild(menuBtn);
   const openWorldMenu = async () => {
     if (busy) return;
     busy = true;
@@ -375,7 +377,7 @@ async function worldLoop(game: Game): Promise<'title' | 'continue'> {
       const pick = await menu({ items: [
         { label: 'Formation', value: 'formation' }, { label: 'Chronicle', value: 'chronicle' }, { label: 'Save', value: 'save' }, { label: 'Load', value: 'load' },
         { label: 'Options', value: 'options' }, { label: 'Return to Title', value: 'title' },
-      ], right: 14, y: 60, title: 'Menu' }).promise;
+      ], right: 24, y: 'calc(76px + env(safe-area-inset-top, 0px))', title: 'Menu' }).promise;
       if (pick === 'formation') await openFormation(game);
       if (pick === 'chronicle') await openChronicle(game);
       if (pick === 'save') await openSaveLoad(game, 'save');
@@ -385,6 +387,11 @@ async function worldLoop(game: Game): Promise<'title' | 'continue'> {
       refreshTop();
     } finally { busy = false; hud.style.display = ''; }
   };
+  cleanupFns.push(setContextMenu(() => {
+    if (busy || result) return false;
+    void openWorldMenu();
+    return true;
+  }));
   // welcome: if the current story step is here, offer it immediately
   const stepHere = STORY[s.storyIndex];
   if (stepHere?.at === s.location) { busy = false; goTo(s.location); }
@@ -414,7 +421,7 @@ function advanceDay(game: Game, n: number) {
 }
 
 // ---------------------------------------------------------------- node menu
-/** the world map's status panel and menu button; hidden while a scene or battle plays */
+/** World-map status panels hide during scenes and battles; the control bar stays available. */
 let worldHud: HTMLElement | null = null;
 let hudHides = 0;
 async function hudHidden<T>(fn: () => Promise<T>): Promise<T> {

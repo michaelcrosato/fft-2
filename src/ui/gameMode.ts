@@ -1,6 +1,7 @@
 // Browser immersion is opt-in for each campaign entry, never a saved preference.
 import { h } from './dom';
 import { input } from './input';
+import { addGameControl } from './gameToolbar';
 import { toast } from './widgets';
 
 type FullscreenDocument = Document & {
@@ -20,6 +21,7 @@ class GameMode {
   private wakeLock: WakeLockSentinel | null = null;
   private wakePending = false;
   private exitButton: HTMLElement | null = null;
+  private removeExit: (() => void) | null = null;
   private listeners = new Set<() => void>();
 
   onChange(listener: () => void) {
@@ -99,7 +101,7 @@ class GameMode {
         '⛶',
       );
       // Outside #ui: scene transitions clear that container. Fullscreen covers the whole document.
-      document.body.appendChild(this.exitButton);
+      this.removeExit = addGameControl(this.exitButton);
     }
     try {
       if (!this.fullscreen) {
@@ -130,7 +132,8 @@ class GameMode {
     this.wasFullscreen = false;
     this.session++;
     document.documentElement.classList.remove('game-mode');
-    this.exitButton?.remove();
+    this.removeExit?.();
+    this.removeExit = null;
     this.exitButton = null;
     this.releaseWakeLock();
     this.leaveFullscreen();
@@ -246,7 +249,7 @@ export function promptGameMode(): Promise<void> {
       }
       if (!busy && action === 'confirm') (document.activeElement === decline ? decline : enable).click();
       return true;
-    });
+    }, true);
     document.body.appendChild(dialog);
     dialog.showModal();
     enable.focus();

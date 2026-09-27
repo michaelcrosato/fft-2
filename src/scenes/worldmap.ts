@@ -13,6 +13,7 @@ import { Vfx } from '../gfx/vfx';
 import type { Scene, PerspectiveCamera, Group, Mesh, Vector3, Raycaster, Object3D } from 'three/webgpu';
 import { buildHumanoid } from '../gfx/models/humanoid';
 import { Animator } from '../gfx/models/anim';
+import { gameClock } from '../core/gameClock';
 import type { UnitModel } from '../gfx/models/rig';
 import { releaseTree } from '../gfx/dispose';
 import { fovFor } from '../gfx/camera';
@@ -293,9 +294,13 @@ export class WorldView {
       const dir = b.pos.clone().sub(a.pos);
       this.party.model.root.rotation.y = Math.atan2(dir.x, dir.z);
       await new Promise<void>((resolve) => {
-        const t0 = performance.now();
+        let last = performance.now(), elapsed = 0;
         const step = () => {
-          const t = Math.min(1, (performance.now() - t0) / 1000 / dur);
+          const now = performance.now();
+          if (!gameClock.paused) elapsed += now - last;
+          last = now;
+          if (gameClock.paused) { requestAnimationFrame(step); return; }
+          const t = Math.min(1, elapsed / 1000 / dur);
           const p = a.pos.clone().lerp(b.pos, t);
           p.y = this.heightAt(a.node.pos[0] + (b.node.pos[0] - a.node.pos[0]) * t, a.node.pos[1] + (b.node.pos[1] - a.node.pos[1]) * t) + 0.08;
           this.party.root.position.copy(p);

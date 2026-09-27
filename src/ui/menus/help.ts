@@ -5,8 +5,8 @@ import { h } from "../dom";
 import { menu } from "../widgets";
 import { overlay } from "./common";
 
-export async function openHelp() {
-	const ov = overlay("How to Play");
+export async function openHelp(parent?: HTMLElement) {
+	const ov = overlay("How to Play", parent);
 	const topics = fieldManual();
 	let body = null as HTMLElement | null;
 	let textPane = null as HTMLElement | null;

@@ -10,11 +10,11 @@ import { getMonsterBuilder } from '../../scenes/unitview';
 import { ZODIAC_GLYPH, ZODIAC_NAMES } from '../../battle/zodiac';
 import { bar } from '../widgets';
 
-export function overlay(title: string): { root: HTMLElement; close: () => void } {
+export function overlay(title: string, parent = uiRoot()): { root: HTMLElement; close: () => void } {
   const root = h('div.screen', { style: { zIndex: '5' } }, h('div.screen-bg'));
   const head = h('div', { style: { position: 'relative', padding: '14px 20px 0', fontFamily: 'Cinzel, serif', fontWeight: '700', fontSize: '1.4em', color: '#f4dc98', letterSpacing: '0.12em', textShadow: '0 2px 6px #000' } }, title);
   root.appendChild(head);
-  uiRoot().appendChild(root);
+  parent.appendChild(root);
   return { root, close: () => root.remove() };
 }
 
