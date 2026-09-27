@@ -2,7 +2,7 @@
 import type { Game } from '../../game/game';
 import { menu, toast, confirm } from '../widgets';
 import { overlay } from './common';
-import { listSaves, saveGame, loadGame, deleteSave, saveOptions, type GameState, type Options } from '../../game/state';
+import { listSaves, saveGame, loadGame, saveOptions, type GameState, type Options } from '../../game/state';
 import { audio } from '../../audio/audio';
 import { setQuality, rinfo, type Quality } from '../../gfx/renderer';
 import { NODES } from '../../data/db';
@@ -88,5 +88,3 @@ export async function openOptions(game: Game, parent?: HTMLElement) {
     }
   } finally { ov.close(); }
 }
-
-export { deleteSave };

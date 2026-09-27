@@ -1,6 +1,5 @@
 // Procedural animation for rigged unit models. Each clip writes additive
 // offsets on top of the rest pose every frame.
-import type { Object3D } from 'three/webgpu';
 import type { UnitModel, BoneName } from './rig';
 
 export type ClipName =
@@ -461,5 +460,3 @@ export class Animator {
     }
   }
 }
-
-export function boneOf(m: UnitModel, n: BoneName): Object3D | undefined { return m.bones[n]; }

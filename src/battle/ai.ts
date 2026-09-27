@@ -259,7 +259,7 @@ function scoreAction(b: Battle, u: BattleUnit, a: AbilityDef, prev: TargetPrevie
           const has = e.slot === 'gil' || e.slot === 'exp' ? !t.isMonster : e.slot === 'any' ? Object.keys(t.roster.equip).length > 0 : !!t.roster.equip[b.shieldSlot(t, e.slot)];
           if (has && !t.hasSupport('maintenance')) s += (ally ? -1 : 1) * 14 * hit;
         }
-        if (e.type === 'invite') s += (ally ? 0 : 30) * hit;
+        if (e.type === 'invite' && t.recruitable) s += (ally ? 0 : 30) * hit;
         if (e.type === 'ct' && e.set !== undefined) s += (ally === e.set > 50 ? 1 : -1) * 25 * hit;
       }
     }

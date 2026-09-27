@@ -1,0 +1,12 @@
+{
+  "entry": [
+    "src/main.ts",
+    "src/dev.ts",
+    "src/audio/audio-test.ts",
+    "tools/*.{ts,mjs}",
+    "e2e/**/*.ts",
+    "tests/**/*.test.ts"
+  ],
+  "project": ["src/**/*.ts", "tools/*.{ts,mjs}", "tests/**/*.ts", "e2e/**/*.ts"],
+  "ignoreDependencies": ["@fontsource/cinzel", "@fontsource/eb-garamond"]
+}

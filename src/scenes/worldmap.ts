@@ -11,7 +11,6 @@ import type { WorldNode } from '../data/types';
 import { hash2 } from '../core/rng';
 import { Vfx } from '../gfx/vfx';
 import type { Scene, PerspectiveCamera, Group, Mesh, Vector3, Raycaster, Object3D, BufferGeometry } from 'three/webgpu';
-import { buildHumanoid } from '../gfx/models/humanoid';
 import { Animator } from '../gfx/models/anim';
 import { gameClock } from '../core/gameClock';
 import type { UnitModel } from '../gfx/models/rig';
@@ -308,13 +307,10 @@ export class WorldView {
       const dir = b.pos.clone().sub(a.pos);
       this.party.model.root.rotation.y = Math.atan2(dir.x, dir.z);
       await new Promise<void>((resolve) => {
-        let last = performance.now(), elapsed = 0;
+        const started = gameClock.now();
         const step = () => {
-          const now = performance.now();
-          if (!gameClock.paused) elapsed += now - last;
-          last = now;
           if (gameClock.paused) { requestAnimationFrame(step); return; }
-          const t = Math.min(1, elapsed / 1000 / dur);
+          const t = Math.min(1, (gameClock.now() - started) / 1000 / dur);
           const p = a.pos.clone().lerp(b.pos, t);
           p.y = this.heightAt(a.node.pos[0] + (b.node.pos[0] - a.node.pos[0]) * t, a.node.pos[1] + (b.node.pos[1] - a.node.pos[1]) * t) + 0.08;
           this.party.root.position.copy(p);
@@ -390,8 +386,4 @@ export class WorldView {
 
 function avg(a: number[], b: number[], c: number[]): [number, number, number] {
   return [(a[0] + b[0] + c[0]) / 3, (a[1] + b[1] + c[1]) / 3, (a[2] + b[2] + c[2]) / 3];
-}
-
-export function heroModel(look: any, job: any): UnitModel {
-  return buildHumanoid({ job, look, gender: 'm' });
 }

@@ -11,8 +11,6 @@ export async function loadTSL() {
   if (NODES && !TSL) TSL = await import('three/tsl');
   return TSL;
 }
-export function tsl() { return TSL; }
-
 const matCache = new Map<string, Material>();
 
 export function terrainMaterial(tex: TexId, opts: { roughness?: number; metal?: number; emissive?: boolean } = {}): Material {

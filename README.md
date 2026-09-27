@@ -105,6 +105,8 @@ tools/          content validator, campaign simulator, screenshot helpers
 Checks: `npm run typecheck`, `npm test`, `npm run validate` (content cross-references),
 `npx vite-node tools/simcampaign.ts` (AI-vs-AI simulation of every battle, including scripted events).
 
+See the [repository audit](docs/REPO_AUDIT.md) for recent bug fixes, cleanup and deployment checks.
+
 Cross-browser / mobile end-to-end tests (Playwright; builds, then serves `dist/` on port 4173):
 
 ```bash
@@ -183,6 +185,10 @@ There are no external audio requests at runtime and no synthesized fallback. Unk
 manifest's `fallbackSfx` cue. Music streams from local MP3 files; short effects are decoded and
 cached after the first user gesture. Music crossfades, volume controls, ducking, pan, pitch,
 background suspension and the dev audition page remain available.
+
+Audio requests include their manifest checksum in the URL. Vercel caches these versioned
+files for a year in the browser; replacing a file changes its cache key automatically.
+Unversioned URLs and the entry HTML still revalidate so updated content is not hidden by caching.
 
 All 24 music files are already compressed to 128 kbps stereo MP3. Only the requested music
 is streamed, and scene changes do not wait for a full track download or PCM decode.

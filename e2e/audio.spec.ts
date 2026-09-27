@@ -88,6 +88,12 @@ test("placeholder music and effects play through the production mixer after a ge
 	expect(audioRequests.every((url) => new URL(url).origin === origin)).toBe(
 		true,
 	);
+	for (const request of audioRequests) {
+		const url = new URL(request);
+		const asset = Object.values(manifest.assets).find((entry) => url.pathname.endsWith('/' + entry.src));
+		expect(asset, url.pathname).toBeDefined();
+		expect(url.searchParams.get('v')).toBe(asset?.sha256);
+	}
 	expect(audioWarnings).toEqual([]);
 	errors.assertClean();
 });

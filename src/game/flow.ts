@@ -554,5 +554,3 @@ async function credits(game: Game) {
   // the autosave slot, never one of the player's own slots
   await titleCard('Fin', saveGame(game.state, 7) ? 'Your chronicle has been saved.' : 'The chronicle ends.');
 }
-
-export { say, CHARACTERS };

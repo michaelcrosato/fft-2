@@ -1,7 +1,7 @@
 // Turn a BattleDef + the player's chosen party into a running Battle:
 // resolves levels, creates enemy/guest roster units, auto-equips generics and
 // gives them sensible abilities for their level.
-import type { BattleDef, EquipSlot, ItemDef, JobDef, UnitSpawn, StatusId } from '../data/types';
+import type { BattleDef, EquipSlot, ItemDef, UnitSpawn, StatusId } from '../data/types';
 import { ABILITIES, CHARACTERS, ITEMS, JOBS, job as getJob, mapDef } from '../data/db';
 import { Battle } from '../battle/battle';
 import { MapGrid } from '../battle/grid';
@@ -240,5 +240,3 @@ export function applyResults(state: GameState, b: Battle, setup: BattleSetup) {
 }
 
 function clamp(v: number, a: number, b: number) { return Math.max(a, Math.min(b, v)); }
-
-export function rosterJob(u: RosterUnit): JobDef { return getJob(u.job); }

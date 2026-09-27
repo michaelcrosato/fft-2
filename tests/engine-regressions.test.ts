@@ -28,6 +28,23 @@ const A = (id: string) => ABILITIES.get(id)!;
 const tickStatuses = (b: Battle, n: number) => { for (let i = 0; i < n; i++) (b as unknown as { statusTick(): void }).statusTick(); };
 
 describe('engine regressions', () => {
+  it('does not waste Invite on a protected target', () => {
+    const orator = mk(0, 3, 8, 'orator', (r) => { r.learned = ['invite']; r.equip = {}; });
+    const foe = mk(1, 3, 6);
+    const b = battle([orator, foe]);
+    orator.moved = true; // outside melee reach, but inside Speechcraft range
+    expect(planTurn(b, orator).act?.ability.id).toBe('invite');
+    foe.boss = true;
+    expect(planTurn(b, orator).act?.ability.id).not.toBe('invite');
+    foe.boss = false; foe.vip = true;
+    expect(planTurn(b, orator).act?.ability.id).not.toBe('invite');
+    foe.vip = false; foe.roster.charId = 'rhen';
+    expect(planTurn(b, orator).act?.ability.id).not.toBe('invite');
+    delete foe.roster.charId;
+    Object.defineProperty(foe, 'job', { value: { ...foe.job, noInvite: true } });
+    expect(planTurn(b, orator).act?.ability.id).not.toBe('invite');
+  });
+
   it('charm wears off and the unit returns to its own side', () => {
     const p = mk(0, 3, 8), foe = mk(1, 9, 0);
     const b = battle([p, foe]);

@@ -31,6 +31,8 @@ export interface AudioManifest {
 export const manifest: AudioManifest = data;
 export function assetUrl(asset: AudioAsset): string {
 	// Vite's relative base also works when the build is served under a subdirectory.
-	return new URL(`${import.meta.env.BASE_URL}${asset.src}`, document.baseURI)
-		.href;
+	const url = new URL(`${import.meta.env.BASE_URL}${asset.src}`, document.baseURI);
+	// A replacement gets a new browser cache key even when its filename stays the same.
+	url.searchParams.set("v", asset.sha256);
+	return url.href;
 }

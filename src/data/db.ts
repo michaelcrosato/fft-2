@@ -59,16 +59,6 @@ export function ability(id: string): AbilityDef {
   if (!a) throw new Error(`Unknown ability ${id}`);
   return a;
 }
-export function item(id: string): ItemDef {
-  const i = ITEMS.get(id);
-  if (!i) throw new Error(`Unknown item ${id}`);
-  return i;
-}
-export function character(id: string): CharacterDef {
-  const c = CHARACTERS.get(id);
-  if (!c) throw new Error(`Unknown character ${id}`);
-  return c;
-}
 export function mapDef(id: string): MapDef {
   const m = MAPS.get(id);
   if (!m) throw new Error(`Unknown map ${id}`);
@@ -78,7 +68,4 @@ export function mapDef(id: string): MapDef {
 /** Generic job ids in job-tree order */
 export function genericJobs(): JobDef[] {
   return [...JOBS.values()].filter((j) => j.generic && !j.monster);
-}
-export function monsterJobs(): JobDef[] {
-  return [...JOBS.values()].filter((j) => !!j.monster);
 }
