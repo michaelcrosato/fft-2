@@ -293,6 +293,22 @@ describe("file playback lifecycle", () => {
 		await e.unlock();
 		expect(e.debug().track).toBe("town");
 	});
+	it("restarts a track whose start was aborted by hiding the tab", async () => {
+		await e.unlock();
+		const visibility = fakeDocument.addEventListener.mock.calls[0][1];
+		Media.deferred = true;
+		e.playMusic("town");
+		fakeDocument.hidden = true;
+		visibility();
+		Media.all[0].rejectPlay(new Error("The play() request was interrupted by a call to pause()"));
+		await vi.waitFor(() => expect(e.debug().loading).toBeNull());
+		expect(e.debug().error).toBeNull();
+		Media.deferred = false;
+		fakeDocument.hidden = false;
+		visibility();
+		await vi.waitFor(() => expect(e.debug().track).toBe("town"));
+		expect(Media.all).toHaveLength(2);
+	});
 	it("caches shared SFX, applies pitch/pan, limits voices, and supports the manifest fallback", async () => {
 		await e.unlock();
 		await vi.waitFor(() =>
@@ -320,10 +336,18 @@ describe("file playback lifecycle", () => {
 		vi.mocked(fetch).mockResolvedValue({ ok: false, status: 404 } as Response);
 		await e.unlock();
 		await vi.waitFor(() => expect(e.debug().error).toContain("HTTP 404"));
+		const failedFetches = vi.mocked(fetch).mock.calls.length;
 		vi.mocked(fetch).mockResolvedValue({
 			ok: true,
 			arrayBuffer: async () => new ArrayBuffer(8),
 		} as Response);
+		// playing it again straight away reuses the failure instead of refetching
+		e.sfx("hit");
+		await vi.waitFor(() => expect(e.debug().error).toContain("HTTP 404"));
+		expect(vi.mocked(fetch)).toHaveBeenCalledTimes(failedFetches);
+		const later = performance.now() + 11_000;
+		vi.spyOn(performance, "now").mockReturnValue(later);
+		Context.current.currentTime += 11;
 		e.sfx("hit");
 		await vi.waitFor(() => expect(e.debug().sfxVoices).toBe(1));
 	});

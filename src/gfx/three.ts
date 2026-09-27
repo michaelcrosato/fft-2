@@ -23,16 +23,22 @@ export function hasWebGPU(): boolean {
   return typeof navigator !== 'undefined' && !!(navigator as Navigator & { gpu?: unknown }).gpu;
 }
 
-export function hasWebGL2(): boolean {
+// Probe contexts count against the browser's small live-context limit until garbage collected.
+function probe(...types: string[]): boolean {
   try {
     const c = document.createElement('canvas');
-    return !!c.getContext('webgl2');
-  } catch { return false; }
+    for (const t of types) {
+      const gl = c.getContext(t) as WebGLRenderingContext | null;
+      if (gl) { gl.getExtension('WEBGL_lose_context')?.loseContext(); return true; }
+    }
+  } catch { /* no WebGL */ }
+  return false;
+}
+
+export function hasWebGL2(): boolean {
+  return probe('webgl2');
 }
 
 export function hasWebGL1(): boolean {
-  try {
-    const c = document.createElement('canvas');
-    return !!(c.getContext('webgl') || c.getContext('experimental-webgl'));
-  } catch { return false; }
+  return probe('webgl', 'experimental-webgl');
 }

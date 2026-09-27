@@ -31,6 +31,7 @@ interface EffectVoice {
 	gain: GainNode;
 	pan: AudioNode;
 }
+const EFFECT_RETRY_MS = 10_000;
 const clamp = (v: number, min = 0, max = 1) =>
 	Number.isFinite(v) ? Math.max(min, Math.min(max, v)) : min;
 
@@ -49,6 +50,8 @@ export class AudioEngine {
 	private fading = new Set<MusicPlayer>();
 	private request = 0;
 	private buffers = new Map<string, Promise<AudioBuffer>>();
+	/** A missing or undecodable effect is retried after a pause, not fetched again on every play. */
+	private failed = new Map<string, { at: number; error: unknown }>();
 	private voices: EffectVoice[] = [];
 	private lastSfx = new Map<string, number>();
 	private quality: "high" | "low" = "high";
@@ -160,7 +163,12 @@ export class AudioEngine {
 			for (const p of [this.player, this.pending, ...this.fading])
 				p?.media.pause();
 			void this.ctx?.suspend().catch(() => {});
-		} else void this.resume();
+		} else {
+			void this.resume();
+			// hiding the tab aborts a track that was still starting; start it again
+			if (this.wanted && !this.player && !this.pending)
+				this.startMusic(this.wanted.id, this.wanted.opts);
+		}
 	};
 
 	playMusic(id: string, opts: MusicOptions = {}): void {
@@ -304,6 +312,9 @@ export class AudioEngine {
 		if (cached) return cached;
 		const ctx = this.ctx;
 		if (!ctx) return Promise.reject(new Error("Audio is locked"));
+		const failure = this.failed.get(id);
+		if (failure && performance.now() - failure.at < EFFECT_RETRY_MS)
+			return Promise.reject(failure.error);
 		const promise = (async () => {
 			const controller = new AbortController();
 			const timeout = setTimeout(() => controller.abort(), 15000);
@@ -321,6 +332,7 @@ export class AudioEngine {
 			}
 		})().catch((e) => {
 			this.buffers.delete(id);
+			this.failed.set(id, { at: performance.now(), error: e });
 			throw e;
 		});
 		this.buffers.set(id, promise);
@@ -484,6 +496,7 @@ export class AudioEngine {
 		void this.ctx?.close().catch(() => {});
 		this.ctx = null;
 		this.buffers.clear();
+		this.failed.clear();
 		this.lastSfx.clear();
 		this.master =
 			this.musicBus =

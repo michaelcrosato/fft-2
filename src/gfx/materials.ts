@@ -44,7 +44,7 @@ export function waterMaterial(kind: 'water' | 'poison' | 'lava' = 'water'): Mate
   const shallow = kind === 'poison' ? '#7a5aa0' : '#4aa8b8';
   let m: Material;
   if (NODES && TSL) {
-    const { vec3, vec2, float, color, time, positionWorld, mix, sin, cos, normalize, attribute, uv, smoothstep, cameraPosition, dot, pow, mx_noise_float } = TSL;
+    const { vec3, vec2, float, color, time, positionWorld, mix, sin, cos, normalize, attribute, uv, smoothstep, cameraPosition, dot, pow, mx_noise_float, transformNormalByViewMatrix, cameraViewMatrix } = TSL;
     const nm = new (THREE as any).MeshPhysicalNodeMaterial({ transparent: true, roughness: 0.08, metalness: 0.0, clearcoat: 0.6 });
     const p = positionWorld.xz;
     const t = time.mul(0.6);
@@ -57,7 +57,8 @@ export function waterMaterial(kind: 'water' | 'poison' | 'lava' = 'water'): Mate
     const sparkle = smoothstep(0.62, 0.75, ripple.mul(0.5).add(0.5));
     const base = mix(color(deep), color(shallow), ripple.mul(0.5).add(0.5).mul(0.55).add(shore.mul(0.15)));
     nm.colorNode = mix(base.add(sparkle.mul(0.08)), color('#dff2f4'), foam.mul(0.7));
-    nm.normalNode = normalize(vec3(ripple.mul(0.22), float(1), n2.mul(0.22)));
+    // normalNode is read in view space: turn the rippled world-up normal with the camera
+    nm.normalNode = transformNormalByViewMatrix(vec3(ripple.mul(0.22), float(1), n2.mul(0.22)), cameraViewMatrix);
     nm.opacityNode = float(0.8).add(foam.mul(0.15));
     nm.emissiveNode = color(shallow).mul(0.05);
     m = nm;

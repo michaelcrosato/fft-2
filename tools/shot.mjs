@@ -1,4 +1,4 @@
-// Screenshot helper: node tools/shot.mjs <url> <out.png> [waitFrames=60] [backendFlags=webgpu|webgl]
+// Screenshot helper: node tools/shot.mjs <url> <out.png> [waitFrames=40] [width=1280] [height=720]   (CH=<channel> picks a browser channel)
 import { chromium } from 'playwright';
 const [url, out, waitFrames = '40', w = '1280', h = '720'] = process.argv.slice(2);
 const b = await chromium.launch({ headless: true, channel: process.env.CH || undefined, args: ['--enable-unsafe-webgpu', '--use-webgpu-adapter=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });

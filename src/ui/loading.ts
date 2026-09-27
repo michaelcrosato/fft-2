@@ -44,6 +44,9 @@ class LoadingScreen {
 		if (fresh) {
 			this.el.style.opacity = "1";
 			await delay(180);
+			// a busy page can finish the fade late: the next screen must not swap in under a translucent cover
+			for (let i = 0; i < 20 && getComputedStyle(this.el).opacity !== "1"; i++)
+				await delay(16);
 		}
 		await paintLoading();
 	}

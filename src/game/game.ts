@@ -10,7 +10,7 @@ import { BATTLES, SCENES, STORY, SIDE, CHARACTERS, JOBS, ITEMS, NODES, ABILITIES
 import type { BattleDef, CharacterDef, Facing, JobDef, SceneDef, StoryStep, SideQuestStep, EnvTime, Weather } from '../data/types';
 import { setupBattle, applyResults, type DeployChoice } from './setup';
 import type { GameState, Options } from './state';
-import { saveGame, joinCharacter, leaveCharacter, addItem, hero, loadOptions, partyLevel } from './state';
+import { saveGame, joinCharacter, leaveCharacter, addItem, hero, loadOptions, partyLevel, AUTOSAVE_SLOT } from './state';
 import type { RosterUnit } from './roster';
 import { portrait } from '../gfx/portraits';
 import { buildHumanoid } from '../gfx/models/humanoid';
@@ -27,6 +27,7 @@ import { backBtn, portraitFor } from '../ui/battleHud';
 import { gameClock } from '../core/gameClock';
 import { installGameMenu } from '../ui/gameMenu';
 import { loading, paintLoading } from '../ui/loading';
+import { tapTracker } from '../ui/taps';
 
 export interface Screen {
   update(dt: number): void;
@@ -84,17 +85,27 @@ export class Game {
     console.info(`[renderer] slow frames (${Math.round(1 / avg)} fps): quality → ${order[i + 1]}`);
   }
 
+  // Only the Game Menu pauses the clock, and its opaque backdrop covers the frozen scene:
+  // draw one paused frame, then again only when a resize clears the canvas.
+  private pausedSize = '';
   private frame() {
     const now = performance.now();
     const rawDt = (now - this.last) / 1000;
     const dt = Math.min(0.05, rawDt);
     this.last = now;
-    if (!gameClock.paused) {
+    const paused = gameClock.paused;
+    if (!paused) {
       if (!loading.preparing) this.autoQuality(rawDt);
       if (this.state && !loading.preparing) this.state.playtime += dt;
       this.screen?.update(dt);
     }
-    if (!loading.preparing) this.screen?.render();
+    if (!loading.preparing) {
+      const c = renderer.domElement, size = `${c.width}x${c.height}`;
+      if (!paused || size !== this.pausedSize) {
+        this.screen?.render();
+        this.pausedSize = paused ? size : '';
+      }
+    }
     (window as any).__frames = ((window as any).__frames ?? 0) + 1;
   }
 
@@ -107,6 +118,7 @@ export class Game {
   setScreen(s: Screen | null) {
     if (this.screen && this.screen !== s) this.screen.dispose?.();
     this.screen = s;
+    this.pausedSize = '';
     this.onResize();
   }
 
@@ -350,7 +362,7 @@ export class Game {
       await this.victoryPose(stage, b);
       const results = applyResults(this.state, b, setup);
       this.state.battlesWon++;
-      this.state.flags[def.id] = true;
+      if (!def.id.startsWith('rand_')) this.state.flags[def.id] = true; // one-off ambushes need no record
       if (def.rewards?.gil) this.state.gil += def.rewards.gil;
       for (const it of def.rewards?.items ?? []) addItem(this.state, it, 1);
       await this.resultsScreen(b, def, results);
@@ -394,8 +406,9 @@ export class Game {
       getFlag: (f) => !!game.state.flags[f],
       join: (c) => joinCharacter(game.state, c),
       leave: (c) => leaveCharacter(game.state, c),
-      item: (i, n) => addItem(game.state, i, n),
-      gil: (n) => { game.state.gil += n; },
+      // the battle keeps its own stock and purse until applyResults copies them back
+      item: (i, n) => { b.addItem(i, n); if ((b.inventory.get(i) ?? 0) <= 0) b.inventory.delete(i); },
+      gil: (n) => { b.gil.value = Math.max(0, b.gil.value + n); },
       chronicle: (cid) => { if (!game.state.chronicle.includes(cid)) game.state.chronicle.push(cid); },
       heroName: () => game.state.heroName,
       battle: hooks,
@@ -508,12 +521,9 @@ export class Game {
       uiRoot().appendChild(back);
       const el = renderer.domElement;
       const valid = new Set(cells.map((c) => c.join(',')));
-      let downAt: { x: number; y: number } | null = null;
-      const onDown = (e: PointerEvent) => { downAt = { x: e.clientX, y: e.clientY }; };
+      const taps = tapTracker(el);
       const onUp = (e: PointerEvent) => {
-        const moved = downAt ? Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) : 0;
-        downAt = null;
-        if (e.button !== 0 || moved > 10) return; // a drag moves the camera
+        if (!taps.tap(e) || e.button !== 0) return; // a drag or pinch moves the camera
         const c = stage.pickCell(e.clientX, e.clientY); if (c && valid.has(c.join(','))) { done(c); }
       };
       const pop = input.push((a) => {
@@ -529,14 +539,13 @@ export class Game {
         if (a === 'cancel') { done(null); return true; }
         return true;
       });
-      function done(c: [number, number] | null) { pop(); back.remove(); el.removeEventListener('pointerup', onUp); el.removeEventListener('pointerdown', onDown); stage.hideCursor(); resolve(c); }
-      el.addEventListener('pointerdown', onDown);
+      function done(c: [number, number] | null) { pop(); back.remove(); el.removeEventListener('pointerup', onUp); taps.dispose(); stage.hideCursor(); resolve(c); }
       el.addEventListener('pointerup', onUp);
     });
   }
 
   // ============================================================ results & game over
-  private async resultsScreen(b: import('../battle/battle').Battle, def: BattleDef, { lost, defected, recruited }: ReturnType<typeof applyResults>) {
+  private async resultsScreen(b: import('../battle/battle').Battle, def: BattleDef, { lost, defected, recruited, hatched }: ReturnType<typeof applyResults>) {
     const party = b.units.filter((u) => u.baseTeam === 0 && u.controlled);
     const rows = party.map((u) => h('div.kv', null, h('span', null, `${u.name}${u.levelUps ? ` — Lv ${u.level} ▲` : ''}`), h('span', null, `EXP +${u.expGained} · JP +${u.jpGained}`)));
     const loot = [...b.loot, ...(def.rewards?.items ?? [])].map((i) => ITEMS.get(i)?.name ?? i);
@@ -553,7 +562,7 @@ export class Game {
       b.poached.length ? h('div.muted', null, `Poached: ${b.poached.map((i) => ITEMS.get(i)?.name ?? i).join(', ')}`) : null,
       lost ? h('div.bad', null, `${lost} ${lost === 1 ? 'soul was' : 'souls were'} lost to the crystals.`) : null,
       defected ? h('div.bad', null, `${defected} ${defected === 1 ? 'soldier left' : 'soldiers left'} the company for the enemy.`) : null,
-      (this.state as any).__eggs?.length ? h('div.good', null, `An egg hatched: a young ${(this.state as any).__eggs.join(', ')} joins the company!`) : null,
+      hatched.length ? h('div.good', null, `An egg hatched: a young ${hatched.join(', ')} joins the company!`) : null,
       h('div', { style: { textAlign: 'center', marginTop: '10px' } }, h('span.btn', null, 'Continue')),
     );
     uiRoot().appendChild(panel);
@@ -652,7 +661,13 @@ export class Game {
     return true;
   }
 
-  autosave() { saveGame(this.state, 7); }
+  private autosaveWarned = false;
+  autosave() {
+    if (saveGame(this.state, AUTOSAVE_SLOT) || this.autosaveWarned) return;
+    // blocked or full storage: say so once instead of letting the player assume progress is kept
+    this.autosaveWarned = true;
+    toast('Autosave failed: this browser is not keeping saved games.', 5000);
+  }
 }
 
 function victoryText(def: BattleDef): string {

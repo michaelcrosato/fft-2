@@ -222,6 +222,7 @@ export function applyResults(state: GameState, b: Battle, setup: BattleSetup) {
   }
   for (const p of b.poached) state.furStock[p] = (state.furStock[p] ?? 0) + 1;
   // monsters in the company sometimes lay eggs after a victory
+  const hatched: string[] = [];
   if (b.result === 'victory') {
     const rng = new Rng(state.seed + state.day * 97 + state.battlesWon);
     const eggs: RosterUnit[] = [];
@@ -233,10 +234,10 @@ export function applyResults(state: GameState, b: Battle, setup: BattleSetup) {
       eggs.push(baby);
     }
     state.roster.push(...eggs);
-    (state as any).__eggs = eggs.map((e) => e.name);
+    hatched.push(...eggs.map((e) => e.name));
   }
   void setup;
-  return { lost: lostUids.length, defected: defectedUids.length, recruited };
+  return { lost: lostUids.length, defected: defectedUids.length, recruited, hatched };
 }
 
 function clamp(v: number, a: number, b: number) { return Math.max(a, Math.min(b, v)); }

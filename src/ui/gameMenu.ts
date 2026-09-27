@@ -42,6 +42,12 @@ export function installGameMenu(game: Game) {
   ) as HTMLButtonElement;
   const button = menuButton;
   addGameControl(button);
+  // the Menu key/button works like the ☰ button wherever it is shown; cutscenes keep it for Skip
+  input.menuShortcut = () => {
+    if (button.hidden || !button.isConnected || document.querySelector('.skipbtn')) return false;
+    button.click();
+    return true;
+  };
 
   function open() {
     const shell = h('dialog.game-menu-shell', { 'aria-label': 'Game Menu', tabindex: '-1' }) as HTMLDialogElement;

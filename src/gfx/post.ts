@@ -32,6 +32,30 @@ export const DEFAULT_GRADE: GradeParams = {
   tint: [1, 1, 1], bloom: 0.55, dofScale: 1.0,
 };
 
+// Effect modules load on demand; import() shares one download per module.
+const EFFECTS = {
+  ssao: () => import('three/addons/tsl/display/SSAONode.js' as any),
+  bloom: () => import('three/addons/tsl/display/BloomNode.js' as any),
+  dof: () => import('three/addons/tsl/display/DepthOfFieldNode.js' as any),
+  smaa: () => import('three/addons/tsl/display/SMAANode.js' as any),
+  fxaa: () => import('three/addons/tsl/display/FXAANode.js' as any),
+};
+
+function loadEffects() {
+  const s = rinfo.settings;
+  return Promise.all([
+    s.ao ? EFFECTS.ssao() : null,
+    s.bloom ? EFFECTS.bloom() : null,
+    s.dof ? EFFECTS.dof() : null,
+    s.aa === 'none' ? null : EFFECTS[s.aa](),
+  ]);
+}
+
+/** Start downloading the current quality's effects while the rest of the game loads. */
+export function preloadPostEffects() {
+  if (NODES) loadEffects().catch(() => { /* the first scene retries and reports it */ });
+}
+
 export async function createPost(scene: Scene, camera: Camera): Promise<PostFX> {
   if (!NODES) return legacyPost(scene, camera);
   try {
@@ -42,12 +66,35 @@ export async function createPost(scene: Scene, camera: Camera): Promise<PostFX> 
   }
 }
 
+/**
+ * Without a grading pass (low quality, WebGL 1) lightning and summons flash an overlay above
+ * the canvas instead, fading at the grading pass's rate.
+ */
+let flashEl: HTMLElement | null = null;
+function overlayFlash(color: string, amount: number) {
+  const host = renderer.domElement.parentElement;
+  if (!host) return;
+  if (!flashEl?.isConnected) {
+    flashEl = document.createElement('div');
+    flashEl.style.cssText = 'position:absolute;inset:0;pointer-events:none;opacity:0';
+    host.appendChild(flashEl);
+  }
+  const el = flashEl;
+  const a = Math.min(1, amount);
+  el.style.transition = 'none';
+  el.style.background = color;
+  el.style.opacity = String(a);
+  void el.offsetWidth; // start this flash's fade from full strength
+  el.style.transition = `opacity ${a / 2.2}s linear`;
+  el.style.opacity = '0';
+}
+
 function legacyPost(scene: Scene, camera: Camera): PostFX {
   return {
     render: () => renderer.render(scene, camera),
     setFocus: () => {},
     setGrade: (g) => { if (g.exposure !== undefined) renderer.toneMappingExposure = g.exposure; },
-    flash: () => {},
+    flash: overlayFlash,
     setSize: () => {},
     dispose: () => {},
   };
@@ -72,6 +119,8 @@ async function nodePost(scene: Scene, camera: Camera): Promise<PostFX> {
     renderOutput, sample, builtinAOContext, packNormalToRGB, unpackRGBToNormal, clamp, max,
   } = TSL as any;
   const s = rinfo.settings;
+  // fetch the effects together rather than one round trip after another
+  const [ssaoMod, bloomMod, dofMod, aaMod] = await loadEffects();
   const pipeline = new THREE.RenderPipeline(renderer as any);
   pipeline.outputColorTransform = false;
 
@@ -105,8 +154,7 @@ async function nodePost(scene: Scene, camera: Camera): Promise<PostFX> {
     nt.type = THREE.UnsignedByteType;
     const prePassNormal = sample((uv: any) => unpackRGBToNormal(prePass.getTextureNode().sample(uv)));
     const prePassDepth = prePass.getTextureNode('depth');
-    const { ssao } = await import('three/addons/tsl/display/SSAONode.js' as any);
-    aoNode = ssao(prePassDepth, prePassNormal, camera);
+    aoNode = ssaoMod.ssao(prePassDepth, prePassNormal, camera);
     owned.push(aoNode);
     aoNode.resolutionScale = rinfo.quality === 'ultra' ? 1 : 0.5;
     if (aoNode.radius) aoNode.radius.value = 0.55;
@@ -118,16 +166,14 @@ async function nodePost(scene: Scene, camera: Camera): Promise<PostFX> {
   // ---- bloom (HDR threshold) ----
   let bloomNode: any = null;
   if (s.bloom) {
-    const { bloom } = await import('three/addons/tsl/display/BloomNode.js' as any);
-    bloomNode = bloom(color, DEFAULT_GRADE.bloom, 0.45, 0.82);
+    bloomNode = bloomMod.bloom(color, DEFAULT_GRADE.bloom, 0.45, 0.82);
     owned.push(bloomNode);
     color = color.add(bloomNode);
   }
 
   // ---- depth of field (miniature / diorama feel) ----
   if (s.dof) {
-    const { dof } = await import('three/addons/tsl/display/DepthOfFieldNode.js' as any);
-    color = dof(color, scenePass.getViewZNode(), u.focus, u.focalLength, u.bokeh);
+    color = dofMod.dof(color, scenePass.getViewZNode(), u.focus, u.focalLength, u.bokeh);
     owned.push(color);
   }
 
@@ -162,12 +208,10 @@ async function nodePost(scene: Scene, camera: Camera): Promise<PostFX> {
 
   // ---- anti-aliasing ----
   if (s.aa === 'smaa') {
-    const { smaa } = await import('three/addons/tsl/display/SMAANode.js' as any);
-    out = smaa(out);
+    out = aaMod.smaa(out);
     owned.push(out);
   } else if (s.aa === 'fxaa') {
-    const { fxaa } = await import('three/addons/tsl/display/FXAANode.js' as any);
-    out = fxaa(out);
+    out = aaMod.fxaa(out);
     owned.push(out);
   }
   pipeline.outputNode = out;
@@ -198,6 +242,7 @@ async function nodePost(scene: Scene, camera: Camera): Promise<PostFX> {
       if (g.dofScale !== undefined) u.bokeh.value = 1.2 * g.dofScale;
     },
     flash(colorHex: string, amount: number) {
+      if (!s.grading) { overlayFlash(colorHex, amount); return; }
       const c = new THREE.Color(colorHex);
       u.flashColor.value.set(c.r, c.g, c.b);
       flashT = Math.min(1, amount);

@@ -91,3 +91,5 @@ for (const st of steps) {
   }
 }
 console.log(`wins ${wins} losses ${losses} stalls ${stalls} errors ${errs}`);
+// defeats are expected (fixed bot parties); a stall or exception is a failure
+if (stalls || errs) process.exitCode = 1;

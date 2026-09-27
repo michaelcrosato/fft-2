@@ -1,7 +1,7 @@
 // Town services: outfitter (buy/sell), soldier office (recruit), tavern
 // (rumours & errands), fur shop.
 import type { Game } from '../../game/game';
-import type { WorldNode, ItemDef } from '../../data/types';
+import type { WorldNode, ItemDef, ErrandDef } from '../../data/types';
 import { ITEMS, ERRANDS, JOBS } from '../../data/db';
 import { menu, toast, confirm } from '../widgets';
 import { h } from '../dom';
@@ -14,6 +14,8 @@ import { input } from '../input';
 import { STATUS } from '../../battle/status';
 
 type Rumor = { id: string; title: string; text: string; towns: string[]; chapterMin: number; chapterMax?: number; needs?: string[] };
+const ERRAND_STAT: Record<ErrandDef['stat'], string> = { brave: 'Brave', faith: 'Faith', level: 'level', pa: 'PA', ma: 'MA', speed: 'Speed' };
+
 const rumorMods = import.meta.glob<{ rumors?: Rumor[] }>('../../data/misc/*.ts', { eager: true });
 const RUMORS: Rumor[] = Object.values(rumorMods).flatMap((m) => m.rumors ?? []);
 
@@ -208,7 +210,7 @@ export async function openTavern(game: Game, node: WorldNode) {
       if (pick === 'errands') {
         const list = [...ERRANDS.values()].filter((e) => e.towns.includes(node.id) && s.chapter >= e.chapterMin && (e.chapterMax === undefined || s.chapter <= e.chapterMax) && (e.needs ?? []).every((f) => s.flags[f]) && !s.errandsDone.includes(e.id) && !s.errands.some((r) => r.id === e.id));
         if (!list.length) { toast('No errands posted here now.'); continue; }
-        const eid = await menu({ items: list.map((e) => ({ label: e.title, value: e.id, right: `${e.fee} gil · ${e.days}d`, desc: `${e.desc}  (Reward ~${e.reward.gil} gil${e.reward.jp ? `, ${e.reward.jp} JP` : ''})` })), x: 16, y: 64, title: 'Errands', parent: ov.root, showDesc: true, maxHeight: 'calc(60 * var(--vh))' }).promise;
+        const eid = await menu({ items: list.map((e) => ({ label: e.title, value: e.id, right: `${e.fee} gil · ${e.days}d`, desc: `${e.desc}  (Reward ~${e.reward.gil} gil${e.reward.jp ? `, ${e.reward.jp} JP` : ''} · favours ${ERRAND_STAT[e.stat]})` })), x: 16, y: 64, title: 'Errands', parent: ov.root, showDesc: true, maxHeight: 'calc(60 * var(--vh))' }).promise;
         if (!eid) continue;
         const e = ERRANDS.get(eid)!;
         if (s.gil < e.fee) { toast('You cannot afford the fee.'); continue; }

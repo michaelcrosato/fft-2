@@ -75,6 +75,8 @@ class InputManager {
 
   init() {
     window.addEventListener('keydown', (e) => {
+      // keys that pick or cancel an IME conversion (typing a name in Japanese, Chinese…) are not game input
+      if (e.isComposing || e.keyCode === 229) return;
       if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') { this.kbFast = true; this.setDevice('kb'); return; }
       // leave browser/OS shortcuts (reload, zoom, close tab…) alone
       if (e.ctrlKey || e.metaKey || e.altKey) return;
@@ -103,8 +105,12 @@ class InputManager {
     // iOS Safari: stop page pinch-zoom (the game handles pinch itself; touch-action covers other browsers)
     document.addEventListener('gesturestart', (e) => e.preventDefault());
     // poll on a short timer rather than per rendered frame: a quick button tap (~50 ms) must not
-    // fall between two frames when the game renders slowly (low-end phones, software GL)
-    window.setInterval(() => this.pollPad(), 12);
+    // fall between two frames when the game renders slowly (low-end phones, software GL).
+    // Until a controller shows up, a few checks a second are enough (and spare phone batteries).
+    let timer = 0;
+    const loop = () => { this.pollPad(); timer = window.setTimeout(loop, this.pad.connected ? 12 : 250); };
+    window.addEventListener('gamepadconnected', () => { clearTimeout(timer); loop(); });
+    loop();
   }
 
   push(h: Handler, modal = false): () => void {
@@ -113,7 +119,11 @@ class InputManager {
     return () => { const i = stack.lastIndexOf(h); if (i >= 0) stack.splice(i, 1); };
   }
 
+  /** M / Start / Y outside modal layers: the pause menu (registered by the Game Menu) */
+  menuShortcut: (() => boolean) | null = null;
+
   dispatch(a: Action, e?: KeyboardEvent) {
+    if (a === 'menu' && !this.modalStack.length && this.menuShortcut?.()) return;
     const stack = this.modalStack.length ? this.modalStack : this.stack;
     for (let i = stack.length - 1; i >= 0; i--) {
       const r = stack[i](a, e);

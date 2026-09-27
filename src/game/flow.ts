@@ -1,6 +1,6 @@
 // Title → new game / continue → story & world map loop.
 import type { Game } from './game';
-import { newGame, saveGame, loadGame, listSaves, latestSave, partyLevel, advanceDay as advanceStateDay, loadOptions, saveOptions, type GameState } from './state';
+import { newGame, saveGame, loadGame, listSaves, latestSave, partyLevel, advanceDay as advanceStateDay, loadOptions, saveOptions, AUTOSAVE_SLOT, type GameState } from './state';
 import { NODES, EDGES, STORY, ERRANDS, JOBS, CHARACTERS, BATTLES, ITEMS } from '../data/db';
 import type { BattleDef, UnitSpawn, WorldNode } from '../data/types';
 import { WorldView } from '../scenes/worldmap';
@@ -21,6 +21,7 @@ import { openOptions, openSaveLoad } from '../ui/menus/system';
 import { gameMode, promptGameMode } from '../ui/gameMode';
 import { setContextMenu, setGameMenuVisible } from '../ui/gameMenu';
 import { loading } from '../ui/loading';
+import { tapTracker } from '../ui/taps';
 
 export const MONTHS = ZODIAC_ORDER.map((z) => ZODIAC_NAMES[z]);
 export function dateText(day: number) { const d = day - 1; return `${MONTHS[Math.floor(d / 30) % 12]} ${(d % 30) + 1}`; }
@@ -62,7 +63,10 @@ export async function runTitle(game: Game) {
     let state: GameState | null = null;
     if (pick === 'continue') state = loadGame(latestSave()!);
     if (pick === 'load') { const s = await openSaveLoad(game, 'load'); if (!s) continue; state = s; }
-    if (pick === 'new') { logo.style.display = 'none'; state = await newGameSetup(); logo.style.display = ''; if (!state) continue; }
+    if (pick === 'new') {
+      if (!(await keepsAutosave())) continue;
+      logo.style.display = 'none'; state = await newGameSetup(); logo.style.display = ''; if (!state) continue;
+    }
     if (!state) continue;
     await promptGameMode();
     await loading.begin('Continuing the tale…');
@@ -174,6 +178,13 @@ function nextIsImmediate(game: Game): boolean {
   return !nx.at || !!prev?.chain;
 }
 
+/** A new tale autosaves over the previous one's autosave: say so before starting (other slots are kept). */
+async function keepsAutosave(): Promise<boolean> {
+  const auto = listSaves()[AUTOSAVE_SLOT];
+  if (!auto) return true;
+  return confirm(`Start a new game? It will replace the autosave of ${auto.heroName}'s tale (level ${auto.level}). Other save slots are kept.`, 'New Game', 'Back', true);
+}
+
 async function runImmediate(game: Game): Promise<boolean> {
   while (nextIsImmediate(game)) {
     const st = STORY[game.state.storyIndex];
@@ -280,7 +291,8 @@ async function worldLoop(game: Game): Promise<'title' | 'continue'> {
     showLabel(null);
     try {
       const unlocked = new Set(s.unlocked);
-      if (target !== s.location) {
+      const travelled = target !== s.location;
+      if (travelled) {
         const r = route(s.location, target, unlocked);
         if (!r) { toast('No known road leads there.'); return; }
         sel = target; // keyboard selection follows mouse/tap travel
@@ -294,9 +306,9 @@ async function worldLoop(game: Game): Promise<'title' | 'continue'> {
           return true;
         });
       }
-      // arrival: wandering foes may lie in wait in open country
+      // arrival: wandering foes may lie in wait in open country (not when opening the menu where the party stands)
       const here = NODES.get(s.location);
-      if (here?.kind === 'field' && here.random && STORY[s.storyIndex]?.at !== s.location && !(window as any).__autoPlay && loadOptions().encounters !== false && new Rng().pct(28)) {
+      if (travelled && here?.kind === 'field' && here.random && STORY[s.storyIndex]?.at !== s.location && !(window as any).__autoPlay && loadOptions().encounters !== false && new Rng().pct((here.random.rate ?? 0.28) * 100)) {
         const def = randomBattleDef(game, here);
         if (def) {
           toast('Ambush! Foes block the road.');
@@ -315,17 +327,16 @@ async function worldLoop(game: Game): Promise<'title' | 'continue'> {
       if (res === 'rebuild' || res === 'title') { result = res === 'title' ? 'title' : 'continue'; return; }
       world.setMarkerStates(markerStates(game));
       refreshTop();
-    } finally { busy = false; }
+    } finally {
+      // once the world has a result it is being torn down: ignore input until the loop notices
+      busy = result !== null;
+    }
   };
   const onMove = (e: PointerEvent) => { if (busy) return; const id = world.pickNode(e.clientX, e.clientY); if (id !== hovered) showLabel(id); };
-  let down: { x: number; y: number } | null = null;
-  const onDown = (e: PointerEvent) => { down = { x: e.clientX, y: e.clientY }; };
+  const taps = tapTracker(el, 8);
   let tapped: string | null = null;
   const onUp = (e: PointerEvent) => {
-    if (!down || busy) return;
-    const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y);
-    down = null;
-    if (moved > 8) return;
+    if (!taps.tap(e) || busy) return; // drags and pinches move the camera
     const id = world.pickNode(e.clientX, e.clientY);
     if (!id) { tapped = null; showLabel(null); return; }
     // touch has no hover: the first tap names the place, a second tap travels there
@@ -338,8 +349,8 @@ async function worldLoop(game: Game): Promise<'title' | 'continue'> {
     const px = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1);
     world.camDist = Math.max(14, Math.min(70, world.camDist * Math.exp(Math.max(-0.4, Math.min(0.4, px * (e.ctrlKey ? 0.01 : 0.0015))))));
   };
-  el.addEventListener('pointermove', onMove); el.addEventListener('pointerdown', onDown); el.addEventListener('pointerup', onUp); el.addEventListener('wheel', onWheel, { passive: false });
-  cleanupFns.push(() => { el.removeEventListener('pointermove', onMove); el.removeEventListener('pointerdown', onDown); el.removeEventListener('pointerup', onUp); el.removeEventListener('wheel', onWheel); });
+  el.addEventListener('pointermove', onMove); el.addEventListener('pointerup', onUp); el.addEventListener('wheel', onWheel, { passive: false });
+  cleanupFns.push(() => { el.removeEventListener('pointermove', onMove); el.removeEventListener('pointerup', onUp); el.removeEventListener('wheel', onWheel); taps.dispose(); });
   // keyboard: cycle through neighbour nodes, confirm to travel, menu key for party menu
   const pop = input.push((a) => {
     if (busy) return true;
@@ -387,7 +398,7 @@ async function worldLoop(game: Game): Promise<'title' | 'continue'> {
       if (pick === 'options') await openOptions(game);
       if (pick === 'title' && await confirm('Return to the title screen? Unsaved progress will be lost.', 'Return to title', 'Stay', true)) result = 'title';
       refreshTop();
-    } finally { busy = false; hud.style.display = ''; }
+    } finally { busy = result !== null; hud.style.display = ''; }
   };
   cleanupFns.push(setContextMenu(() => {
     if (busy || result) return false;

@@ -9,12 +9,11 @@ import { propMaterial, waterMaterial } from '../gfx/materials';
 import { NODES, EDGES } from '../data/db';
 import type { WorldNode } from '../data/types';
 import { hash2 } from '../core/rng';
-import { Vfx } from '../gfx/vfx';
 import type { Scene, PerspectiveCamera, Group, Mesh, Vector3, Raycaster, Object3D, BufferGeometry } from 'three/webgpu';
 import { Animator } from '../gfx/models/anim';
 import { gameClock } from '../core/gameClock';
 import type { UnitModel } from '../gfx/models/rig';
-import { releaseTree } from '../gfx/dispose';
+import { markShared, releaseTree } from '../gfx/dispose';
 import { fovFor } from '../gfx/camera';
 import { paintLoading } from '../ui/loading';
 
@@ -43,7 +42,6 @@ export class WorldView {
   readonly scene: Scene;
   readonly cam: PerspectiveCamera;
   post!: PostFX;
-  vfx: Vfx;
   readonly markers = new Map<string, NodeMarker>();
   private heights: Float32Array;
   private res = 160;
@@ -66,8 +64,6 @@ export class WorldView {
     this.ray = new THREE.Raycaster();
     this.heights = new Float32Array(this.res * this.res);
     this.roads = new THREE.Group();
-    this.vfx = new Vfx(this.scene);
-    this.vfx.setBounds(SIZE * S, SIZE * S, 6);
   }
 
   async init() {
@@ -145,10 +141,11 @@ export class WorldView {
         b.tri(d.p, c.p, bb.p, avg(d.c, c.c, bb.c));
         b.tri(d.p, bb.p, a.p, avg(d.c, bb.c, a.c));
       }
-      landCache = { heights: this.heights, geometry: b.build() };
+      // kept for the session: the map is revisited between most story steps
+      landCache = { heights: this.heights, geometry: markShared(b.build()) };
     }
     this.heights = landCache.heights;
-    const land = new THREE.Mesh(landCache.geometry.clone(), propMaterial({ flat: true, roughness: 0.95 }));
+    const land = new THREE.Mesh(landCache.geometry, propMaterial({ flat: true, roughness: 0.95 }));
     land.receiveShadow = true; land.castShadow = true;
     this.scene.add(land);
     await paintLoading();
@@ -375,13 +372,12 @@ export class WorldView {
     this.clouds ??= this.scene.getObjectByName('clouds') ?? null;
     if (this.clouds) { this.clouds.position.x = ((this.t * 0.6) % 60) - 30; }
     if (this.party) this.party.anim.update(dt);
-    this.vfx.update(dt, this.cam);
     this.post.setFocus(this.camDist, this.camDist * 0.7);
   }
   render() { this.post.render(); }
   resize(w: number, h: number) { this.cam.aspect = w / Math.max(1, h); this.cam.fov = fovFor(this.cam.aspect, 32); this.cam.updateProjectionMatrix(); }
   private clouds: Object3D | null = null;
-  dispose() { this.post.dispose(); this.vfx.dispose(); releaseTree(this.scene); }
+  dispose() { this.post.dispose(); releaseTree(this.scene); }
 }
 
 function avg(a: number[], b: number[], c: number[]): [number, number, number] {

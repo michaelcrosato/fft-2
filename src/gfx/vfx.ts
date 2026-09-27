@@ -6,6 +6,7 @@ import type { VfxId, Weather } from '../data/types';
 import { rinfo } from './renderer';
 import type { Scene, Camera, InstancedMesh, Vector3, Object3D, Material, Texture } from 'three/webgpu';
 import { markShared, releaseTree } from './dispose';
+import { gameClock } from '../core/gameClock';
 
 interface P {
   x: number; y: number; z: number; vx: number; vy: number; vz: number;
@@ -370,7 +371,7 @@ export class Vfx {
         const a = Math.random() * Math.PI * 2;
         this.sparks.spawn({ x: p.x + Math.cos(a) * 0.45, y: p.y + rand(0, 0.2), z: p.z + Math.sin(a) * 0.45, vx: -Math.cos(a) * 0.3, vy: rand(0.8, 1.4), vz: -Math.sin(a) * 0.3, max: 0.8, s0: 0.08, s1: 0.02, r0: c.r * 2, g0: c.g * 2, b0: c.b * 2, r1: c.r, g1: c.g, b1: c.b });
       }
-      setTimeout(tick, 60);
+      gameClock.schedule(tick, 60);
     };
     tick();
     return () => { alive = false; };
@@ -410,7 +411,7 @@ export class Vfx {
         const n = id === 'inferno' ? 3 : 1;
         this.glyph(at, '#ff7a30', 1.2 * S, 0.9);
         for (let k = 0; k < n; k++) {
-          setTimeout(() => {
+          gameClock.schedule(() => {
             this.burst(at.clone().add(V(rand(-0.3, 0.3) * (n > 1 ? 2 : 0), 0.2, rand(-0.3, 0.3) * (n > 1 ? 2 : 0))), '#ff6a20', 50 * S, 1.8, 0.4, 0.9, { up: 2.2, grav: -1.5 });
             this.burst(at, '#ffd060', 25, 1.2, 0.25, 0.6, { up: 2.5, pool: 'sparks' });
           }, k * 150);
@@ -429,7 +430,7 @@ export class Vfx {
       case 'bolt': case 'thunder': {
         const strikes = id === 'thunder' ? 3 : 1;
         for (let k = 0; k < strikes; k++) {
-          setTimeout(() => {
+          gameClock.schedule(() => {
             const off = strikes > 1 ? V(rand(-0.8, 0.8), 0, rand(-0.8, 0.8)) : V(0, 0, 0);
             this.bolt(at.clone().add(off).add(V(rand(-0.5, 0.5), 7, rand(-0.5, 0.5))), at.clone().add(off).add(V(0, 0.3, 0)), '#dce8ff', 0.3, 0.05 * S);
             this.onFlash('#e8f0ff', 0.35);
@@ -470,7 +471,7 @@ export class Vfx {
           const a = Math.random() * Math.PI * 2, r = rand(0.8, 1.4) * S;
           this.add.spawn({ x: chest.x + Math.cos(a) * r, y: chest.y + rand(-0.5, 0.8), z: chest.z + Math.sin(a) * r, vx: -Math.cos(a) * r * 1.8, vy: 0, vz: -Math.sin(a) * r * 1.8, max: 0.55, s0: 0.3, s1: 0.05, r0: 0.5, g0: 0.1, b0: 0.9, r1: 0.1, g1: 0, b1: 0.3 });
         }
-        if (id === 'drain') setTimeout(() => this.stream(chest, from, '#c060ff'), 350);
+        if (id === 'drain') gameClock.schedule(() => this.stream(chest, from, '#c060ff'), 350);
         await wait(350);
         return;
       case 'poison':
@@ -535,7 +536,7 @@ export class Vfx {
         return;
       case 'buff': case 'buffRed': case 'buffBlue': case 'guard':
         this.ring(at, c, 0.5, 0.5, 0.9, 0.1);
-        for (let k = 0; k < 3; k++) setTimeout(() => this.ring(at, c, 0.45, 0.45, 0.6, 0.2 + k * 0.4), k * 120);
+        for (let k = 0; k < 3; k++) gameClock.schedule(() => this.ring(at, c, 0.45, 0.45, 0.6, 0.2 + k * 0.4), k * 120);
         this.rise(at, c, 20, 1.6, 0.45, 1.0, 0.1);
         await wait(250);
         return;
@@ -557,7 +558,7 @@ export class Vfx {
         return;
       case 'steal':
         this.burst(chest, '#ffe070', 14, 1.5, 0.12, 0.4, { pool: 'sparks' });
-        setTimeout(() => this.stream(chest, from, '#ffe070'), 150);
+        gameClock.schedule(() => this.stream(chest, from, '#ffe070'), 150);
         await wait(150);
         return;
       case 'song': case 'dance':
@@ -628,7 +629,8 @@ export class Vfx {
   }
 }
 
-function wait(ms: number) { return new Promise<void>((r) => setTimeout(r, ms)); }
+// effect timing follows gameplay time, so the Menu pause holds a spell mid-cast
+function wait(ms: number) { return gameClock.sleep(ms); }
 
 export function defaultColor(id: string | undefined): string {
   switch (id) {

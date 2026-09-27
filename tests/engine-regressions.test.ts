@@ -4,9 +4,9 @@ import { Battle } from '../src/battle/battle';
 import { MapGrid } from '../src/battle/grid';
 import { BattleUnit } from '../src/battle/unit';
 import { planTurn } from '../src/battle/ai';
-import { createGeneric } from '../src/game/roster';
+import { createGeneric, createMonster } from '../src/game/roster';
 import { Rng } from '../src/core/rng';
-import { ABILITIES, BATTLES, mapDef } from '../src/data/db';
+import { ABILITIES, BATTLES, JOBS, mapDef } from '../src/data/db';
 import type { BattleDef } from '../src/data/types';
 import { newGame } from '../src/game/state';
 import { setupBattle, applyResults } from '../src/game/setup';
@@ -195,5 +195,161 @@ describe('engine regressions', () => {
     const b = battle([block, hidden, foe]);
     b.scriptReveal('reinf');
     expect(Math.abs(hidden.x - 5) + Math.abs(hidden.z - 5)).toBe(1);
+  });
+});
+
+// Audit pass 3: the AI's previews must match resolution, and plans must stay legal.
+describe('previews and AI plans match what actually happens', () => {
+  it('previews Reflect as a bounce onto the caster, so the AI does not burn itself', () => {
+    const wiz = mk(1, 3, 3, 'wizard', (r) => { r.equip = {}; r.learned.push('fire', 'fira'); });
+    const tgt = mk(0, 3, 6);
+    tgt.statuses.set('reflect', 32);
+    const b = battle([wiz, tgt]);
+    const [p] = b.previewAction(wiz, A('fira'), tgt.x, tgt.z);
+    expect(p.uid).toBe(wiz.uid);
+    expect(p.status).toContain('Reflected');
+    wiz.moved = true;
+    const plan = planTurn(b, wiz);
+    expect(plan.act && plan.act.ability.magic && plan.act.x === tgt.x && plan.act.z === tgt.z).toBeFalsy();
+  });
+
+  it('rejects an action out of reach after a failed Teleport', () => {
+    let failures = 0;
+    for (let seed = 1; seed < 6; seed++) {
+      const att = mk(1, 7, 3, 'knight', (r) => { r.movement = 'teleport'; r.learned.push('teleport'); });
+      const tgt = mk(0, 3, 6);
+      const b = battle([att, tgt], {}, seed);
+      const plan = planTurn(b, att);
+      expect(plan.move && plan.act).toBeTruthy();
+      b.doMove(att, plan.move![0], plan.move![1]);
+      const hp = tgt.hp;
+      b.doAction(att, plan.act!.ability, plan.act!.x, plan.act!.z, plan.act!.opts);
+      if (att.x === plan.move![0] && att.z === plan.move![1]) continue;
+      failures++;
+      expect(tgt.hp).toBe(hp);
+      expect(att.acted).toBe(false);
+    }
+    expect(failures).toBeGreaterThan(0);
+  });
+
+  it('lets an AI performance finish instead of restarting it every turn', () => {
+    const bard = mk(1, 3, 1, 'bard', (r) => { r.learned = ['finale']; r.equip = {}; });
+    const b = battle([bard, mk(1, 4, 1), mk(1, 2, 1), mk(0, 9, 9)]);
+    let casts = 0, resolved = 0;
+    for (let i = 0; i < 4000 && b.tick < 600; i++) {
+      const { events, unit } = b.advance();
+      resolved += events.filter((e) => e.t === 'hits' && e.ability === 'finale').length;
+      if (!unit) continue;
+      if (unit === bard) {
+        const plan = planTurn(b, bard);
+        if (plan.move) b.doMove(bard, plan.move[0], plan.move[1]);
+        if (plan.act) { casts++; b.doAction(bard, plan.act.ability, plan.act.x, plan.act.z, plan.act.opts); }
+        b.endTurn(bard, plan.facing);
+      } else b.endTurn(unit);
+    }
+    expect(casts).toBe(1);
+    expect(resolved).toBeGreaterThan(1);
+  });
+
+  it('previews Death as a full heal on the undead and a resist against KO immunity', () => {
+    const wiz = mk(1, 3, 3, 'wizard', (r) => { r.learned.push('death'); r.equip = {}; });
+    const und = mk(0, 3, 5);
+    und.statuses.set('undead', 0);
+    const rib = mk(0, 5, 5);
+    rib.immune.add('ko');
+    const b = battle([wiz, und, rib]);
+    und.hp = Math.floor(und.maxHp / 2);
+    const onUndead = b.previewOn(wiz, und, A('death'));
+    expect(onUndead.ko).toBeFalsy();
+    expect(onUndead.heal).toBe(und.maxHp - und.hp);
+    const onImmune = b.previewOn(wiz, rib, A('death'));
+    expect(onImmune.ko).toBeFalsy();
+    expect(onImmune.status).toContain('Resisted');
+  });
+
+  it('does not preview a revive for a fallen undead unit', () => {
+    const priest = mk(1, 3, 3, 'priest', (r) => { r.learned.push('raise'); r.equip = {}; });
+    const knight = mk(1, 3, 5);
+    knight.statuses.set('undead', 0);
+    const b = battle([priest, knight, mk(0, 9, 9)]);
+    b.knockOut(knight);
+    const p = b.previewOn(priest, knight, A('raise'));
+    expect(p.heal).toBeUndefined();
+    expect(p.status ?? '').not.toContain('Revive');
+  });
+
+  it('does not plan a skill from deep water, where only Attack works', () => {
+    const monk = mk(1, 1, 4, 'monk', (r) => { r.equip = {}; r.learned = ['shockwave']; });
+    const b = battle([monk, mk(0, 0, 6), mk(1, 1, 6), mk(1, 0, 7)]);
+    const plan = planTurn(b, monk);
+    const from = plan.move ? b.grid.cell(plan.move[0], plan.move[1])! : b.cellOf(monk);
+    if (plan.act) expect(b.deepWaterBlocks(monk, plan.act.ability, from)).toBe(false);
+  });
+
+  it('gives talk skills no chance on monsters without Beast Speech', () => {
+    const talker = mk(1, 3, 3, 'knight', (r) => { r.learned = ['invite', 'persuade']; r.secondary = 'orator'; });
+    const job = [...JOBS.values()].find((j) => j.monster && !j.noInvite)!;
+    const mon = new BattleUnit(createMonster(job.id, 20, rng), 0, true);
+    mon.x = 3; mon.z = 6;
+    const b = battle([talker, mon]);
+    expect(b.previewOn(talker, mon, A('persuade')).hit).toBe(0);
+    talker.moved = true;
+    expect(planTurn(b, talker).act?.ability.id).not.toBe('persuade');
+  });
+
+  it("leaves a fallen unit's KO counter alone when it is hit again", () => {
+    const hero = mk(0, 3, 3), foe = mk(1, 3, 6);
+    const b = battle([hero, foe]);
+    b.knockOut(foe);
+    foe.koCount = 1;
+    expect(b.damage(foe, 50)).toBe(0);
+    expect(foe.koCount).toBe(1);
+  });
+
+  it('does not re-arm a performance whose performer was knocked out by a reaction', () => {
+    const dancer = mk(0, 3, 8, 'dancer', (r) => { r.learned.push('bladeDance'); });
+    const foe = mk(1, 3, 1, 'squire', (r) => { r.reaction = 'damageSplit'; r.learned.push('damageSplit'); r.brave = 100; });
+    const b = battle([dancer, foe, mk(1, 5, 1), mk(0, 9, 9)]);
+    b.doAction(dancer, A('bladeDance'), dancer.x, dancer.z);
+    dancer.hp = 1;
+    b.endTurn(dancer);
+    for (let i = 0; i < 200 && dancer.alive; i++) { const { unit } = b.advance(); if (unit) b.endTurn(unit); }
+    expect(dancer.alive).toBe(false);
+    expect(dancer.charging).toBeNull();
+  });
+
+  it("sends a charmed unit to its charmer's side in a three-sided battle", () => {
+    const p = mk(0, 3, 8), beast = mk(2, 5, 5), foe = mk(1, 9, 0);
+    const b = battle([p, beast, foe]);
+    b.addStatus(p, 'charm', beast);
+    expect(p.team).toBe(2);
+    b.unCharm(p);
+    b.addStatus(p, 'charm');
+    expect(p.team).toBe(1);
+  });
+
+  it('lets Invite recruit a foe that is currently charmed onto the party side', () => {
+    const orator = mk(0, 3, 8, 'orator', (r) => { r.learned = ['invite']; r.equip = {}; });
+    const foe = mk(1, 3, 7);
+    const b = battle([orator, foe, mk(1, 9, 0)]);
+    b.addStatus(foe, 'charm', orator);
+    expect(foe.team).toBe(0);
+    let hit;
+    for (let i = 0; i < 40 && foe.baseTeam !== 0; i++) hit = b.hitUnit(orator, foe, A('invite'), {}, []);
+    expect(foe.baseTeam).toBe(0);
+    expect(foe.has('charm')).toBe(false);
+    expect(hit?.text).toContain('Joins your cause!');
+  });
+
+  it('makes a Vampire strike at its own side', () => {
+    let hitsAlly = 0;
+    for (let seed = 1; seed <= 12; seed++) {
+      const v = mk(0, 3, 5), ally = mk(0, 3, 6);
+      const b = battle([v, ally, mk(1, 9, 0)], {}, seed);
+      v.statuses.set('vampire', 0);
+      const plan = planTurn(b, v);
+      if (plan.act && plan.act.x === ally.x && plan.act.z === ally.z) hitsAlly++;
+    }
+    expect(hitsAlly).toBeGreaterThan(0);
   });
 });

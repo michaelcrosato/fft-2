@@ -647,6 +647,7 @@ export interface WorldNode {
   guild?: boolean;              // soldier office (recruit)
   furShop?: boolean;
   /** maps + monster/human pools for random battles (field nodes) */
+  /** rate: ambush chance on arriving here after travel (Options can turn ambushes off) */
   random?: { maps: string[]; pools: RandomPool[]; rate?: number };
   /** initially visible */
   start?: boolean;

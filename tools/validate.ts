@@ -2,6 +2,7 @@ import { validateAudioAssets } from './audio-assets';
 // Cross-reference validator for all content. Run: npm run validate
 import {
   ABILITIES, ITEMS, JOBS, CHARACTERS, MAPS, BATTLES, SCENES, STORY, SIDE, NODES, EDGES, SHOP_STOCK, ERRANDS, ARTEFACTS, CHRONICLE,
+  DUPLICATE_IDS,
 } from '../src/data/db';
 import { rumors } from '../src/data/misc/rumors';
 import { ZODIAC_STONES } from '../src/data/misc/zodiacStones';
@@ -17,6 +18,9 @@ const recordedEvents = new Set<string>();
 for (const step of [...STORY, ...SIDE]) for (const flag of step.flags ?? []) producedFlags.add(flag);
 for (const e of ERRANDS.values()) if (e.reward.flag) producedFlags.add(e.reward.flag);
 for (const r of rumors) if (r.needs === undefined) producedFlags.add('rumor_' + r.id);
+for (const d of DUPLICATE_IDS) err(`duplicate ${d}: a later definition replaces the earlier one`);
+const storyIds = new Set<string>();
+for (const s of [...STORY, ...SIDE]) { if (storyIds.has(s.id)) err(`duplicate story/side step ${s.id}`); storyIds.add(s.id); }
 
 // ---- jobs & abilities ----
 for (const j of JOBS.values()) {
@@ -84,6 +88,15 @@ for (const b of BATTLES.values()) {
   for (const id of b.protect ?? []) if (!b.units.some((u) => (u.id ?? u.char) === id) && !CHARACTERS.has(id)) err(`battle ${b.id}: protect id ${id} not in units or cast`);
   for (const t of b.treasure ?? []) { if (!ITEMS.has(t[2])) err(`battle ${b.id}: unknown treasure ${t[2]}`); if (!ITEMS.has(t[3])) err(`battle ${b.id}: unknown treasure ${t[3]}`); }
   for (const e of b.events ?? []) checkCmds(e.script, `battle ${b.id} event`);
+  for (const id of b.rewards?.items ?? []) if (!ITEMS.has(id)) err(`battle ${b.id}: unknown reward item ${id}`);
+  for (const id of b.forced ?? []) if (!CHARACTERS.has(id)) err(`battle ${b.id}: forced deploy of unknown character ${id}`);
+  // event triggers name a spawn or a party character
+  const known = (id: string) => b.units.some((u) => (u.id ?? u.char) === id) || CHARACTERS.has(id);
+  for (const e of b.events ?? []) {
+    const w = e.when;
+    const id = 'hpBelow' in w ? w.hpBelow[0] : 'ko' in w ? w.ko : undefined;
+    if (id !== undefined && !known(id)) err(`battle ${b.id}: event watches unknown unit ${id}`);
+  }
 }
 // ---- scenes ----
 function checkCmds(cmds: SceneCmd[], where: string) {
@@ -115,12 +128,14 @@ for (const st of [...STORY, ...SIDE]) {
   if (st.post && !SCENES.has(st.post)) err(`story ${st.id}: unknown post scene ${st.post}`);
   if (st.battle && !BATTLES.has(st.battle)) err(`story ${st.id}: unknown battle ${st.battle}`);
   for (const n of st.unlock ?? []) if (!NODES.has(n)) err(`story ${st.id}: unlocks unknown node ${n}`);
+  if ('moveTo' in st && st.moveTo && !NODES.has(st.moveTo)) err(`story ${st.id}: moves to unknown node ${st.moveTo}`);
+  for (const c of ('join' in st ? st.join : undefined) ?? []) if (!CHARACTERS.has(c)) err(`story ${st.id}: unknown joining character ${c}`);
 }
 for (const e of EDGES) { if (!NODES.has(e.a)) err(`edge: unknown node ${e.a}`); if (!NODES.has(e.b)) err(`edge: unknown node ${e.b}`); }
 for (const n of NODES.values()) for (const m of n.random?.maps ?? []) if (!MAPS.has(m)) err(`node ${n.id}: unknown random map ${m}`);
 for (const n of NODES.values()) for (const p of n.random?.pools ?? []) for (const u of p.units) if (!JOBS.has(u.job)) err(`node ${n.id}: unknown random job ${u.job}`);
 for (const s of SHOP_STOCK) for (const i of s.items) if (!ITEMS.has(i)) err(`shopStock tier ${s.tier}: unknown item ${i}`);
-for (const e of ERRANDS.values()) { for (const t of e.towns) if (!NODES.has(t)) err(`errand ${e.id}: unknown town ${t}`); if (e.reward.item && !ITEMS.has(e.reward.item)) err(`errand ${e.id}: unknown item ${e.reward.item}`); }
+for (const e of ERRANDS.values()) { for (const t of e.towns) if (!NODES.get(t)?.tavern) err(`errand ${e.id}: town ${t} has no tavern to post it`); if (e.reward.item && !ITEMS.has(e.reward.item)) err(`errand ${e.id}: unknown item ${e.reward.item}`); }
 
 // ---- lore and optional-content references ----
 const checkFlags = (flags: string[], where: string) => {

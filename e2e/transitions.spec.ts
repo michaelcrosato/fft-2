@@ -28,7 +28,8 @@ test("startup has visible feedback even before the game bundle downloads", async
 	const gate = new Promise<void>((resolve) => {
 		release = resolve;
 	});
-	await page.route("**/assets/index-*.js", async (route) => {
+	// every script chunk: the HTML also preloads the renderer and title chunks alongside the entry bundle
+	await page.route("**/assets/*.js", async (route) => {
 		await gate;
 		await route.continue();
 	});
@@ -42,8 +43,10 @@ test("startup has visible feedback even before the game bundle downloads", async
 		await expectInViewport(page, "#loadmsg");
 		// WebKit's screenshot command waits for pending module requests. Assert the
 		// visible DOM here, then capture this engine's loader during the scene test.
+		// The screenshot is evidence only: host headless Chromium sometimes cannot capture a page whose
+		// scripts are held back during a full parallel run; the assertions above are the test.
 		if (info.project.name === "chromium")
-			await page.screenshot({ path: info.outputPath("startup-loading.png") });
+			await page.screenshot({ path: info.outputPath("startup-loading.png") }).catch(() => {});
 	} finally {
 		release();
 	}

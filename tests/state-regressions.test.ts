@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { BATTLES, ERRANDS, NODES, mapDef } from '../src/data/db';
 import { Rng } from '../src/core/rng';
 import {
-  advanceDay, deleteSave, joinCharacter, latestSave, leaveCharacter, listSaves,
+  advanceDay, deleteSave, errandAptitude, joinCharacter, latestSave, leaveCharacter, listSaves,
   loadGame, newGame, saveGame,
 } from '../src/game/state';
 import { addExp, setLevel } from '../src/game/roster';
@@ -139,6 +139,25 @@ describe('errand rewards', () => {
     expect(state.errandsDone).toEqual([errand.id]);
     expect(advanceDay(state, 10, rng)).toEqual([]);
     expect(state.gil).toBe(beforeGil + errand.reward.gil);
+  });
+
+  it('scores PA, MA and Speed errands by those stats, not a flat value', () => {
+    const errand = [...ERRANDS.values()].find((e) => e.stat === 'pa')!;
+    const unit = newGame('Rhen', [4, 12], 4).roster[1];
+    const strong = structuredClone(unit), weak = structuredClone(unit);
+    strong.uid = 'strong'; weak.uid = 'weak';
+    strong.raw.pa *= 3; weak.raw.pa = Math.floor(weak.raw.pa / 3);
+    expect(errandAptitude(strong, 'pa')).toBeGreaterThan(errandAptitude(weak, 'pa'));
+    const chance = (u: typeof unit) => {
+      const rng = new Rng(1);
+      const pct = vi.spyOn(rng, 'pct');
+      const state = newGame('Rhen', [4, 12], 4);
+      state.roster.push(u);
+      state.errands.push({ id: errand.id, units: [u.uid], start: state.day, due: state.day + 1 });
+      advanceDay(state, 1, rng);
+      return pct.mock.calls[0][0];
+    };
+    expect(chance(strong)).toBeGreaterThan(chance(weak));
   });
 
   it('cannot earn rewards after every dispatched soldier has left the roster', () => {

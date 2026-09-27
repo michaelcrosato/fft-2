@@ -1,0 +1,7 @@
+# Windows-side editors and tools also work in this checkout: keep text LF in the repository.
+* text=auto eol=lf
+*.mp3 binary
+*.wav binary
+*.png binary
+*.woff binary
+*.woff2 binary

@@ -18,6 +18,7 @@ import { loadOptions } from '../game/state';
 import { input, type Action } from '../ui/input';
 import { releaseTree } from '../gfx/dispose';
 import { audio } from '../audio/audio';
+import { gameClock } from '../core/gameClock';
 
 export type HighlightKind = 'move' | 'target' | 'aoe' | 'deploy' | 'cursor' | 'enemyMove' | 'path' | 'charge';
 const HL_COLORS: Record<HighlightKind, string> = {
@@ -319,7 +320,7 @@ export class Stage {
         this.stormT = 5 + Math.random() * 9;
         this.post.flash('#e8f0ff', 0.45);
         this.env.lightning();
-        setTimeout(() => audio.sfx('thunderclap', { volume: 0.6 }), 250 + Math.random() * 600);
+        gameClock.schedule(() => audio.sfx('thunderclap', { volume: 0.6 }), 250 + Math.random() * 600);
       }
     }
     // focus DOF on the camera target

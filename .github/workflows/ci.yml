@@ -1,0 +1,59 @@
+# Checks every push to main and every pull request. Vercel repeats the unit tests and
+# build before publishing; this catches failures before a merge and adds the browser smoke test.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      # type check, content/audio validation, production bundle
+      - run: npm run build
+      # AI-vs-AI run of every battle; fails on a stall or exception
+      - run: npm run sim
+
+  browser-smoke:
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      # software rendering on the runner: low quality keeps frame times reasonable
+      - run: npx playwright test --project=chromium e2e/boot.spec.ts
+        env:
+          E2E_QUALITY: low
+          E2E_WORKERS: 2
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            e2e-report
+            e2e-results
+          retention-days: 7

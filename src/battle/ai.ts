@@ -69,7 +69,10 @@ export function planTurn(b: Battle, u: BattleUnit): AiPlan {
       if (best) return { move: [best.x, best.z], facing: u.facing, score: 1 };
     }
   }
-  const confused = u.has('confuse');
+  // a performance lands only while the performer waits: moving or acting would restart it
+  if (u.performing && !u.critical) return { facing: u.facing, score: 0 };
+  // Vampire, like Confuse, strikes at friend and foe alike
+  const confused = u.has('confuse') || u.has('vampire');
   const berserk = u.has('berserk') || u.ai === 'berserk';
 
   const startX = u.x, startZ = u.z;
@@ -83,6 +86,7 @@ export function planTurn(b: Battle, u: BattleUnit): AiPlan {
       for (const a of g.abilities) {
         if (b.unusableReason(u, a)) continue;
         if (a.special === 'calc') continue; // arithmancy handled below
+        if (u.performing && a.perform) continue; // singing again would restart the charge
         if (berserk && a.id !== 'attack') continue;
         if (a.special === 'throw') {
           const list = throwables(b, String(a.params?.cat ?? 'shuriken'), u);
@@ -129,6 +133,9 @@ export function planTurn(b: Battle, u: BattleUnit): AiPlan {
   const support = u.ai === 'support';
   const guard = u.ai === 'guard' || u.ai === 'defensive';
   const want = rangedPreference(b, u);
+  // Arithmeticks targets by attribute, not position: score each combination once
+  // (except by height, where the caster's own tile can change who is hit)
+  const calcScores = new Map<string, number>();
   for (const pos of positions) {
     if (guard && manhattan(pos, { x: startX, z: startZ }) > 2 && enemies.every((e) => manhattan(e, pos) > 5)) continue;
     const ox = u.x, oz = u.z;
@@ -138,6 +145,7 @@ export function planTurn(b: Battle, u: BattleUnit): AiPlan {
     for (const e of enemies) near = Math.min(near, manhattan(e, pos));
     const posScore = guard ? 0 : support ? -Math.max(0, near - want - 1) * 0.9 : -Math.max(0, near - want) * 1.4;
     for (const { a, opts } of abilities) {
+      if (b.deepWaterBlocks(u, a, pos)) continue;
       let cells: Cell[];
       if (opts?.calc) cells = [pos];
       else cells = b.targetCells(u, a, pos.x, pos.z);
@@ -151,9 +159,10 @@ export function planTurn(b: Battle, u: BattleUnit): AiPlan {
           for (const o of b.units) if (!o.gone && !o.hidden && manhattan(o, c) < aoe) { near = true; break; }
           if (!near) continue;
         }
-        const prev = b.previewAction(u, a, c.x, c.z, opts);
         const effect = opts?.calc ? ABILITIES.get(opts.calc.spell) ?? a : a;
-        let s = scoreAction(b, u, effect, prev, support);
+        const calcKey = opts?.calc ? `${opts.calc.attr}|${opts.calc.div}|${opts.calc.spell}|${opts.calc.attr === 'height' ? `${pos.h}:${pos.depth}` : ''}` : '';
+        let s = calcScores.get(calcKey) ?? scoreAction(b, u, effect, b.previewAction(u, a, c.x, c.z, opts), support);
+        if (calcKey) calcScores.set(calcKey, s);
         if (s <= 0.5) continue;
         const ct = opts?.calc ? 0 : b.chargeTicks(u, a);
         if (ct > 0) s *= aoe > 1 ? 0.75 : 0.85;

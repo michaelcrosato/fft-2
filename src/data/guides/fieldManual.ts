@@ -298,7 +298,7 @@ Read Tavern rumours as events unfold. Some record a lead that opens an optional 
 
 World-map travel advances days. Here, the party returns automatically on its due date; there is no need to revisit the posting tavern. Errands underway lists outstanding assignments.
 
-Success depends on preferred jobs, Brave, Faith or level, and the number sent. It is not guaranteed. Successful errands grant their listed rewards, including JP in each soldier's current job; some grant an artefact, item or new destination.
+Success depends on preferred jobs, the attribute each posting favours (Brave, Faith, level, PA, MA or Speed), and the number sent. It is not guaranteed. Successful errands grant their listed rewards, including JP in each soldier's current job; some grant an artefact, item or new destination.
 
 On failure the fee is spent and the soldiers return empty-handed, but an eligible unfinished errand can be attempted again. An artefact is a Chronicle discovery, not necessarily usable equipment.`,
 		},
