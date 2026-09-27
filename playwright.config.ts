@@ -9,13 +9,13 @@ const PORT = Number(process.env.E2E_PORT ?? 4173);
 
 export default defineConfig({
   testDir: './e2e',
-  outputDir: './e2e-results',
+  outputDir: process.env.E2E_OUTPUT_DIR ?? './e2e-results',
   timeout: 180_000,
   expect: { timeout: 60_000 },
   fullyParallel: true,
   workers: process.env.E2E_WORKERS ? Number(process.env.E2E_WORKERS) : 3,
   retries: process.env.CI ? 1 : 0,
-  reporter: [['list'], ['html', { outputFolder: 'e2e-report', open: 'never' }]],
+  reporter: [['list'], ['html', { outputFolder: process.env.E2E_REPORT_DIR ?? 'e2e-report', open: 'never' }]],
   use: {
     baseURL: `http://localhost:${PORT}/`,
     trace: 'retain-on-failure',
@@ -24,7 +24,9 @@ export default defineConfig({
   webServer: {
     command: `npx vite build --logLevel warn && npx vite preview --port ${PORT} --strictPort`,
     url: `http://localhost:${PORT}/`,
-    reuseExistingServer: true,
+    // An occupied port may belong to a different project on this workstation.
+    // Fail explicitly instead of silently running the suite against that app.
+    reuseExistingServer: false,
     timeout: 180_000,
   },
   projects: [

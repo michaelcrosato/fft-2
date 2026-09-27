@@ -232,7 +232,7 @@ export const rumors: Rumor[] = [
     text: 'There is a girl in the Zargid market who sells flowers for a single gil apiece, and talks to them while she does it. She says strange things about the sky, and stranger things about the people she sells to. The Brotherhood of the Scales has been leaning on her for market dues. She laughs at them. That is not a safe thing to do.',
   },
   {
-    id: 'r_cogsgard_flash', title: 'Lightning Without a Cloud', towns: ['cogsgard', 'zargid', 'zelland'], chapterMin: 4, needs: ['sq_flower'],
+    id: 'r_cogsgard_flash', title: 'Lightning Without a Cloud', towns: ['cogsgard', 'zargid', 'zelland'], chapterMin: 4, needs: ['sq_kestrel_arrived'],
     text: 'A flash of green lightning came out of Bastian Brunel\'s workshop in Cogsgard, on a clear day, and blew out every window on the street. A man was seen running from the smoke — a tall stranger with hair like a hedgehog and a sword the size of a door, asking everyone he met the way to "the flowers".',
   },
   {
@@ -254,5 +254,36 @@ export const rumors: Rumor[] = [
   {
     id: 'r_crowned_commoner', title: 'A Commoner\'s Coronation', towns: ALL, chapterMin: 4, needs: ['b_murondel3'],
     text: 'The banns are posted in every church: Delan Harrow is to wed Princess Oriane, and the Holy See will crown them both at Lesandre. There will be three days of feasting and a free barrel in every square. The old soldiers of the Ashen Brigade are drinking to the groom. They are the only ones who remember what he used to say about crowns.',
+  },
+
+  // Leads and discoveries: these follow the local quest flags, not merely the
+  // chapter, so an account of a result cannot appear before it has happened.
+  {
+    id: 'r_brunel_letter', title: 'A Letter from the Workshop', towns: ['cogsgard', 'colgrave', 'lesandre'], chapterMin: 3, needs: ['b_lesandre'],
+    text: 'Bastian Brunel has sent word for his son Mattis to come home to Cogsgard. Something enormous has come out of the east workings, and the old man will scarcely leave it long enough to eat. If you travel with the younger Brunel, take him to the workshop. His father has questions only he and his companions can answer.',
+  },
+  {
+    id: 'r_ghost_freed', title: 'The Ghost Had a Name', towns: ['colgrave', 'lesandre', 'cogsgard'], chapterMin: 3, needs: ['sq_colliery'],
+    text: 'The white creature in the colliery was a prisoner, not the thing taking our miners. A knight called her Rhosyn, as gently as you please, and brought her up alive. They found a stone marked with the Water-bearer down there too. Brunel in Cogsgard has been asking everyone whether they have seen it. He says there is an empty heart waiting for just such a thing.',
+  },
+  {
+    id: 'r_eighth_walks', title: 'Eight Goes Walking', towns: ['cogsgard', 'zelland', 'zeltmoor'], chapterMin: 4, needs: ['sq_octo', 'ch4_germain_done'],
+    text: 'Bastian\'s iron giant has walked out of the workshop. Aquarius woke it, the apprentices say, and Mattis named it Octo before his father could give it a lecture. So the stones need not make demons of men after all. If a buried machine can wake, perhaps the stories of a cure at Nevel deserve a hearing in Zeltmoor.',
+  },
+  {
+    id: 'r_nevel_return', title: 'A Pilgrim Returned', towns: ['zeltmoor', 'bervaine', 'cogsgard'], chapterMin: 4, needs: ['sq_nevel'],
+    text: 'A woman came back from Nevel beside the knight who had crossed the ice with a dragon. Same eyes, the guides say. Same manner of turning her head when he speaks. A Cancer Stone was found in the old guardian, and now the curse is broken. Brunel has a use for that sign in Cogsgard too; his second machine is missing its heart.',
+  },
+  {
+    id: 'r_glass_door', title: 'A Door Awaiting Its Key', towns: ['cogsgard', 'zelland', 'zargid'], chapterMin: 4, needs: ['sq_kestrel_machine', 'ch4_germain_done'],
+    text: 'Brunel has found a ring of brass and glass in the old workings and thinks it a doorway. It needs the Crab\'s stone to answer him, he says. Meanwhile a girl sells flowers in Zargid and tells her customers that the sky is a door. Perhaps artificers and flower sellers know something the rest of us have missed.',
+  },
+  {
+    id: 'r_deep_sigils', title: 'The Stair Is the Prize', towns: ['wargill'], chapterMin: 4, needs: ['sq_deep_open'],
+    text: 'The carvings below the quay speak of hidden sigils, one on each of the first nine landings. A living foot upon the right mark opens the stair. Do not spend your whole strength hunting every creature and then forget to find the way onward. Ten landings there are, and the last has something worse than a locked stair waiting upon it.',
+  },
+  {
+    id: 'r_thirteenth_sign', title: 'A Sign Outside the Calendar', towns: ['wargill', 'galwyn', 'lesandre'], chapterMin: 4, needs: ['sq_deep'],
+    text: 'The company that went below Wargill has returned with a stone bearing a serpent, and a book that turns its own pages. The priests count twelve stones. The scholars are suddenly counting thirteen. There is talk of a summoning heard at the very bottom, but everyone agrees that asking the book for a demonstration would be unwise.',
   },
 ];

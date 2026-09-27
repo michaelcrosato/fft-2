@@ -7,30 +7,50 @@ import { overlay } from './common';
 import { input } from '../input';
 import { ZODIAC_STONES } from '../../data/misc/zodiacStones';
 import { ZODIAC_NAMES, ZODIAC_GLYPH } from '../../battle/zodiac';
+import { atlasEntries, bestiaryEntries, locationReference, monsterReference } from '../../game/reference';
 
 export async function openChronicle(game: Game) {
   const s = game.state;
   const ov = overlay('The Chronicle');
   let body = null as HTMLElement | null;
+  let textPane = null as HTMLElement | null;
+  let shownTitle = '';
   const show = (title: string, text: string) => {
+    if (body && shownTitle === title && textPane?.textContent === text) return;
+    shownTitle = title;
     body?.remove();
+    textPane = h('div', { role: 'region', 'aria-label': title, style: { whiteSpace: 'pre-wrap', lineHeight: '1.55', marginTop: '6px', fontSize: '1.02em', overflowY: 'auto', minHeight: '0' } }, text);
     body = h('div.panel.detail.titled', { style: { right: '16px', top: '64px', width: 'min(620px, 58vw)', maxHeight: 'calc(78 * var(--vh))', display: 'flex', flexDirection: 'column' } },
-      h('div.title-plate', null, title), h('div', { style: { whiteSpace: 'pre-wrap', lineHeight: '1.55', marginTop: '6px', fontSize: '1.02em', overflowY: 'auto', minHeight: '0' } }, text));
+      h('div.title-plate', null, title),
+      h('div.muted', { style: { fontSize: '.82em', flexShrink: '0' } }, 'Scroll text: ←/→ · Page Up/Down · wheel · swipe'), textPane);
     ov.root.appendChild(body);
   };
   /** a browsable list: entries show on hover/choose; only Back returns to the sections */
   const browse = async (o: Parameters<typeof menu<string>>[0]) => {
-    let last: string | undefined;
-    for (;;) {
-      const p = await menu({ ...o, initial: last }).promise;
-      if (p === null) return;
-      last = p;
-    }
+    await menu({ ...o, keepOpenOnChoose: true, onAction: (a) => {
+      if (a !== 'left' && a !== 'right' && a !== 'prev' && a !== 'next') return false;
+      textPane?.scrollBy({ top: (a === 'left' || a === 'prev' ? -1 : 1) * Math.max(80, textPane.clientHeight * 0.7) });
+      return true;
+    } }).promise;
   };
   try {
     for (;;) {
-      const sec = await menu({ items: [{ label: 'Events', value: 'events' }, { label: 'Persons', value: 'persons' }, { label: 'Artefacts & Wonders', value: 'artefacts' }, { label: 'Zodiac Stones', value: 'stones', right: `${ZODIAC_STONES.filter((z) => s.flags[z.flag]).length}/13` }, { label: 'Errands', value: 'errands' }, { label: 'Records', value: 'records' }], x: 16, y: 64, title: 'Chronicle', parent: ov.root }).promise;
+      const sec = await menu({ items: [{ label: 'Events', value: 'events' }, { label: 'Persons', value: 'persons' }, { label: 'Bestiary', value: 'bestiary', right: String(bestiaryEntries().length) }, { label: 'Atlas of Ivaldis', value: 'atlas' }, { label: 'Artefacts & Wonders', value: 'artefacts' }, { label: 'Zodiac Stones', value: 'stones', right: `${ZODIAC_STONES.filter((z) => s.flags[z.flag]).length}/13` }, { label: 'Errands', value: 'errands' }, { label: 'Records', value: 'records' }], x: 16, y: 64, title: 'Chronicle', parent: ov.root }).promise;
       if (!sec) return;
+      if (sec === 'bestiary') {
+        const list = bestiaryEntries();
+        await browse({ items: list.map((j) => ({ label: j.name, value: j.id })), x: 16, y: 64, title: 'Bestiary', parent: ov.root, maxHeight: 'calc(70 * var(--vh))', onHover: (id) => {
+          const j = list.find((entry) => entry.id === id);
+          if (j) show(j.name, monsterReference(j, s));
+        } });
+      }
+      if (sec === 'atlas') {
+        const list = atlasEntries(s);
+        await browse({ items: list.length ? list.map((n) => ({ label: n.name, value: n.id })) : [{ label: 'No places recorded yet', value: '', disabled: true }], x: 16, y: 64, title: 'Atlas of Ivaldis', parent: ov.root, maxHeight: 'calc(70 * var(--vh))', onHover: (id) => {
+          const n = list.find((entry) => entry.id === id);
+          if (n) show(n.name, locationReference(n, s));
+        } });
+      }
       if (sec === 'events') {
         const list = [...CHRONICLE.values()].filter((e) => s.chronicle.includes(e.id) || s.flags[e.id]).sort((a, b) => a.chapter - b.chapter);
         await browse({ items: list.length ? list.map((e) => ({ label: e.title, value: e.id })) : [{ label: 'Nothing recorded yet', value: '', disabled: true }], x: 16, y: 64, title: 'Events', parent: ov.root, maxHeight: 'calc(70 * var(--vh))', onHover: (id) => { const e = CHRONICLE.get(id as string); if (e) show(e.title, e.text); } });

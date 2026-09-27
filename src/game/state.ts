@@ -1,10 +1,10 @@
 // Persistent game state + save slots.
 import type { RosterUnit } from './roster';
-import { createCharacter, createGeneric, newUid, randomName, setLevel } from './roster';
+import { addExp, addJp, createCharacter, createGeneric, newUid, randomName, setLevel } from './roster';
 import { autoEquip } from './setup';
 import { Rng } from '../core/rng';
 import { zodiacFromDate } from '../battle/zodiac';
-import { STORY, CHARACTERS } from '../data/db';
+import { STORY, CHARACTERS, ERRANDS, JOBS, NODES } from '../data/db';
 import type { Quality } from '../gfx/renderer';
 
 export interface Options {
@@ -163,6 +163,33 @@ export function leaveCharacter(s: GameState, charId: string) {
   (s.away ??= {})[charId] = u;
 }
 
+/** Resolve returning errand parties once, including rewards and level growth. */
+export function advanceDay(s: GameState, n: number, rng = new Rng()): Array<{ id: string; success: boolean }> {
+  s.day += n;
+  const reports: Array<{ id: string; success: boolean }> = [];
+  for (const run of [...s.errands]) {
+    if (s.day < run.due) continue;
+    const e = ERRANDS.get(run.id);
+    s.errands = s.errands.filter((r) => r !== run);
+    const units = s.roster.filter((u) => run.units.includes(u.uid));
+    for (const u of units) u.errand = undefined;
+    if (!e) continue;
+    const score = units.reduce((acc, u) => acc + (e.stat === 'brave' ? u.brave : e.stat === 'faith' ? u.faith : e.stat === 'level' ? u.level * 3 : 60) + ((e.jobs ?? []).includes(u.job) ? 25 : 0), 0) / Math.max(1, units.length);
+    const success = units.length > 0 && rng.pct(Math.min(95, 40 + score * 0.6 + units.length * 8));
+    if (success) {
+      s.gil += e.reward.gil;
+      for (const u of units) { addJp(u, u.job, e.reward.jp ?? 100); addExp(u, 30); }
+      if (e.reward.item) addItem(s, e.reward.item);
+      if (e.reward.artefact && !s.artefacts.includes(e.reward.artefact)) s.artefacts.push(e.reward.artefact);
+      if (e.reward.flag) s.flags[e.reward.flag] = true;
+      if (e.reward.unlock && NODES.has(e.reward.unlock) && !s.unlocked.includes(e.reward.unlock)) s.unlocked.push(e.reward.unlock);
+      if (!s.errandsDone.includes(e.id)) s.errandsDone.push(e.id);
+    }
+    reports.push({ id: e.id, success });
+  }
+  return reports;
+}
+
 // ---------------------------------------------------------------------------
 //  Save slots (localStorage; each slot is a JSON blob)
 // ---------------------------------------------------------------------------
@@ -176,22 +203,26 @@ function storage(): Storage | null { try { return window.localStorage; } catch {
 export function saveGame(s: GameState, slot: number): boolean {
   const st = storage();
   if (!st) return false;
-  s.savedAt = Date.now();
-  try { st.setItem(KEY + slot, JSON.stringify(s)); return true; } catch { return false; }
+  const savedAt = Date.now();
+  try { st.setItem(KEY + slot, JSON.stringify({ ...s, savedAt })); s.savedAt = savedAt; return true; } catch { return false; }
 }
 
 export function loadGame(slot: number): GameState | null {
   const st = storage();
   if (!st) return null;
-  const raw = st.getItem(KEY + slot);
-  if (!raw) return null;
   try {
-    const s = JSON.parse(raw) as GameState;
-    return migrate(s);
+    const raw = st.getItem(KEY + slot);
+    if (!raw) return null;
+    const s: unknown = JSON.parse(raw);
+    return validSave(s) ? migrate(s) : null;
   } catch { return null; }
 }
 
-export function deleteSave(slot: number) { storage()?.removeItem(KEY + slot); }
+export function deleteSave(slot: number): boolean {
+  const st = storage();
+  if (!st) return false;
+  try { st.removeItem(KEY + slot); return true; } catch { return false; }
+}
 
 export function listSaves(): Array<SlotInfo | null> {
   const out: Array<SlotInfo | null> = [];
@@ -218,8 +249,43 @@ function migrate(s: GameState): GameState {
   s.errands ??= [];
   s.errandsDone ??= [];
   s.chronicle ??= [];
-  for (const u of s.roster) { u.uid ??= newUid(); u.learned ??= []; u.jp ??= {}; u.totalJp ??= {}; u.equip ??= {}; }
+  for (const u of [...s.roster, ...Object.values(s.away ?? {})]) { u.uid ??= newUid(); u.learned ??= []; u.jp ??= {}; u.totalJp ??= {}; u.equip ??= {}; }
   return s;
+}
+
+/** Reject truncated/corrupt saves before their data reaches menus or battle setup. */
+function validSave(value: unknown): value is GameState {
+  const record = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
+  const number = (v: unknown, min = 0, max = Infinity): v is number => typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max;
+  const integer = (v: unknown, min = 0, max = Infinity): v is number => number(v, min, max) && Number.isInteger(v);
+  const strings = (v: unknown): v is string[] => Array.isArray(v) && v.every((x) => typeof x === 'string');
+  const numbers = (v: unknown) => record(v) && Object.values(v).every((n) => number(n));
+  const unit = (v: unknown): boolean => {
+    if (!record(v) || typeof v.name !== 'string' || typeof v.job !== 'string' || !JOBS.has(v.job)) return false;
+    if (!['m', 'f', 'monster'].includes(v.gender as string) || typeof v.zodiac !== 'string') return false;
+    if (!integer(v.level, 1, 99) || !number(v.exp) || !number(v.brave, 0, 100) || !number(v.faith, 0, 100)) return false;
+    if (!record(v.raw) || !['hp', 'mp', 'sp', 'pa', 'ma'].every((k) => number((v.raw as Record<string, unknown>)[k]))) return false;
+    if (!record(v.look) || !integer(v.kills)) return false;
+    if (v.charId !== undefined && (typeof v.charId !== 'string' || !CHARACTERS.has(v.charId))) return false;
+    for (const k of ['uid', 'secondary', 'reaction', 'support', 'movement', 'errand']) if (v[k] !== undefined && typeof v[k] !== 'string') return false;
+    if (v.learned != null && !strings(v.learned)) return false;
+    if (v.jp != null && !numbers(v.jp) || v.totalJp != null && !numbers(v.totalJp)) return false;
+    return v.equip == null || (record(v.equip) && Object.values(v.equip).every((id) => typeof id === 'string'));
+  };
+  if (!record(value) || value.version !== 1 || typeof value.heroName !== 'string') return false;
+  if (!Array.isArray(value.heroBirthday) || value.heroBirthday.length !== 2 || !integer(value.heroBirthday[0], 1, 12) || !integer(value.heroBirthday[1], 1, 31)) return false;
+  if (!integer(value.chapter, 0, 4) || !integer(value.storyIndex, 0, STORY.length) || !integer(value.tier, 1, 8)) return false;
+  if (!integer(value.day, 1) || !integer(value.gil) || !integer(value.battlesWon) || !number(value.playtime) || !number(value.seed)) return false;
+  if (!record(value.flags) || !Object.values(value.flags).every((v) => typeof v === 'boolean' || number(v))) return false;
+  if (!numbers(value.inventory) || typeof value.location !== 'string' || !NODES.has(value.location)) return false;
+  if (!strings(value.unlocked) || !value.unlocked.every((id) => NODES.has(id))) return false;
+  if (!Array.isArray(value.roster) || !value.roster.every(unit) || !value.roster.some((u) => u.charId === 'rhen')) return false;
+  if (value.away != null && (!record(value.away) || !Object.values(value.away).every(unit))) return false;
+  for (const k of ['met', 'rumorsRead', 'sideDone', 'artefacts', 'errandsDone', 'chronicle']) if (value[k] != null && !strings(value[k])) return false;
+  if (value.furStock != null && !numbers(value.furStock)) return false;
+  if (value.savedAt != null && !number(value.savedAt)) return false;
+  if (value.errands != null && (!Array.isArray(value.errands) || !value.errands.every((r) => record(r) && typeof r.id === 'string' && strings(r.units) && integer(r.start, 1) && integer(r.due, 1)))) return false;
+  return true;
 }
 
 const OPT_KEY = 'fft-fealty-options';

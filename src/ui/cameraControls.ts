@@ -18,6 +18,8 @@ export class CameraControls {
   readonly el: HTMLElement;
   private raf = 0;
   private stopHold: (() => void) | null = null;
+  private onBlur = () => this.stopHold?.();
+  private onVisibilityChange = () => { if (document.hidden) this.stopHold?.(); };
 
   constructor(private stage: Stage) {
     const btn = (id: keyof typeof ICONS, label: string, kb: string, act: () => void, hold = false) => {
@@ -41,6 +43,9 @@ export class CameraControls {
       btn('recenter', 'Recenter', 'F', () => cam().recenter()),
     );
     uiRoot().appendChild(this.el);
+    // A release in another app/tab may never reach the original button.
+    window.addEventListener('blur', this.onBlur);
+    document.addEventListener('visibilitychange', this.onVisibilityChange);
   }
 
   private hold(dir: 1 | -1) {
@@ -58,5 +63,10 @@ export class CameraControls {
     this.stopHold = () => { cancelAnimationFrame(this.raf); this.stopHold = null; };
   }
 
-  dispose() { this.stopHold?.(); this.el.remove(); }
+  dispose() {
+    this.stopHold?.();
+    window.removeEventListener('blur', this.onBlur);
+    document.removeEventListener('visibilitychange', this.onVisibilityChange);
+    this.el.remove();
+  }
 }

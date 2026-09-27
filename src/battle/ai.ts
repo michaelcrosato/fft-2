@@ -152,7 +152,8 @@ export function planTurn(b: Battle, u: BattleUnit): AiPlan {
           if (!near) continue;
         }
         const prev = b.previewAction(u, a, c.x, c.z, opts);
-        let s = scoreAction(b, u, a, prev, support);
+        const effect = opts?.calc ? ABILITIES.get(opts.calc.spell) ?? a : a;
+        let s = scoreAction(b, u, effect, prev, support);
         if (s <= 0.5) continue;
         const ct = opts?.calc ? 0 : b.chargeTicks(u, a);
         if (ct > 0) s *= aoe > 1 ? 0.75 : 0.85;
@@ -225,6 +226,7 @@ function scoreAction(b: Battle, u: BattleUnit, a: AbilityDef, prev: TargetPrevie
       }
     }
     if (p.ko && !p.dmg) s += (ally ? -1.5 : 1) * 95 * hit;
+    if (p.mp) s += (ally ? -0.5 : 0.5) * Math.min(1, p.mp / Math.max(1, t.maxMp)) * 25 * hit * (t.maxMp > 20 ? 1 : 0.2);
     if (p.status) {
       for (const e of a.effects ?? []) {
         if (e.type !== 'status' || !e.add?.length) continue;
@@ -238,7 +240,6 @@ function scoreAction(b: Battle, u: BattleUnit, a: AbilityDef, prev: TargetPrevie
           else s += (ally ? 1 : -1) * v * hit * (support ? 1.2 : 0.8);
         }
       }
-      if (p.mp) s += (ally ? -0.5 : 0.5) * Math.min(1, p.mp / Math.max(1, t.maxMp)) * 25 * hit * (t.maxMp > 20 ? 1 : 0.2);
       for (const st of (a.effects ?? []).flatMap((e) => (e.type === 'status' ? e.remove ?? [] : []))) {
         if (!t.has(st)) continue;
         const bad = STATUS[st].bad;

@@ -115,7 +115,7 @@ export const abilities: AbilityDef[] = [
   },
   {
     id: 'sorcererGraviton', name: 'Graviton', kind: 'action', jp: 550, skillset: 'sorcery',
-    desc: 'Crushing gravity halves the current HP of everyone in a small area. Bosses resist. (Hit MA + 120)',
+    desc: 'Crushing gravity deals half the maximum HP of everyone in a small area. Bosses resist. (Hit MA + 120)',
     range: 4, aoe: 2, aoeV: 2, ct: 6, mp: 50, target: 'enemy', magic: true, anim: 'cast', vfx: 'gravity', color: '#503070',
     hit: F.hitMa(120), params: { pct: 0.5 },
     effects: [{ type: 'special', id: 'gravity' }],

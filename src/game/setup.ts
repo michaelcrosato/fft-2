@@ -201,6 +201,7 @@ export function applyResults(state: GameState, b: Battle, setup: BattleSetup) {
   state.inventory = Object.fromEntries(b.inventory);
   state.gil = b.gil.value;
   const lostUids: string[] = [];
+  const defectedUids = b.units.filter((u) => u.baseTeam !== 0 && state.roster.some((r) => r.uid === u.roster.uid)).map((u) => u.roster.uid);
   for (const u of b.units) {
     if (u.baseTeam !== 0 || !u.controlled) continue;
     const r = u.roster;
@@ -209,13 +210,15 @@ export function applyResults(state: GameState, b: Battle, setup: BattleSetup) {
     r.faith = clamp(r.faith + Math.trunc((u.faith - u.startFaith) / 4), 1, 97);
     if ((u.has('crystal') || u.has('treasure')) && !b.gentle && r.charId !== 'rhen') lostUids.push(r.uid);
   }
-  state.roster = state.roster.filter((r) => !lostUids.includes(r.uid));
+  state.roster = state.roster.filter((r) => !lostUids.includes(r.uid) && !defectedUids.includes(r.uid));
+  const recruited: RosterUnit[] = [];
   for (const inv of b.invited) {
-    // a recruit who fell and crystallized later in the battle doesn't join
-    if (inv.has('crystal') || inv.has('treasure')) continue;
+    // A recruit must still belong to the company after permanent conversions;
+    // temporary Charm changes only `team` and does not cancel recruitment.
+    if (inv.baseTeam !== 0 || inv.has('crystal') || inv.has('treasure')) continue;
     const r = inv.roster;
     r.errand = undefined;
-    if (!state.roster.some((x) => x.uid === r.uid)) state.roster.push(r);
+    if (!state.roster.some((x) => x.uid === r.uid)) { state.roster.push(r); recruited.push(r); }
   }
   for (const p of b.poached) state.furStock[p] = (state.furStock[p] ?? 0) + 1;
   // monsters in the company sometimes lay eggs after a victory
@@ -233,7 +236,7 @@ export function applyResults(state: GameState, b: Battle, setup: BattleSetup) {
     (state as any).__eggs = eggs.map((e) => e.name);
   }
   void setup;
-  return { lost: lostUids.length };
+  return { lost: lostUids.length, defected: defectedUids.length, recruited };
 }
 
 function clamp(v: number, a: number, b: number) { return Math.max(a, Math.min(b, v)); }

@@ -197,6 +197,7 @@ export class Battle {
               if (t && !t.gone) { tx = t.x; tz = t.z; }
             }
             this.resolveAbility(u, ch.ability, tx, tz, { item: ch.item, calc: undefined });
+            this.triggerMimics(u, ch.ability, tx, tz, { item: ch.item });
           }
           this.fireEvents(); // KO / low-HP / enemies-left triggers react to charged spells at once
           this.checkEnd();
@@ -399,7 +400,7 @@ export class Battle {
 
   doMove(u: BattleUnit, x: number, z: number): BEvent[] {
     this.events = [];
-    if (u.moved || !u.alive) return [];
+    if (u.moved || !u.canMove) return [];
     const target = this.grid.cell(x, z);
     if (!target || !target.standable) return [];
     if (u.performing) this.stopPerforming(u);
@@ -523,9 +524,9 @@ export class Battle {
   }
 
   /** Why an ability can't be used right now (undefined = usable) */
-  unusableReason(u: BattleUnit, a: AbilityDef): string | undefined {
+  unusableReason(u: BattleUnit, a: AbilityDef, noMp = false): string | undefined {
     const mp = this.mpCost(u, a);
-    if (mp > u.mp) return 'Not enough MP';
+    if (!noMp && mp > u.mp) return 'Not enough MP';
     if (a.magic && u.has('silence')) return 'Silenced';
     if (u.has('frog') && a.id !== 'attack' && a.id !== 'frogSpell') return 'Toads can only croak';
     if (a.requires?.weapon && !a.requires.weapon.includes(u.weaponType())) return 'Needs ' + a.requires.weapon.join('/');
@@ -676,7 +677,13 @@ export class Battle {
         default: return false;
       }
     };
-    return this.units.filter((o) => !o.gone && !o.hidden && o.alive && !o.jumping && test(val(o)));
+    const spell = ABILITIES.get(calc.spell);
+    if (!spell) return [];
+    return this.units.filter((o) => {
+      if (o.gone || o.hidden || o.jumping || o.has('crystal') || o.has('treasure') || !test(val(o))) return false;
+      if (spell.target === 'ko') return o.has('ko') || (o.alive && o.has('undead'));
+      return o.alive || this.affectsKo(spell);
+    });
   }
 
   // ------------------------------------------------------------------------
@@ -684,7 +691,7 @@ export class Battle {
   // ------------------------------------------------------------------------
   doAction(u: BattleUnit, a: AbilityDef, x: number, z: number, opts: ActionOpts = {}): BEvent[] {
     this.events = [];
-    if ((u.acted && !opts.mimic) || !u.alive) return [];
+    if ((u.acted && !opts.mimic) || !u.canAct || this.unusableReason(u, a, opts.noMp)) return [];
     if (u.performing) this.stopPerforming(u);
     // acting reveals an invisible unit — after the blow lands, so the accuracy bonus applies
     const reveal = () => { if (u.has('invisible') && !a.id.startsWith('wait')) { u.statuses.delete('invisible'); this.emit({ t: 'status', uid: u.uid, remove: ['invisible'] }); } };
@@ -832,6 +839,15 @@ export class Battle {
 
   isPhysical(a: AbilityDef) { return !a.magic && (a.evadable || a.id === 'attack' || a.anim === 'swing' || a.anim === 'thrust' || a.anim === 'punch' || a.anim === 'kick' || a.anim === 'shoot' || a.anim === 'throw' || a.anim === 'jump'); }
 
+  /** These arts use magic power without the silence, faith or reflection rules of spells. */
+  private usesMagicPower(a: AbilityDef) { return a.magic || a.special === 'iaido' || a.special === 'geo' || a.special === 'geoAuto'; }
+
+  private healingAmount(c: BattleUnit, a: AbilityDef, base: number, zodiac: number) {
+    let amount = Math.floor(base * zodiac);
+    if (this.usesMagicPower(a) && c.hasSupport('magicAttackUp')) amount = Math.floor(amount * 4 / 3);
+    return Math.min(999, Math.max(0, amount));
+  }
+
   /** Apply one ability to one target. Pushes reactions into the queue. */
   hitUnit(c: BattleUnit, t: BattleUnit, a: AbilityDef, opts: ActionOpts, react: Array<() => void>): HitInfo {
     const h: HitInfo = { uid: t.uid };
@@ -916,9 +932,7 @@ export class Battle {
         }
         case 'heal': {
           const stat = e.stat ?? 'hp';
-          let amt = Math.floor(e.formula(ctx) * ctx.zodiac);
-          if (a.magic && c.hasSupport('magicAttackUp')) amt = Math.floor(amt * 4 / 3);
-          amt = Math.min(999, Math.max(0, amt));
+          const amt = this.healingAmount(c, a, e.formula(ctx), ctx.zodiac);
           if (stat === 'hp') {
             if (t.has('undead')) { const real = this.damage(t, amt); h.dmg = (h.dmg ?? 0) + real; }
             else if (t.alive) { this.heal(t, amt, undefined, false); h.heal = (h.heal ?? 0) + amt; }
@@ -1065,7 +1079,7 @@ export class Battle {
       if (t.hasSupport('defenseUp')) d = d * 2 / 3;
       if (t.has('sleep') || t.has('charging') || t.has('frog') || t.has('chicken')) d = d * 1.5;
       if (!preview && a.id === 'attack' && this.rng.pct(5)) { d = d * 1.5; h.crit = true; }
-    } else if (a.magic) {
+    } else if (this.usesMagicPower(a)) {
       if (c.hasSupport('magicAttackUp')) d = d * 4 / 3;
       if (t.has('shell')) d = d * 2 / 3;
       if (t.hasSupport('magicDefenseUp')) d = d * 2 / 3;
@@ -1115,7 +1129,7 @@ export class Battle {
         case 'damage': {
           // same seed on every hover, so a random-damage skill previews the same number each time
           ctx.rng = this.previewRng = new Rng(777);
-          const el = e.element ?? a.element ?? (a.id === 'attack' ? c.weapon?.element : undefined);
+          const el = e.element ?? a.element ?? (opts.item ? ITEMS.get(opts.item)?.element : undefined) ?? (a.id === 'attack' ? c.weapon?.element : undefined);
           let base = a.id === 'attack' ? weaponDamage(c, c.weapon, null, { avg: true, wp }) : e.formula(ctx);
           let d = this.modifyDamage(c, t, a, base, el, physical, ctx.zodiac, dummy, true);
           if (a.id === 'attack' && c.weapon2) d += this.modifyDamage(c, t, a, weaponDamage(c, c.weapon2, null, { avg: true }), c.weapon2.element, true, ctx.zodiac, dummy, true);
@@ -1125,7 +1139,7 @@ export class Battle {
           break;
         }
         case 'heal': {
-          const amt = Math.min(999, Math.floor(e.formula(ctx) * ctx.zodiac));
+          const amt = this.healingAmount(c, a, e.formula(ctx), ctx.zodiac);
           if ((e.stat ?? 'hp') === 'hp') { if (t.has('undead')) p.dmg = (p.dmg ?? 0) + amt; else p.heal = (p.heal ?? 0) + amt; }
           else p.mp = -(amt);
           break;
@@ -1138,7 +1152,7 @@ export class Battle {
         case 'stat': status.push(`${e.stat} ${e.amount > 0 ? '+' : ''}${e.amount}`); break;
         case 'special':
           if (e.id === 'instantKo') { if (!t.boss) { p.ko = true; status.push('KO'); } }
-          else if (e.id === 'gravity') { if (!t.boss) p.dmg = Math.floor(t.hp * Number(a.params?.pct ?? 0.25)); }
+          else if (e.id === 'gravity') { if (!t.boss) p.dmg = Math.min(t.hp, Math.max(1, Math.floor(t.maxHp * Number(a.params?.pct ?? 0.25)))); }
           else if (e.id === 'fullRestore') p.heal = t.maxHp - t.hp;
           else if (e.id === 'wish') p.heal = Math.floor(c.maxHp / 5) * 2;
           break;
@@ -1176,9 +1190,8 @@ export class Battle {
       case 'counterTackle':
         if (physical && dealt > 0 && c.alive && Math.abs(c.x - t.x) + Math.abs(c.z - t.z) === 1 && brave()) {
           say();
-          const dash = ABILITIES.get('dash');
-          if (dash) this.subAction(t, dash, c.x, c.z);
-          else this.counterAttack(t, c);
+          const rush = ABILITIES.get('rush');
+          if (rush) this.subAction(t, rush, c.x, c.z);
         }
         break;
       case 'counterMagic':

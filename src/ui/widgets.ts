@@ -34,6 +34,8 @@ export interface MenuOpts<T> {
   closeTitle?: string;
   /** touch: first tap only selects (default for menus with hover panels or descriptions) */
   tapSelects?: boolean;
+  /** Reference lists: keep the selected page and list scroll position until Back. */
+  keepOpenOnChoose?: boolean;
 }
 
 export interface MenuHandle<T> { promise: Promise<T | null>; close: () => void; el: HTMLElement; refresh: (items: MenuItem<T>[]) => void; }
@@ -70,8 +72,9 @@ export function menu<T = string>(o: MenuOpts<T>): MenuHandle<T> {
     rows = items.map((it, i) => {
       if (it.sep) return list.appendChild(h('div.sep')) as HTMLElement;
       const row = h('div.item' + (it.disabled ? '.disabled' : ''), {
-        // pointerenter, not mouseenter: a tap fires compatibility mouse events that would select + choose in one go
-        onpointerenter: (e: PointerEvent) => { if (e.pointerType === 'mouse') setSel(i, false); },
+        // Layout changes can emit pointerenter beneath a stationary cursor (notably WebKit).
+        // Only mouse movement takes selection back from keyboard/gamepad; touch still selects on tap.
+        onpointermove: (e: PointerEvent) => { if (e.pointerType === 'mouse') setSel(i, false); },
         onpointerdown: (e: PointerEvent) => { lastPointer = e.pointerType; },
         onclick: (e: MouseEvent) => {
           e.stopPropagation();
@@ -100,6 +103,7 @@ export function menu<T = string>(o: MenuOpts<T>): MenuHandle<T> {
     if (!it || it.sep) return;
     if (it.disabled) { audio.sfx('error'); return; }
     audio.sfx('confirm');
+    if (o.keepOpenOnChoose) return;
     finish(it.value);
   };
   const finish = (v: T | null) => {

@@ -1,6 +1,6 @@
 // Title → new game / continue → story & world map loop.
 import type { Game } from './game';
-import { newGame, saveGame, loadGame, listSaves, latestSave, partyLevel, addItem, loadOptions, saveOptions, type GameState } from './state';
+import { newGame, saveGame, loadGame, listSaves, latestSave, partyLevel, advanceDay as advanceStateDay, loadOptions, saveOptions, type GameState } from './state';
 import { NODES, EDGES, STORY, ERRANDS, JOBS, CHARACTERS, BATTLES, ITEMS } from '../data/db';
 import type { BattleDef, UnitSpawn, WorldNode } from '../data/types';
 import { WorldView } from '../scenes/worldmap';
@@ -14,7 +14,6 @@ import { Rng } from '../core/rng';
 import { MapGrid } from '../battle/grid';
 import { mapDef } from '../data/db';
 import { zodiacFromDate, ZODIAC_NAMES, ZODIAC_GLYPH, ZODIAC_ORDER } from '../battle/zodiac';
-import { addJp } from './roster';
 import { openFormation } from '../ui/menus/formation';
 import { openShop, openRecruit, openTavern, openFurShop } from '../ui/menus/town';
 import { openChronicle } from '../ui/menus/chronicle';
@@ -42,7 +41,7 @@ export async function runTitle(game: Game) {
     h('div', { style: { fontFamily: 'EB Garamond, serif', fontStyle: 'italic', fontSize: 'min(4vw, 20px, 4.5vh)', color: '#e8d8b0', whiteSpace: 'nowrap' } }, 'The Chronicle of the Twelve Braves'),
   );
   uiRoot().appendChild(logo);
-  const footer = h('div', { style: { position: 'absolute', bottom: '10px', width: '100%', textAlign: 'center', color: 'rgba(240,225,190,.6)', fontSize: '12px', pointerEvents: 'none' } }, `A fan-made spiritual successor · three.js ${({ webgpu: 'WebGPU', webgl2: 'WebGL 2', webgl1: 'WebGL 1' } as Record<string, string>)[rinfo?.backend ?? ''] ?? ''} · all names, words and music original`);
+  const footer = h('div', { style: { position: 'absolute', bottom: '10px', width: '100%', textAlign: 'center', color: 'rgba(240,225,190,.6)', fontSize: '12px', pointerEvents: 'none' } }, `A fan-made spiritual successor · three.js ${({ webgpu: 'WebGPU', webgl2: 'WebGL 2', webgl1: 'WebGL 1' } as Record<string, string>)[rinfo?.backend ?? ''] ?? ''} · internal test build · placeholder FFT audio`);
   uiRoot().appendChild(footer);
   for (;;) {
     const hasSave = latestSave() !== null;
@@ -401,33 +400,14 @@ async function worldLoop(game: Game): Promise<'title' | 'continue'> {
 }
 
 function advanceDay(game: Game, n: number) {
-  const s = game.state;
-  s.day += n;
-  // errands
-  for (const run of [...s.errands]) {
-    if (s.day < run.due) continue;
-    const e = ERRANDS.get(run.id);
-    s.errands = s.errands.filter((r) => r !== run);
-    const units = s.roster.filter((u) => run.units.includes(u.uid));
-    for (const u of units) u.errand = undefined;
-    if (!e) continue;
-    // success chance from stat emphasis
-    const score = units.reduce((acc, u) => acc + (e.stat === 'brave' ? u.brave : e.stat === 'faith' ? u.faith : e.stat === 'level' ? u.level * 3 : 60) + ((e.jobs ?? []).includes(u.job) ? 25 : 0), 0) / Math.max(1, units.length);
-    const ok = new Rng().pct(Math.min(95, 40 + score * 0.6 + units.length * 8));
-    if (ok) {
-      s.gil += e.reward.gil;
-      for (const u of units) { addJp(u, u.job, e.reward.jp ?? 100); u.exp += 30; }
-      if (e.reward.item) addItem(s, e.reward.item, 1);
-      if (e.reward.artefact && !s.artefacts.includes(e.reward.artefact)) s.artefacts.push(e.reward.artefact);
-      if (e.reward.flag) s.flags[e.reward.flag] = true;
-      if (e.reward.unlock && NODES.has(e.reward.unlock) && !s.unlocked.includes(e.reward.unlock)) s.unlocked.push(e.reward.unlock);
-      s.errandsDone.push(e.id);
+  for (const report of advanceStateDay(game.state, n)) {
+    const e = ERRANDS.get(report.id)!;
+    if (report.success) {
       toast(`Errand complete: ${e.title} (+${e.reward.gil} gil)`, 3500);
     } else {
       toast(`Errand failed: ${e.title}. The party returns empty-handed.`, 3500);
     }
   }
-  // birthdays: small brave bump
 }
 
 // ---------------------------------------------------------------- node menu
@@ -531,7 +511,7 @@ export function randomBattleDef(game: Game, node: WorldNode): BattleDef | null {
     const pick = cells[Math.min(cells.length - 1, rng.int(0, Math.min(cells.length - 1, 10)))];
     if (used.has(pick.c.x + ',' + pick.c.z)) { i--; cells.splice(cells.indexOf(pick), 1); continue; }
     used.add(pick.c.x + ',' + pick.c.z);
-    units.push({ job: u.job, gender: u.gender, level: `+${rng.int(-1, 2)}`, at: [pick.c.x, pick.c.z], team: 1 });
+    units.push({ job: u.job, gender: u.gender, level: String(rng.int(-1, 2)), at: [pick.c.x, pick.c.z], team: 1 });
   }
   return {
     id: 'rand_' + node.id + '_' + s.day, name: node.name, map: mapId, music: rng.pick(['battle1', 'battle2']),
@@ -544,7 +524,7 @@ async function credits(game: Game) {
   audio.playMusic('credits', { fade: 2 });
   const lines = [
     'FINAL FEALTY TACTICS', 'The Chronicle of the Twelve Braves', '',
-    'A tale of fealty and its price.', '', 'Story, systems, code, models, music', 'written procedurally for the browser', '',
+    'A tale of fealty and its price.', '', 'Story, systems, code and models', 'written for the browser', '', 'Placeholder audio — Final Fantasy Tactics', 'Music: Hitoshi Sakimoto / Masaharu Iwata', 'Sources: Zophar’s Domain / The Sounds Resource', 'Internal, non-commercial testing', '',
     'Rendered with three.js — WebGPU, WebGL 2, WebGL 1', '', 'Inspired by the war-drama tactics games of old,', 'with love and respect.', '',
     `Played by ${game.state.heroName}'s company`, `Days on the road: ${game.state.day}`, `Battles won: ${game.state.battlesWon}`, '', 'Thank you for playing.',
   ];

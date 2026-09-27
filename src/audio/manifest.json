@@ -1,0 +1,1285 @@
+{
+  "version": 1,
+  "usage": "Internal, non-commercial testing only. Third-party Final Fantasy Tactics audio placeholders; replace before release.",
+  "assets": {
+    "ost-101": {
+      "src": "audio/fft/ost-101.mp3",
+      "title": "101 Bland Logo ~ Title Back",
+      "game": "Final Fantasy Tactics (PlayStation, 1997)",
+      "source": {
+        "page": "https://www.zophar.net/music/playstation-psf/final-fantasy-tactics",
+        "download": "https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/101%20Bland%20Logo%20~%20Title%20Back.mp3",
+        "file": "101 Bland Logo ~ Title Back.mp3",
+        "sha256": "eba4aa0bc8f9e976fa453864dfe6a178e13ecab55df51251c61aa8efc49fdbdc"
+      },
+      "processing": "Full track; MP3 128 kbps stereo; source fade retained.",
+      "sha256": "6f70ded5996117c1bb71271cc5e7ccdd06b50bdfb71cbc7aaca5580f4d5195a1",
+      "duration": 69.826667
+    },
+    "ost-102": {
+      "src": "audio/fft/ost-102.mp3",
+      "title": "102 Backborn Story",
+      "game": "Final Fantasy Tactics (PlayStation, 1997)",
+      "source": {
+        "page": "https://www.zophar.net/music/playstation-psf/final-fantasy-tactics",
+        "download": "https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/102%20Backborn%20Story.mp3",
+        "file": "102 Backborn Story.mp3",
+        "sha256": "42a6a9972552c07170a979bd5e8c6661bc6400a37eb90278228d7289d5f99f05"
+      },
+      "processing": "Full track; MP3 128 kbps stereo; source fade retained.",
+      "sha256": "52e74c229f393b80e387f99b70a205fa7d6505aeda88b0966412df209620a9ea",
+      "duration": 94.306667
+    },
+    "ost-109": {
+      "src": "audio/fft/ost-109.mp3",
+      "title": "109 Trisection",
+      "game": "Final Fantasy Tactics (PlayStation, 1997)",
+      "source": {
+        "page": "https://www.zophar.net/music/playstation-psf/final-fantasy-tactics",
+        "download": "https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/109%20Trisection.mp3",
+        "file": "109 Trisection.mp3",
+        "sha256": "c6d8adc65f802f83a86abd57eb1461bac35f33ebdafd4633af5d5147978a400f"
+      },
+      "processing": "Full track; MP3 128 kbps stereo; source fade retained.",
+      "sha256": "3b9c3f7c0e3a815b87df73ec36aa4c14916534a997ca21e94e8ace1204f2da7c",
+      "duration": 150.2
+    },
+    "ost-112": {
+      "src": "audio/fft/ost-112.mp3",
+      "title": "112 Unavoidable Battle",
+      "game": "Final Fantasy Tactics (PlayStation, 1997)",
+      "source": {
+        "page": "https://www.zophar.net/music/playstation-psf/final-fantasy-tactics",
+        "download": "https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/112%20Unavoidable%20Battle.mp3",
+        "file": "112 Unavoidable Battle.mp3",
+        "sha256": "2d8762e9f998488915e23ca15c2b24734e46fd81ffb36748bb95baeed997e9b1"
+      },
+      "processing": "Full track; MP3 128 kbps stereo; source fade retained.",
+      "sha256": "d381d880596754e825f756794240139fbf484c5256510db465a0f7bb31d6cce5",
+      "duration": 188.7
+    },
+    "ost-113": {
+      "src": "audio/fft/ost-113.mp3",
+      "title": "113 Mission Complete",
+      "game": "Final Fantasy Tactics (PlayStation, 1997)",
+      "source": {
+        "page": "https://www.zophar.net/music/playstation-psf/final-fantasy-tactics",
+        "download": "https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/113%20Mission%20Complete.mp3",
+        "file": "113 Mission Complete.mp3",
+        "sha256": "2338d92aa916acaeec1ea0c53c4f0be829d14d0cc57080528cb37dfe4d6510bd"
+      },
+      "processing": "Full track; MP3 128 kbps stereo; source fade retained.",
+      "sha256": "9e3fb37ed5c91c3dfdecd612f980634998ad14324324e1713bfa3147df97421d",
+      "duration": 21.9
+    },
+    "ost-114": {
+      "src": "audio/fft/ost-114.mp3",
+      "title": "114 Hero's Theme",
+      "game": "Final Fantasy Tactics (PlayStation, 1997)",
+      "source": {
+        "page": "https://www.zophar.net/music/playstation-psf/final-fantasy-tactics",
+        "download": "https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/114%20Hero%27s%20Theme.mp3",
+        "file": "114 Hero's Theme.mp3",
+        "sha256": "6a8be319a23899cfb9ac06846905e8b4c13f5635a2ef88fee9f37d02824eba54"
+      },
+      "processing": "Full track; MP3 128 kbps stereo; source fade retained.",
+      "sha256": "d80c858c133fe1ccb2d7a41f300dce0871719f0dbc0b9135bea7123cd656ec22",
+      "duration": 67.6
+    },
+    "ost-115": {
+      "src": "audio/fft/ost-115.mp3",
+      "title": "115 A Chapel",
+      "game": "Final Fantasy Tactics (PlayStation, 1997)",
+      "source": {
+        "page": "https://www.zophar.net/music/playstation-psf/final-fantasy-tactics",
+        "download": "https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/115%20A%20Chapel.mp3",
+        "file": "115 A Chapel.mp3",
+        "sha256": "529080f9c7365d6f50e4f084fac5a7b5a6efa09af6efcca200312926f162d1fb"
+      },
+      "processing": "Full track; MP3 128 kbps stereo; source fade retained.",
+      "sha256": "9ac46b66c8c659e1a2897e59607eb7dbf49c0e5345ae7a25496174fbc4168b0a",
+      "duration": 147.6
+    },
+    "ost-117": {
+      "src": "audio/fft/ost-117.mp3",
+      "title": "117 World Map",
+      "game": "Final Fantasy Tactics (PlayStation, 1997)",
+      "source": {
+        "page": "https://www.zophar.net/music/playstation-psf/final-fantasy-tactics",
+        "download": "https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/117%20World%20Map.mp3",
+        "file": "117 World Map.mp3",
+        "sha256": "3d5b157aba12695c580ceb3de66b668f046b5ee2a8e7e02fcbf7401a22415152"
+      },
+      "processing": "Full track; MP3 128 kbps stereo; source fade retained.",
+      "sha256": "807d454c9e87ca94cd93aaf4a3993112999bb5c78eb6deeec9018d07b06b5e07",
+      "duration": 80.3
+    },
+    "ost-118": {
+      "src": "audio/fft/ost-118.mp3",
+      "title": "118 Shop",
+      "game": "Final Fantasy Tactics (PlayStation, 1997)",
+      "source": {
+        "page": "https://www.zophar.net/music/playstation-psf/final-fantasy-tactics",
+        "download": "https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/118%20Shop.mp3",
+        "file": "118 Shop.mp3",
+        "sha256": "9195d33621d609977cfb7ff40a0587dd3da1b131fc3a1ec3d166e0b869003985"
+      },
+      "processing": "Full track; MP3 128 kbps stereo; source fade retained.",
+      "sha256": "c674f660eccc3023bc57d283f0941fa9276382d8e149d716997f34fe1e70a3fd",
+      "duration": 74.0
+    },
+    "ost-121": {
+      "src": "audio/fft/ost-121.mp3",
+      "title": "121 Team Making",
+      "game": "Final Fantasy Tactics (PlayStation, 1997)",
+      "source": {
+        "page": "https://www.zophar.net/music/playstation-psf/final-fantasy-tactics",
+        "download": "https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/121%20Team%20Making.mp3",
+        "file": "121 Team Making.mp3",
+        "sha256": "72d8d9f5d3fed9b3c41a5929fd9c1f818e6c0b9e3a073ece451aa3f0626a2e13"
+      },
+      "processing": "Full track; MP3 128 kbps stereo; source fade retained.",
+      "sha256": "89468c4c236a7d5c9f628c7f4782ed28bedb26168a0a4592f196639650345d6f",
+      "duration": 94.4
+    },
+    "ost-123": {
+      "src": "audio/fft/ost-123.mp3",
+      "title": "123 Pub",
+      "game": "Final Fantasy Tactics (PlayStation, 1997)",
+      "source": {
+        "page": "https://www.zophar.net/music/playstation-psf/final-fantasy-tactics",
+        "download": "https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/123%20Pub.mp3",
+        "file": "123 Pub.mp3",
+        "sha256": "4187ad3aee66c971040d3f429cd7b8118f237fb719bfc787be1e9c96b701a16d"
+      },
+      "processing": "Full track; MP3 128 kbps stereo; source fade retained.",
+      "sha256": "c68aa05193af6521a3316d434dd66c51ce494afa7c79fa38a15868beb5d70c61",
+      "duration": 101.800249
+    },
+    "ost-128": {
+      "src": "audio/fft/ost-128.mp3",
+      "title": "128 Decisive Battle",
+      "game": "Final Fantasy Tactics (PlayStation, 1997)",
+      "source": {
+        "page": "https://www.zophar.net/music/playstation-psf/final-fantasy-tactics",
+        "download": "https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/128%20Decisive%20Battle.mp3",
+        "file": "128 Decisive Battle.mp3",
+        "sha256": "efa5715d43ea4877e98597808401bf0dfbfdc2bb1b03b8116a9fa301836c02e7"
+      },
+      "processing": "Full track; MP3 128 kbps stereo; source fade retained.",
+      "sha256": "80dc07f23b8acf4cc77a71e5820015e51180fa108ee55b6eda63b60594b12194",
+      "duration": 263.6
+    },
+    "ost-130": {
+      "src": "audio/fft/ost-130.mp3",
+      "title": "130 Remnants",
+      "game": "Final Fantasy Tactics (PlayStation, 1997)",
+      "source": {
+        "page": "https://www.zophar.net/music/playstation-psf/final-fantasy-tactics",
+        "download": "https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/130%20Remnants.mp3",
+        "file": "130 Remnants.mp3",
+        "sha256": "01181a67b277e9f69b9b7cafc80eeeabcfb100c1c18c5d46ce4d82ec92223531"
+      },
+      "processing": "Full track; MP3 128 kbps stereo; source fade retained.",
+      "sha256": "bd197c43fa4ff3d3f5b336893297062041798f5dc1f0407302994be3ec7b9dc2",
+      "duration": 183.3
+    },
+    "ost-132": {
+      "src": "audio/fft/ost-132.mp3",
+      "title": "132 Tension 1",
+      "game": "Final Fantasy Tactics (PlayStation, 1997)",
+      "source": {
+        "page": "https://www.zophar.net/music/playstation-psf/final-fantasy-tactics",
+        "download": "https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/132%20Tension%201.mp3",
+        "file": "132 Tension 1.mp3",
+        "sha256": "62e9ea207d0eafb89545dbc9e6551bbfd949e3d8581468ad2970aaaaf78063f6"
+      },
+      "processing": "Full track; MP3 128 kbps stereo; source fade retained.",
+      "sha256": "83153ca8ee078b80b90cb9524e496a0ea91471a69b836db9d3dbdcf6e6aecf15",
+      "duration": 166.9
+    },
+    "ost-133": {
+      "src": "audio/fft/ost-133.mp3",
+      "title": "133 Game Over",
+      "game": "Final Fantasy Tactics (PlayStation, 1997)",
+      "source": {
+        "page": "https://www.zophar.net/music/playstation-psf/final-fantasy-tactics",
+        "download": "https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/133%20Game%20Over.mp3",
+        "file": "133 Game Over.mp3",
+        "sha256": "aa92e75529ef51c3214f01d8aa72e68b5e497cfdce085e8b603886731cfa8541"
+      },
+      "processing": "Full track; MP3 128 kbps stereo; source fade retained.",
+      "sha256": "8604e95cc70c4bd9233a9588f8a0e1724518b1a31be8919a32621b31f469e5b1",
+      "duration": 18.459864
+    },
+    "ost-136": {
+      "src": "audio/fft/ost-136.mp3",
+      "title": "136 Ovelia's Theme",
+      "game": "Final Fantasy Tactics (PlayStation, 1997)",
+      "source": {
+        "page": "https://www.zophar.net/music/playstation-psf/final-fantasy-tactics",
+        "download": "https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/136%20Ovelia%27s%20Theme.mp3",
+        "file": "136 Ovelia's Theme.mp3",
+        "sha256": "4e3280b59fde9a40f077a92a8a64211ad5abb3c7150364e4585dadb2e58f81ad"
+      },
+      "processing": "Full track; MP3 128 kbps stereo; source fade retained.",
+      "sha256": "602ab43eb781fb580c356ce3d66ab32841f19ce770d53738f797ef409bedf648",
+      "duration": 133.5
+    },
+    "ost-139": {
+      "src": "audio/fft/ost-139.mp3",
+      "title": "139 Run Past Through the Plain",
+      "game": "Final Fantasy Tactics (PlayStation, 1997)",
+      "source": {
+        "page": "https://www.zophar.net/music/playstation-psf/final-fantasy-tactics",
+        "download": "https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/139%20Run%20Past%20Through%20the%20Plain.mp3",
+        "file": "139 Run Past Through the Plain.mp3",
+        "sha256": "7a9e9dc50d60517bc6f51bc35444e3e34dbc2cca5ea9e54941cbe4ddda18732a"
+      },
+      "processing": "Full track; MP3 128 kbps stereo; source fade retained.",
+      "sha256": "918e6954030fd7b65b2df8128e705c15bb6f2d4c4667a0c99a6077833de97db1",
+      "duration": 209.4
+    },
+    "ost-210": {
+      "src": "audio/fft/ost-210.mp3",
+      "title": "210 Under the Stars",
+      "game": "Final Fantasy Tactics (PlayStation, 1997)",
+      "source": {
+        "page": "https://www.zophar.net/music/playstation-psf/final-fantasy-tactics",
+        "download": "https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/210%20Under%20the%20Stars.mp3",
+        "file": "210 Under the Stars.mp3",
+        "sha256": "7477089a747897362fd8bf4d3733ed6cb9d3ee3b5d6add7c9bb2b62e784113c3"
+      },
+      "processing": "Full track; MP3 128 kbps stereo; source fade retained.",
+      "sha256": "cdd1580528d580632a44de242850459c647e3485c3a019aeab21a6a9b2fa8c0a",
+      "duration": 185.7
+    },
+    "ost-219": {
+      "src": "audio/fft/ost-219.mp3",
+      "title": "219 The Impure",
+      "game": "Final Fantasy Tactics (PlayStation, 1997)",
+      "source": {
+        "page": "https://www.zophar.net/music/playstation-psf/final-fantasy-tactics",
+        "download": "https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/219%20The%20Impure.mp3",
+        "file": "219 The Impure.mp3",
+        "sha256": "7124af8a14d1d460b2d9c8de688fba3f770469f4dee4a3562d5827b3b0177074"
+      },
+      "processing": "Full track; MP3 128 kbps stereo; source fade retained.",
+      "sha256": "0ad17b994348f9bac13880d12fe40b4eec8ac0a31f64a860df83983093499a27",
+      "duration": 443.5
+    },
+    "ost-226": {
+      "src": "audio/fft/ost-226.mp3",
+      "title": "226 Ultema, the Perfect Body",
+      "game": "Final Fantasy Tactics (PlayStation, 1997)",
+      "source": {
+        "page": "https://www.zophar.net/music/playstation-psf/final-fantasy-tactics",
+        "download": "https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/226%20Ultema%2C%20the%20Perfect%20Body.mp3",
+        "file": "226 Ultema, the Perfect Body.mp3",
+        "sha256": "342e6b0f5e1bcc328577476c319bf0b86efebeba1066b7acaea1e3e42b972c4b"
+      },
+      "processing": "Full track; MP3 128 kbps stereo; source fade retained.",
+      "sha256": "b7754052505f229c9c61ff9c3c89b70f1f911ae80cd691a27aa599c005bdff09",
+      "duration": 392.8
+    },
+    "ost-227": {
+      "src": "audio/fft/ost-227.mp3",
+      "title": "227 Fanfare",
+      "game": "Final Fantasy Tactics (PlayStation, 1997)",
+      "source": {
+        "page": "https://www.zophar.net/music/playstation-psf/final-fantasy-tactics",
+        "download": "https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/227%20Fanfare.mp3",
+        "file": "227 Fanfare.mp3",
+        "sha256": "f3e18d3a20fc0ef916ff9d6760c11bdce2f4402cda98b86fb68d6f5c43d10319"
+      },
+      "processing": "Full track; MP3 128 kbps stereo; source fade retained.",
+      "sha256": "8f5cc7ff21bf8eb3c165bc65f5f7f1a70d1d9adb48827da0142bb52f37c3b22e",
+      "duration": 15.0
+    },
+    "ost-229": {
+      "src": "audio/fft/ost-229.mp3",
+      "title": "229 Staff Credit",
+      "game": "Final Fantasy Tactics (PlayStation, 1997)",
+      "source": {
+        "page": "https://www.zophar.net/music/playstation-psf/final-fantasy-tactics",
+        "download": "https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/229%20Staff%20Credit.mp3",
+        "file": "229 Staff Credit.mp3",
+        "sha256": "7342ed54588ecfeeeea354544a28b5114a113358f6258d019c1da39c066fe986"
+      },
+      "processing": "Full track; MP3 128 kbps stereo; source fade retained.",
+      "sha256": "b1abd24bac9fb7f1aba81315472398302de2024b8c664f2d6b963bb247bf4f77",
+      "duration": 338.64
+    },
+    "ost-903": {
+      "src": "audio/fft/ost-903.mp3",
+      "title": "903 Award 1 - Completed",
+      "game": "Final Fantasy Tactics (PlayStation, 1997)",
+      "source": {
+        "page": "https://www.zophar.net/music/playstation-psf/final-fantasy-tactics",
+        "download": "https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/903%20Award%201%20-%20Completed.mp3",
+        "file": "903 Award 1 - Completed.mp3",
+        "sha256": "c6ef32b018761f130333d48135eea844c0daf1513a9bec20221510b8aeeda85e"
+      },
+      "processing": "Full track; MP3 128 kbps stereo; source fade retained.",
+      "sha256": "aa240a3bd75674b0d8c339ff2d90a909ea3f97e298145aa256d5e98b3ad14402",
+      "duration": 4.0
+    },
+    "ost-904": {
+      "src": "audio/fft/ost-904.mp3",
+      "title": "904 Award 2 - Unlucky",
+      "game": "Final Fantasy Tactics (PlayStation, 1997)",
+      "source": {
+        "page": "https://www.zophar.net/music/playstation-psf/final-fantasy-tactics",
+        "download": "https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/904%20Award%202%20-%20Unlucky.mp3",
+        "file": "904 Award 2 - Unlucky.mp3",
+        "sha256": "51738bf0942431a7647b2d59dfc60adbafae902ad382dbc7da682fdafedba058"
+      },
+      "processing": "Full track; MP3 128 kbps stereo; source fade retained.",
+      "sha256": "8c3ae7f568646f1bd5201ff418dd63db6294f347f4a78e41e123f291bbf766c5",
+      "duration": 4.0
+    },
+    "ost-905": {
+      "src": "audio/fft/ost-905.mp3",
+      "title": "905 Job Level Up S",
+      "game": "Final Fantasy Tactics (PlayStation, 1997)",
+      "source": {
+        "page": "https://www.zophar.net/music/playstation-psf/final-fantasy-tactics",
+        "download": "https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/905%20Job%20Level%20Up%20S.mp3",
+        "file": "905 Job Level Up S.mp3",
+        "sha256": "f06ba24d664e43b992392e9f0d3859d3994e49c90c7565a353271e3019ac60dd"
+      },
+      "processing": "Full track; MP3 128 kbps stereo; source fade retained.",
+      "sha256": "76b252e7896565c3a20e08a2a3ea27b3eca14e883f54c65d7fd1d5c3d59fde2f",
+      "duration": 2.763175
+    },
+    "ost-911": {
+      "src": "audio/fft/ost-911.mp3",
+      "title": "911 Level Up S",
+      "game": "Final Fantasy Tactics (PlayStation, 1997)",
+      "source": {
+        "page": "https://www.zophar.net/music/playstation-psf/final-fantasy-tactics",
+        "download": "https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/911%20Level%20Up%20S.mp3",
+        "file": "911 Level Up S.mp3",
+        "sha256": "3d75583d6ef22b2c6a0885859ee4f86d64f6b5fa797f8d7783aab4c7a166994b"
+      },
+      "processing": "Full track; MP3 128 kbps stereo; source fade retained.",
+      "sha256": "71fd871b8dc95d497f1999e584bade9ffc735d9fcf53f04d8861650b2c6b0d8f",
+      "duration": 3.0
+    },
+    "ost-915": {
+      "src": "audio/fft/ost-915.mp3",
+      "title": "915 Job Change",
+      "game": "Final Fantasy Tactics (PlayStation, 1997)",
+      "source": {
+        "page": "https://www.zophar.net/music/playstation-psf/final-fantasy-tactics",
+        "download": "https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/915%20Job%20Change.mp3",
+        "file": "915 Job Change.mp3",
+        "sha256": "c25f31e88ff25f3e2d1df56e3ab353dbc056320af5fe2437ca582d4c8277b590"
+      },
+      "processing": "Full track; MP3 128 kbps stereo; source fade retained.",
+      "sha256": "a6a450e8a1eaa008c10e6176895e57cf0aeeaecb2b5a113ca30a41ac77d897ca",
+      "duration": 3.0
+    },
+    "ost-969": {
+      "src": "audio/fft/ost-969.mp3",
+      "title": "969 Epilogue",
+      "game": "Final Fantasy Tactics (PlayStation, 1997)",
+      "source": {
+        "page": "https://www.zophar.net/music/playstation-psf/final-fantasy-tactics",
+        "download": "https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/969%20Epilogue.mp3",
+        "file": "969 Epilogue.mp3",
+        "sha256": "2f04e2d9fec7e44dee90c78a19e260ae889d12a0f24af0836e96021f1a8d696b"
+      },
+      "processing": "Full track; MP3 128 kbps stereo; source fade retained.",
+      "sha256": "b01720e7f57bd14988cca2754ae0540e8fb18741d2553e31ebf6d234cb48b0c6",
+      "duration": 69.0
+    },
+    "ost-980": {
+      "src": "audio/fft/ost-980.mp3",
+      "title": "980 Deep Dungeon",
+      "game": "Final Fantasy Tactics (PlayStation, 1997)",
+      "source": {
+        "page": "https://www.zophar.net/music/playstation-psf/final-fantasy-tactics",
+        "download": "https://fi.zophar.net/soundfiles/playstation-psf/final-fantasy-tactics/980%20Deep%20Dungeon.mp3",
+        "file": "980 Deep Dungeon.mp3",
+        "sha256": "3d9fb94cddba2df894d933c70a5937dfc1b79d63350303bbca82cefdc34cb335"
+      },
+      "processing": "Full track; MP3 128 kbps stereo; source fade retained.",
+      "sha256": "475cac420da472981f6a49d25bdd8d9f7bcdf5b639383b4c210f80ab543ab8ff",
+      "duration": 227.0
+    },
+    "ui-031": {
+      "src": "audio/fft/ui-031.wav",
+      "title": "sound_enhanced_ui-se_ui_world_cursor_stick",
+      "game": "Final Fantasy Tactics: The Ivalice Chronicles (PC, 2025)",
+      "source": {
+        "page": "https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/",
+        "download": "https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568",
+        "file": "FFTIC UI Sounds/sound_enhanced_ui#31 (sound_enhanced_ui-se_ui_world_cursor_stick).wav",
+        "sha256": "67101c65426f5bc173ef005ad58ccb4e38bb5986a4d025d699211d95877555a9"
+      },
+      "processing": "PCM WAV mono 22050 Hz; full effect.",
+      "sha256": "9aa5fa1de628d57e40e453a7844ca563dbbe3e5844886f09f60d05a2929645dc",
+      "duration": 0.220272
+    },
+    "ui-001": {
+      "src": "audio/fft/ui-001.wav",
+      "title": "sound_enhanced_ui-se_ui_com_decision_mini",
+      "game": "Final Fantasy Tactics: The Ivalice Chronicles (PC, 2025)",
+      "source": {
+        "page": "https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/",
+        "download": "https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568",
+        "file": "FFTIC UI Sounds/sound_enhanced_ui#1 (sound_enhanced_ui-se_ui_com_decision_mini).wav",
+        "sha256": "0ac9e0c68da2eca4740ea22ff52ef02dc35ed135ab2752fb9de349df498ae266"
+      },
+      "processing": "PCM WAV mono 22050 Hz; full effect.",
+      "sha256": "01cdc59eab3bfd1e6a8511589be456f20d410f70f32d398517ad58d84f638692",
+      "duration": 0.090884
+    },
+    "ui-034": {
+      "src": "audio/fft/ui-034.wav",
+      "title": "sound_enhanced_ui-se_ui_sortie_cancel_unit",
+      "game": "Final Fantasy Tactics: The Ivalice Chronicles (PC, 2025)",
+      "source": {
+        "page": "https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/",
+        "download": "https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568",
+        "file": "FFTIC UI Sounds/sound_enhanced_ui#34 (sound_enhanced_ui-se_ui_sortie_cancel_unit).wav",
+        "sha256": "98a97b155fefd5501402ccf6006bc966edfe6f509cc38daa1651ed86bf407880"
+      },
+      "processing": "PCM WAV mono 22050 Hz; full effect.",
+      "sha256": "5349d21c51dc8c38be5210a66c373e7ee6945e374c2b52787d478b3e1ebfb669",
+      "duration": 0.491111
+    },
+    "ui-054": {
+      "src": "audio/fft/ui-054.wav",
+      "title": "sound_enhanced_ui-se_ui_battle_map_display_warning_signs",
+      "game": "Final Fantasy Tactics: The Ivalice Chronicles (PC, 2025)",
+      "source": {
+        "page": "https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/",
+        "download": "https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568",
+        "file": "FFTIC UI Sounds/sound_enhanced_ui#54 (sound_enhanced_ui-se_ui_battle_map_display_warning_signs).wav",
+        "sha256": "1d11d7d9642f503934811a6d7a7c2f0eb4d648f60ecc33dc6ed30a937bf500c4"
+      },
+      "processing": "PCM WAV mono 22050 Hz; full effect.",
+      "sha256": "28f8f7e1a54ee463f8059980bc9f395e225788ddb387bcbdeb174b94e314099f",
+      "duration": 5.057732
+    },
+    "ui-044": {
+      "src": "audio/fft/ui-044.wav",
+      "title": "sound_enhanced_ui-se_ui_battle_menu_open",
+      "game": "Final Fantasy Tactics: The Ivalice Chronicles (PC, 2025)",
+      "source": {
+        "page": "https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/",
+        "download": "https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568",
+        "file": "FFTIC UI Sounds/sound_enhanced_ui#44 (sound_enhanced_ui-se_ui_battle_menu_open).wav",
+        "sha256": "10bb0bc50f999fbe99e1868d0ff42a3b819a07d0c298943ad77d89b1850228d7"
+      },
+      "processing": "PCM WAV mono 22050 Hz; full effect.",
+      "sha256": "9b70f63cdbbffa3d32fdf588f7af685866db51c28b2efeeea06e421ca85dea0a",
+      "duration": 0.966984
+    },
+    "ui-101": {
+      "src": "audio/fft/ui-101.wav",
+      "title": "sound_enhanced_ui-se_ui_battle_active_turn",
+      "game": "Final Fantasy Tactics: The Ivalice Chronicles (PC, 2025)",
+      "source": {
+        "page": "https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/",
+        "download": "https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568",
+        "file": "FFTIC UI Sounds/sound_enhanced_ui#101 (sound_enhanced_ui-se_ui_battle_active_turn).wav",
+        "sha256": "efe62d4b1ea2f64c6083182adecf7a4bee4971b8070c352d4edf8d459592ce86"
+      },
+      "processing": "PCM WAV mono 22050 Hz; full effect.",
+      "sha256": "bc8c25b6fe77396312a08d786431a5d7d1876699f520cf13566010413b63cdcd",
+      "duration": 1.058005
+    },
+    "ui-006": {
+      "src": "audio/fft/ui-006.wav",
+      "title": "sound_enhanced_ui-se_ui_com_value_input",
+      "game": "Final Fantasy Tactics: The Ivalice Chronicles (PC, 2025)",
+      "source": {
+        "page": "https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/",
+        "download": "https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568",
+        "file": "FFTIC UI Sounds/sound_enhanced_ui#6 (sound_enhanced_ui-se_ui_com_value_input).wav",
+        "sha256": "9104fd1adf4e6d35417d34af3fe489a395b14d1dd8c61ba55e6e6d2772820892"
+      },
+      "processing": "PCM WAV mono 22050 Hz; full effect.",
+      "sha256": "36342e9b80f72d22c2937a3322c0a2c24c3e4740aab2112afd836a61adfba57b",
+      "duration": 0.0439
+    },
+    "ui-055": {
+      "src": "audio/fft/ui-055.wav",
+      "title": "sound_enhanced_ui-se_ui_battle_map_chara_walk",
+      "game": "Final Fantasy Tactics: The Ivalice Chronicles (PC, 2025)",
+      "source": {
+        "page": "https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/",
+        "download": "https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568",
+        "file": "FFTIC UI Sounds/sound_enhanced_ui#55 (sound_enhanced_ui-se_ui_battle_map_chara_walk).wav",
+        "sha256": "0c91b5b063d674278caf3841e1685292a3bc6d694ea469d538b8b68d08da4a85"
+      },
+      "processing": "PCM WAV mono 22050 Hz; full effect.",
+      "sha256": "adbd95b00a058e6263b4850864f2d7d19a2563f7d10ebf295ba5c61a9db85567",
+      "duration": 2.37424
+    },
+    "ui-009": {
+      "src": "audio/fft/ui-009.wav",
+      "title": "sound_enhanced_ui-se_ui_formation_unit_hold",
+      "game": "Final Fantasy Tactics: The Ivalice Chronicles (PC, 2025)",
+      "source": {
+        "page": "https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/",
+        "download": "https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568",
+        "file": "FFTIC UI Sounds/sound_enhanced_ui#9 (sound_enhanced_ui-se_ui_formation_unit_hold).wav",
+        "sha256": "03bde2ee52d633b8aab19cfb3fbc13e5af6d3e4810807e8bfd99beecad12adc9"
+      },
+      "processing": "PCM WAV mono 22050 Hz; full effect.",
+      "sha256": "48dab14ac56cdf5a3c35c18205c4630d8b91d647c1f4078ccc2610a27b467fc5",
+      "duration": 0.343311
+    },
+    "ui-010": {
+      "src": "audio/fft/ui-010.wav",
+      "title": "sound_enhanced_ui-se_ui_formation_unit_down",
+      "game": "Final Fantasy Tactics: The Ivalice Chronicles (PC, 2025)",
+      "source": {
+        "page": "https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/",
+        "download": "https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568",
+        "file": "FFTIC UI Sounds/sound_enhanced_ui#10 (sound_enhanced_ui-se_ui_formation_unit_down).wav",
+        "sha256": "ff748cf86d48ba826f493decde0dc94ffaa66b6878615f8675eb8f843baef095"
+      },
+      "processing": "PCM WAV mono 22050 Hz; full effect.",
+      "sha256": "762f1ab461695f16b89afa624b35bc5810101da48d729f4c3a98e35a21d7c22b",
+      "duration": 0.402358
+    },
+    "ui-108": {
+      "src": "audio/fft/ui-108.wav",
+      "title": "sound_enhanced_ui-se_ui_battle_display_attack_result",
+      "game": "Final Fantasy Tactics: The Ivalice Chronicles (PC, 2025)",
+      "source": {
+        "page": "https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/",
+        "download": "https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568",
+        "file": "FFTIC UI Sounds/sound_enhanced_ui#108 (sound_enhanced_ui-se_ui_battle_display_attack_result).wav",
+        "sha256": "1088a34bedec84cee798fcea1134b47f957dcf7a0a40243f4d9f9b26a0600627"
+      },
+      "processing": "PCM WAV mono 22050 Hz; full effect.",
+      "sha256": "e45c159ec4957963db95b1b4d5e859cc326eaf211ea37c3a4f660c44f1745f4c",
+      "duration": 0.745941
+    },
+    "ui-107": {
+      "src": "audio/fft/ui-107.wav",
+      "title": "sound_enhanced_ui-se_ui_battle_display_attack_result_out",
+      "game": "Final Fantasy Tactics: The Ivalice Chronicles (PC, 2025)",
+      "source": {
+        "page": "https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/",
+        "download": "https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568",
+        "file": "FFTIC UI Sounds/sound_enhanced_ui#107 (sound_enhanced_ui-se_ui_battle_display_attack_result_out).wav",
+        "sha256": "6f9ad05a6231b932588f8a536b28ad72d836805ffa2a491dad9ce890f02a525e"
+      },
+      "processing": "PCM WAV mono 22050 Hz; full effect.",
+      "sha256": "e101f0b527fd9214d2da8390fe0da47519add9a42598ee4605c03e2d40048f54",
+      "duration": 0.612381
+    },
+    "ui-017": {
+      "src": "audio/fft/ui-017.wav",
+      "title": "sound_enhanced_ui-se_ui_myset_set_equip",
+      "game": "Final Fantasy Tactics: The Ivalice Chronicles (PC, 2025)",
+      "source": {
+        "page": "https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/",
+        "download": "https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568",
+        "file": "FFTIC UI Sounds/sound_enhanced_ui#17 (sound_enhanced_ui-se_ui_myset_set_equip).wav",
+        "sha256": "b5508ba67e11933c24bcb45b5e46a8bfa1810a10b9e5750335fee2bf2f341996"
+      },
+      "processing": "PCM WAV mono 22050 Hz; full effect.",
+      "sha256": "af2e51b1440bd8fba542d220f315108aacece96df28b39bdd1f0c931e540df07",
+      "duration": 0.957778
+    },
+    "ui-083": {
+      "src": "audio/fft/ui-083.wav",
+      "title": "sound_enhanced_ui-se_ui_item_get",
+      "game": "Final Fantasy Tactics: The Ivalice Chronicles (PC, 2025)",
+      "source": {
+        "page": "https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/",
+        "download": "https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568",
+        "file": "FFTIC UI Sounds/sound_enhanced_ui#83 (sound_enhanced_ui-se_ui_item_get).wav",
+        "sha256": "140ede97b48c14f68779bf6ec902f0fec5eacd359011e62350911f87879ecb12"
+      },
+      "processing": "PCM WAV mono 22050 Hz; full effect.",
+      "sha256": "2cb178ec758dcfae963eb12f0c97291ae1cf3f7f58be945289fab5e5a0260703",
+      "duration": 1.878912
+    },
+    "ui-077": {
+      "src": "audio/fft/ui-077.wav",
+      "title": "sound_enhanced_ui-se_ui_bravestory_sacredstone_cursor_stick",
+      "game": "Final Fantasy Tactics: The Ivalice Chronicles (PC, 2025)",
+      "source": {
+        "page": "https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/",
+        "download": "https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568",
+        "file": "FFTIC UI Sounds/sound_enhanced_ui#77 (sound_enhanced_ui-se_ui_bravestory_sacredstone_cursor_stick).wav",
+        "sha256": "b409f887f19c21c6980c2ee06dc21ddb4b63f2cc128e0097517584beda2c9403"
+      },
+      "processing": "PCM WAV mono 22050 Hz; full effect.",
+      "sha256": "65305003b4b96db9b8936d948ca464e15952749698fe76e0e581f0903c7501b6",
+      "duration": 0.220272
+    },
+    "ui-104": {
+      "src": "audio/fft/ui-104.wav",
+      "title": "sound_enhanced_ui-se_ui_battle_display_result_reward_money",
+      "game": "Final Fantasy Tactics: The Ivalice Chronicles (PC, 2025)",
+      "source": {
+        "page": "https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/",
+        "download": "https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568",
+        "file": "FFTIC UI Sounds/sound_enhanced_ui#104 (sound_enhanced_ui-se_ui_battle_display_result_reward_money).wav",
+        "sha256": "dfc2eac9fe5230f47eff4e41c1314d36f202f6fd99707276c4c76c3c65028f71"
+      },
+      "processing": "PCM WAV mono 22050 Hz; full effect.",
+      "sha256": "a4b99186745ae927aea5112458c8f38d8ff137b5a838795b0620f4479f1ca1bb",
+      "duration": 0.489524
+    },
+    "ui-078": {
+      "src": "audio/fft/ui-078.wav",
+      "title": "sound_enhanced_ui-se_ui_trophy_notice",
+      "game": "Final Fantasy Tactics: The Ivalice Chronicles (PC, 2025)",
+      "source": {
+        "page": "https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/",
+        "download": "https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568",
+        "file": "FFTIC UI Sounds/sound_enhanced_ui#78 (sound_enhanced_ui-se_ui_trophy_notice).wav",
+        "sha256": "e67e2b3e7fb24e33ebbc1b1cc2cf7e17d3dc29a810ec35310b29481b5fac581a"
+      },
+      "processing": "PCM WAV mono 22050 Hz; full effect.",
+      "sha256": "2c769f0a65e1801f7ea70a7fc36ec7375644b1589bf29c5eb6e12c27899e51dc",
+      "duration": 2.187891
+    },
+    "ui-018": {
+      "src": "audio/fft/ui-018.wav",
+      "title": "sound_enhanced_ui-se_ui_item_delete",
+      "game": "Final Fantasy Tactics: The Ivalice Chronicles (PC, 2025)",
+      "source": {
+        "page": "https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/",
+        "download": "https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568",
+        "file": "FFTIC UI Sounds/sound_enhanced_ui#18 (sound_enhanced_ui-se_ui_item_delete).wav",
+        "sha256": "a16ce0ed4a39f6f1699681340b4ff17290f60042d4b279a598ca88f93b759bab"
+      },
+      "processing": "PCM WAV mono 22050 Hz; full effect.",
+      "sha256": "00037ae6cbf833d5e4fba2fa7d42749aa755b268cd8d302d97ab78f8eaf007cf",
+      "duration": 0.564127
+    },
+    "ui-048": {
+      "src": "audio/fft/ui-048.wav",
+      "title": "sound_enhanced_ui-se_ui_battle_notice_estrangement",
+      "game": "Final Fantasy Tactics: The Ivalice Chronicles (PC, 2025)",
+      "source": {
+        "page": "https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/",
+        "download": "https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568",
+        "file": "FFTIC UI Sounds/sound_enhanced_ui#48 (sound_enhanced_ui-se_ui_battle_notice_estrangement).wav",
+        "sha256": "bc40361277520c3a28c93b1197b307d5ea172ded20aa9a4fb3dc0ca64106d8fb"
+      },
+      "processing": "PCM WAV mono 22050 Hz; full effect.",
+      "sha256": "c0a6a5caef5f2a09626442a0899b1b35ea84b1fa734c69f8b04e353e09eeff49",
+      "duration": 4.347211
+    },
+    "ui-116": {
+      "src": "audio/fft/ui-116.wav",
+      "title": "sound_enhanced_ui-se_ui_battle_ramza_jobrank_lvup",
+      "game": "Final Fantasy Tactics: The Ivalice Chronicles (PC, 2025)",
+      "source": {
+        "page": "https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/",
+        "download": "https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568",
+        "file": "FFTIC UI Sounds/sound_enhanced_ui#116 (sound_enhanced_ui-se_ui_battle_ramza_jobrank_lvup).wav",
+        "sha256": "7bc1acd2d9172e368b7ac9cc2bf5dd3696ef6336189f746f2f7a3e24d3388461"
+      },
+      "processing": "PCM WAV mono 22050 Hz; full effect.",
+      "sha256": "d3d6ea371e5beb924c919fe0f3ef7745823970526272f8431d89351a72bfd56f",
+      "duration": 5.357098
+    },
+    "ui-040": {
+      "src": "audio/fft/ui-040.wav",
+      "title": "sound_enhanced_ui-se_ui_battle_mark_on",
+      "game": "Final Fantasy Tactics: The Ivalice Chronicles (PC, 2025)",
+      "source": {
+        "page": "https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/",
+        "download": "https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568",
+        "file": "FFTIC UI Sounds/sound_enhanced_ui#40 (sound_enhanced_ui-se_ui_battle_mark_on).wav",
+        "sha256": "245510691d5759f8c13f6785d89483ede9ab8facddabac5fe63688ba2e4c0b8c"
+      },
+      "processing": "PCM WAV mono 22050 Hz; full effect.",
+      "sha256": "1ea41d6cd3078d6197adf809b47eabfa0859abe7f5cd7da4ca13986405505493",
+      "duration": 0.608027
+    },
+    "ui-005": {
+      "src": "audio/fft/ui-005.wav",
+      "title": "sound_enhanced_ui-se_ui_com_sort_execute",
+      "game": "Final Fantasy Tactics: The Ivalice Chronicles (PC, 2025)",
+      "source": {
+        "page": "https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488628/",
+        "download": "https://sounds.spriters-resource.com/media/assets/473/488628.zip?updated=1760875568",
+        "file": "FFTIC UI Sounds/sound_enhanced_ui#5 (sound_enhanced_ui-se_ui_com_sort_execute).wav",
+        "sha256": "a1083eb163b48545f6d8e2332e3c78007f39efdc531c7925b538d1f43dd771ed"
+      },
+      "processing": "PCM WAV mono 22050 Hz; full effect.",
+      "sha256": "ad751649690777f1e59d507b7648c683a81e3618bdbc7c6a4f693f4031879a29",
+      "duration": 0.25746
+    },
+    "event-016": {
+      "src": "audio/fft/event-016.wav",
+      "title": "sound_enhanced_event-FID_SOUND_EV0880_RUSH_WAV",
+      "game": "Final Fantasy Tactics: The Ivalice Chronicles (PC, 2025)",
+      "source": {
+        "page": "https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488629/",
+        "download": "https://sounds.spriters-resource.com/media/assets/473/488629.zip?updated=1760875717",
+        "file": "FFTIC Novel/sound_enhanced_event#16 (sound_enhanced_event-FID_SOUND_EV0880_RUSH_WAV).wav",
+        "sha256": "5ccadf68032ccb62bdd15695c02081be4a2945bb2bb6ec7154679902cff54dc5"
+      },
+      "processing": "PCM WAV mono 22050 Hz; full effect.",
+      "sha256": "7ad8f4fd09acd9bb9d6276697ddaa44c4b530933410294387457713d64fa7f17",
+      "duration": 2.062721
+    },
+    "event-010": {
+      "src": "audio/fft/event-010.wav",
+      "title": "sound_enhanced_event-FID_SOUND_EV5025_WORKER8_ATTACK_WAV",
+      "game": "Final Fantasy Tactics: The Ivalice Chronicles (PC, 2025)",
+      "source": {
+        "page": "https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488629/",
+        "download": "https://sounds.spriters-resource.com/media/assets/473/488629.zip?updated=1760875717",
+        "file": "FFTIC Novel/sound_enhanced_event#10 (sound_enhanced_event-FID_SOUND_EV5025_WORKER8_ATTACK_WAV).wav",
+        "sha256": "2de8c34032d793746e427d4dd9175bc3eaeaf83be8506a4c0a03366ab89872a6"
+      },
+      "processing": "PCM WAV mono 22050 Hz; full effect.",
+      "sha256": "51e928f08526a897c9e0344c64beca81e3cd1b43e8925a35f8bbd23250212e6a",
+      "duration": 1.428707
+    },
+    "event-017": {
+      "src": "audio/fft/event-017.wav",
+      "title": "sound_enhanced_event-FID_SOUND_EV1280_GUNSHOT_WAV",
+      "game": "Final Fantasy Tactics: The Ivalice Chronicles (PC, 2025)",
+      "source": {
+        "page": "https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488629/",
+        "download": "https://sounds.spriters-resource.com/media/assets/473/488629.zip?updated=1760875717",
+        "file": "FFTIC Novel/sound_enhanced_event#17 (sound_enhanced_event-FID_SOUND_EV1280_GUNSHOT_WAV).wav",
+        "sha256": "86fcf0f699cd6dc8e3bee3cd8a6fe40a3488e707d54a1541ce23ef2758a90b31"
+      },
+      "processing": "PCM WAV mono 22050 Hz; full effect.",
+      "sha256": "c8477c25fd38ded271f80ba61930cfc8b4d9e0b2bd76c25abe87c9792426f5e9",
+      "duration": 4.565125
+    },
+    "event-002": {
+      "src": "audio/fft/event-002.wav",
+      "title": "sound_enhanced_event-FID_SOUND_EV1940_MAGIC_WAV",
+      "game": "Final Fantasy Tactics: The Ivalice Chronicles (PC, 2025)",
+      "source": {
+        "page": "https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488629/",
+        "download": "https://sounds.spriters-resource.com/media/assets/473/488629.zip?updated=1760875717",
+        "file": "FFTIC Novel/sound_enhanced_event#2 (sound_enhanced_event-FID_SOUND_EV1940_MAGIC_WAV).wav",
+        "sha256": "54a49afa30fee066ca3c8fc1e5a5f8f8d2d437cbc110923e4a255e8363fb5aab"
+      },
+      "processing": "PCM WAV mono 22050 Hz; full effect.",
+      "sha256": "75d321fcd262d4cb680e4841ed44205849b4a48f227ee645ad3997be5c7a1119",
+      "duration": 4.934694
+    },
+    "event-004": {
+      "src": "audio/fft/event-004.wav",
+      "title": "sound_enhanced_event-FID_SOUND_EV1880_MAGICSTART_WAV",
+      "game": "Final Fantasy Tactics: The Ivalice Chronicles (PC, 2025)",
+      "source": {
+        "page": "https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488629/",
+        "download": "https://sounds.spriters-resource.com/media/assets/473/488629.zip?updated=1760875717",
+        "file": "FFTIC Novel/sound_enhanced_event#4 (sound_enhanced_event-FID_SOUND_EV1880_MAGICSTART_WAV).wav",
+        "sha256": "7c54a2dbed7485eea4ec97ea556b2fb07a5a0c8436e60d996955a5aa6955be22"
+      },
+      "processing": "PCM WAV mono 22050 Hz; first 2.5s with 80 ms fade-out.",
+      "sha256": "15727a19b54cb97468601b89e7f9ea324f0a93e1e6b1b6257bb09856c9694114",
+      "duration": 2.5
+    },
+    "event-009": {
+      "src": "audio/fft/event-009.wav",
+      "title": "sound_enhanced_event-FID_SOUND_ENV_WATER_FALL_01_WAV",
+      "game": "Final Fantasy Tactics: The Ivalice Chronicles (PC, 2025)",
+      "source": {
+        "page": "https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488629/",
+        "download": "https://sounds.spriters-resource.com/media/assets/473/488629.zip?updated=1760875717",
+        "file": "FFTIC Novel/sound_enhanced_event#9 (sound_enhanced_event-FID_SOUND_ENV_WATER_FALL_01_WAV).wav",
+        "sha256": "66b2248c51d573269b0b004ea5fef880fbd134cf5523b4d746f560870c4e0da6"
+      },
+      "processing": "PCM WAV mono 22050 Hz; first 2s with 80 ms fade-out.",
+      "sha256": "bade0f11f3a4945f5c14662796cec0f1e656decce5a0052099a669b2d5039538",
+      "duration": 2.0
+    },
+    "event-003": {
+      "src": "audio/fft/event-003.wav",
+      "title": "sound_enhanced_event-FID_SOUND_EV1880_DEZONE_WAV",
+      "game": "Final Fantasy Tactics: The Ivalice Chronicles (PC, 2025)",
+      "source": {
+        "page": "https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488629/",
+        "download": "https://sounds.spriters-resource.com/media/assets/473/488629.zip?updated=1760875717",
+        "file": "FFTIC Novel/sound_enhanced_event#3 (sound_enhanced_event-FID_SOUND_EV1880_DEZONE_WAV).wav",
+        "sha256": "ad4904c3045cb9605607e2849c010dfc3456a056b0805f0925791c3b433b73b8"
+      },
+      "processing": "PCM WAV mono 22050 Hz; full effect.",
+      "sha256": "94f575830e245e78eb364fdc8e38d931aa79f98d7e6b0a52c3c508c9b26d8cd9",
+      "duration": 5.559683
+    },
+    "event-001": {
+      "src": "audio/fft/event-001.wav",
+      "title": "sound_enhanced_event-FID_SOUND_EV1960_SYNCRONICITY_WAV",
+      "game": "Final Fantasy Tactics: The Ivalice Chronicles (PC, 2025)",
+      "source": {
+        "page": "https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488629/",
+        "download": "https://sounds.spriters-resource.com/media/assets/473/488629.zip?updated=1760875717",
+        "file": "FFTIC Novel/sound_enhanced_event#1 (sound_enhanced_event-FID_SOUND_EV1960_SYNCRONICITY_WAV).wav",
+        "sha256": "1e2f87608dfb0d83f87bedae0b253f2db8db4d2911ca760376fb014cb395546a"
+      },
+      "processing": "PCM WAV mono 22050 Hz; full effect.",
+      "sha256": "76d476d3235bb8b6c164a1e167fd101240509462c9a146b7d15619f71ad6c91a",
+      "duration": 5.683039
+    },
+    "event-015": {
+      "src": "audio/fft/event-015.wav",
+      "title": "sound_enhanced_event-FID_SOUND_EV1700_DOOR_WAV",
+      "game": "Final Fantasy Tactics: The Ivalice Chronicles (PC, 2025)",
+      "source": {
+        "page": "https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488629/",
+        "download": "https://sounds.spriters-resource.com/media/assets/473/488629.zip?updated=1760875717",
+        "file": "FFTIC Novel/sound_enhanced_event#15 (sound_enhanced_event-FID_SOUND_EV1700_DOOR_WAV).wav",
+        "sha256": "ba617c28957d3f2d4fe9fb73d75c1a8da03c8c889f335e9357c5df5ec59c6a99"
+      },
+      "processing": "PCM WAV mono 22050 Hz; full effect.",
+      "sha256": "b94afe3085bcf4bbe6642f73b82b5225cd47e1db403a3c7cde31b5df05d0de98",
+      "duration": 3.161043
+    },
+    "event-005": {
+      "src": "audio/fft/event-005.wav",
+      "title": "sound_enhanced_event-FID_SOUND_EV0700_CHOCOBO_GO_WAV",
+      "game": "Final Fantasy Tactics: The Ivalice Chronicles (PC, 2025)",
+      "source": {
+        "page": "https://sounds.spriters-resource.com/pc_computer/finalfantasytacticstheivalicechronicles/asset/488629/",
+        "download": "https://sounds.spriters-resource.com/media/assets/473/488629.zip?updated=1760875717",
+        "file": "FFTIC Novel/sound_enhanced_event#5 (sound_enhanced_event-FID_SOUND_EV0700_CHOCOBO_GO_WAV).wav",
+        "sha256": "f10a8e064bd7c6d0761bb5ebf62a681a494bfa69c831095f311d2ac6d1b486c4"
+      },
+      "processing": "PCM WAV mono 22050 Hz; full effect.",
+      "sha256": "bd52ca34249ba80da3d237652bc61d8275aa6165b400cb186dd53aae668b42f5",
+      "duration": 0.867846
+    }
+  },
+  "music": {
+    "title": {
+      "asset": "ost-101",
+      "loop": true,
+      "gain": 0.7
+    },
+    "prologue": {
+      "asset": "ost-102",
+      "loop": true,
+      "gain": 0.7
+    },
+    "worldmap": {
+      "asset": "ost-117",
+      "loop": true,
+      "gain": 0.7
+    },
+    "town": {
+      "asset": "ost-118",
+      "loop": true,
+      "gain": 0.7
+    },
+    "tavern": {
+      "asset": "ost-123",
+      "loop": true,
+      "gain": 0.7
+    },
+    "battle1": {
+      "asset": "ost-109",
+      "loop": true,
+      "gain": 0.7
+    },
+    "battle2": {
+      "asset": "ost-112",
+      "loop": true,
+      "gain": 0.7
+    },
+    "battle3": {
+      "asset": "ost-139",
+      "loop": true,
+      "gain": 0.7
+    },
+    "boss": {
+      "asset": "ost-128",
+      "loop": true,
+      "gain": 0.7
+    },
+    "umbral": {
+      "asset": "ost-219",
+      "loop": true,
+      "gain": 0.7
+    },
+    "finalBoss": {
+      "asset": "ost-226",
+      "loop": true,
+      "gain": 0.7
+    },
+    "victory": {
+      "asset": "ost-113",
+      "loop": false,
+      "gain": 0.7
+    },
+    "defeat": {
+      "asset": "ost-133",
+      "loop": false,
+      "gain": 0.7
+    },
+    "somber": {
+      "asset": "ost-130",
+      "loop": true,
+      "gain": 0.7
+    },
+    "tension": {
+      "asset": "ost-132",
+      "loop": true,
+      "gain": 0.7
+    },
+    "church": {
+      "asset": "ost-115",
+      "loop": true,
+      "gain": 0.7
+    },
+    "heroic": {
+      "asset": "ost-114",
+      "loop": true,
+      "gain": 0.7
+    },
+    "romance": {
+      "asset": "ost-136",
+      "loop": true,
+      "gain": 0.7
+    },
+    "campfire": {
+      "asset": "ost-210",
+      "loop": true,
+      "gain": 0.7
+    },
+    "dungeon": {
+      "asset": "ost-980",
+      "loop": true,
+      "gain": 0.7
+    },
+    "ending": {
+      "asset": "ost-969",
+      "loop": false,
+      "gain": 0.7
+    },
+    "credits": {
+      "asset": "ost-229",
+      "loop": false,
+      "gain": 0.7
+    },
+    "chapter": {
+      "asset": "ost-227",
+      "loop": false,
+      "gain": 0.7
+    },
+    "formation": {
+      "asset": "ost-121",
+      "loop": true,
+      "gain": 0.7
+    }
+  },
+  "sfx": {
+    "levelUp": {
+      "asset": "ost-911",
+      "gain": 0.8,
+      "gapMs": 100
+    },
+    "jobUp": {
+      "asset": "ost-905",
+      "gain": 0.8,
+      "gapMs": 100
+    },
+    "learn": {
+      "asset": "ost-915",
+      "gain": 0.8,
+      "gapMs": 100
+    },
+    "victory": {
+      "asset": "ost-903",
+      "gain": 0.8,
+      "gapMs": 100
+    },
+    "defeat": {
+      "asset": "ost-904",
+      "gain": 0.8,
+      "gapMs": 100
+    },
+    "cursor": {
+      "asset": "ui-031",
+      "gain": 0.25,
+      "gapMs": 35
+    },
+    "confirm": {
+      "asset": "ui-001",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "cancel": {
+      "asset": "ui-034",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "error": {
+      "asset": "ui-054",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "menuOpen": {
+      "asset": "ui-044",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "turn": {
+      "asset": "ui-101",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "textBlip": {
+      "asset": "ui-006",
+      "gain": 0.25,
+      "gapMs": 55,
+      "duration": 0.03
+    },
+    "step": {
+      "asset": "ui-055",
+      "gain": 0.25,
+      "gapMs": 55
+    },
+    "jump": {
+      "asset": "ui-009",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "land": {
+      "asset": "ui-010",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "hit": {
+      "asset": "ui-108",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "miss": {
+      "asset": "ui-107",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "block": {
+      "asset": "ui-017",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "item": {
+      "asset": "ui-083",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "chest": {
+      "asset": "ui-083",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "crystal": {
+      "asset": "ui-077",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "stone": {
+      "asset": "ui-077",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "gil": {
+      "asset": "ui-104",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "bell": {
+      "asset": "ui-078",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "steal": {
+      "asset": "ui-018",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "ko": {
+      "asset": "ui-048",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "buff": {
+      "asset": "ui-116",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "status": {
+      "asset": "ui-040",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "dance": {
+      "asset": "ui-005",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "swing": {
+      "asset": "event-016",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "arrow": {
+      "asset": "event-016",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "throw": {
+      "asset": "event-016",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "wind": {
+      "asset": "event-016",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "hitHeavy": {
+      "asset": "event-010",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "crit": {
+      "asset": "event-010",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "earth": {
+      "asset": "event-010",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "explosion": {
+      "asset": "event-010",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "meteor": {
+      "asset": "event-010",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "gun": {
+      "asset": "event-017",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "gunshot": {
+      "asset": "event-017",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "bolt": {
+      "asset": "event-017",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "thunderclap": {
+      "asset": "event-017",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "magic": {
+      "asset": "event-002",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "fire": {
+      "asset": "event-002",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "ice": {
+      "asset": "event-002",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "poison": {
+      "asset": "event-002",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "debuff": {
+      "asset": "event-002",
+      "gain": 0.65,
+      "gapMs": 35,
+      "pitch": 0.8
+    },
+    "charge": {
+      "asset": "event-004",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "summon": {
+      "asset": "event-004",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "holy": {
+      "asset": "event-004",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "water": {
+      "asset": "event-009",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "dark": {
+      "asset": "event-003",
+      "gain": 0.65,
+      "gapMs": 35,
+      "pitch": 0.8
+    },
+    "time": {
+      "asset": "event-003",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "demon": {
+      "asset": "event-003",
+      "gain": 0.65,
+      "gapMs": 35,
+      "pitch": 0.8
+    },
+    "heal": {
+      "asset": "event-001",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "song": {
+      "asset": "event-001",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "door": {
+      "asset": "event-015",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "kweh": {
+      "asset": "event-005",
+      "gain": 0.65,
+      "gapMs": 35
+    },
+    "roar": {
+      "asset": "event-005",
+      "gain": 0.65,
+      "gapMs": 35,
+      "pitch": 0.6
+    }
+  },
+  "fallbackSfx": "confirm"
+}

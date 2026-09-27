@@ -10,7 +10,7 @@ Open:
 - [x] heal/cure-on-hit weapons (Healing Staff heals; White Staff / Octagon Pole cure on hit)
 - [ ] invite immunity accessories
 - [x] Golem — by design grants Protect party-wide instead of a damage pool
-- [ ] Iaido/Geomancy magic attack/defense modifiers
+- [x] Iaido/Geomancy magic attack/defense modifiers
 - [x] player monsters' secret art requires a Beast Lore ally within 3 tiles
 - [x] Tame support: monsters brought to critical HP may join (60%)
 
@@ -24,4 +24,4 @@ Nice-to-have (not required by any content):
 - [ ] fixed hero deploy cell per battle
 - [ ] terrain-changing script commands (gates, sluices)
 - [ ] decor x/z offsets, held props, riding animations
-- [ ] Iaido/Geomancy magic attack/defense modifiers, invite-immunity accessories
+- [ ] invite-immunity accessories

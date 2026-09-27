@@ -45,7 +45,7 @@ let skipAll = false;
 export async function runScene(cmds: SceneCmd[], host: SceneHost): Promise<void> {
   skipAll = !!(window as any).__autoPlay;
   // skip button
-  const skip = h('div.btn.ghost.skipbtn', { style: { position: 'absolute', right: '14px', top: '12px', color: '#efe3c6', borderColor: 'rgba(240,210,140,.4)', fontSize: '0.8em', padding: '3px 10px' }, onclick: () => { skipAll = true; input.dispatch('confirm'); } }, 'Skip ⏭');
+  const skip = h('div.btn.ghost.skipbtn', { style: { position: 'absolute', right: '14px', top: '12px', color: '#efe3c6', borderColor: 'rgba(240,210,140,.4)', fontSize: '0.8em', padding: '3px 10px' }, onclick: () => { skipAll = true; input.dispatch('menu'); } }, 'Skip ⏭');
   uiRoot().appendChild(skip);
   setSkipHook(() => { skipAll = true; });
   try {
@@ -107,7 +107,8 @@ async function runCmd(c: SceneCmd, host: SceneHost): Promise<void> {
       if (v && v.anim.baseClip === 'idle') v.anim.setBase('talk');
       // never hold a line of dialogue for a portrait that is slow to render (it stays cached for later lines)
       const portrait = await Promise.race([host.portraitOf(id), new Promise<null>((r) => setTimeout(() => r(null), 1200))]);
-      await say(host.nameOf(id), fillText(text, host), { mood: opts?.mood, pos: opts?.pos, portrait, speed: loadOptions().textSpeed });
+      // Skip may have been pressed while the portrait was rendering.
+      if (!skipAll) await say(host.nameOf(id), fillText(text, host), { mood: opts?.mood, pos: opts?.pos, portrait, speed: loadOptions().textSpeed });
       if (v && v.anim.baseClip === 'talk') v.anim.setBase('idle');
       return;
     }

@@ -101,7 +101,11 @@ test('reaches the first player turn with a usable HUD', async ({ page }, info) =
   // skip the opening scene; wait for our first turn (enemies may act first)
   await expect.poll(async () => {
     const skip = page.locator('.btn.ghost:has-text("Skip")');
-    if (await skip.isVisible().catch(() => false)) await skip.click({ timeout: 2000 }).catch(() => {});
+    if (await skip.isVisible().catch(() => false)) {
+      // Software-rendered WebKit may need several frames for actionability.
+      // Use the device's real interaction mode and allow the tap/click to land.
+      await (info.project.use.hasTouch ? skip.tap({ timeout: 10_000 }) : skip.click({ timeout: 10_000 })).catch(() => {});
+    }
     const t = await uiText(page);
     return t.includes('Move') && t.includes('Act') && t.includes('Wait');
   }, { timeout: 150_000, intervals: [1000] }).toBe(true);
@@ -123,7 +127,9 @@ test('a whole turn by touch or mouse: move, wait, face', async ({ page }, info) 
   await press(page, '.menu .item:has-text("Begin Battle")', info);
   await expect.poll(async () => {
     const skip = page.locator('.btn.ghost:has-text("Skip")');
-    if (await skip.isVisible().catch(() => false)) await skip.click({ timeout: 2000 }).catch(() => {});
+    if (await skip.isVisible().catch(() => false)) {
+      await (info.project.use.hasTouch ? skip.tap({ timeout: 10_000 }) : skip.click({ timeout: 10_000 })).catch(() => {});
+    }
     const t = await uiText(page);
     return t.includes('Move') && t.includes('Act') && t.includes('Wait');
   }, { timeout: 150_000, intervals: [1000] }).toBe(true);
