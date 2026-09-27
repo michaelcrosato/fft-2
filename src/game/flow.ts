@@ -18,6 +18,7 @@ import { openFormation } from '../ui/menus/formation';
 import { openShop, openRecruit, openTavern, openFurShop } from '../ui/menus/town';
 import { openChronicle } from '../ui/menus/chronicle';
 import { openOptions, openSaveLoad } from '../ui/menus/system';
+import { gameMode, promptGameMode } from '../ui/gameMode';
 
 export const MONTHS = ZODIAC_ORDER.map((z) => ZODIAC_NAMES[z]);
 export function dateText(day: number) { const d = day - 1; return `${MONTHS[Math.floor(d / 30) % 12]} ${(d % 30) + 1}`; }
@@ -57,6 +58,7 @@ export async function runTitle(game: Game) {
     if (pick === 'load') { const s = await openSaveLoad(game, 'load'); if (!s) continue; state = s; }
     if (pick === 'new') { logo.style.display = 'none'; state = await newGameSetup(); logo.style.display = ''; if (!state) continue; }
     if (!state) continue;
+    await promptGameMode();
     logo.remove(); footer.remove();
     game.state = state;
     await fade('out', 0.8);
@@ -151,6 +153,7 @@ export async function mainLoop(game: Game) {
 }
 
 async function returnToTitle(game: Game) {
+  gameMode.exit();
   await fade('out', 0.6);
   game.disposeStage();
   uiRoot().innerHTML = '';
@@ -376,7 +379,7 @@ async function worldLoop(game: Game): Promise<'title' | 'continue'> {
       if (pick === 'formation') await openFormation(game);
       if (pick === 'chronicle') await openChronicle(game);
       if (pick === 'save') await openSaveLoad(game, 'save');
-      if (pick === 'load') { const st = await openSaveLoad(game, 'load'); if (st) { game.state = st; result = 'continue'; } }
+      if (pick === 'load') { const st = await openSaveLoad(game, 'load'); if (st) { await promptGameMode(); game.state = st; result = 'continue'; } }
       if (pick === 'options') await openOptions(game);
       if (pick === 'title' && await confirm('Return to the title screen? Unsaved progress will be lost.', 'Return to title', 'Stay', true)) result = 'title';
       refreshTop();

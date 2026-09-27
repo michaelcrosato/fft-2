@@ -48,6 +48,17 @@ access limitations and adaptation choices behind the expanded content.
 
 ## Controls
 
+Every **New Game**, **Continue**, and saved-game load asks whether to enable **Fullscreen Game Mode**.
+Choose **Enable Game Mode** for fullscreen, edge-swipe/overscroll protection and a screen wake lock
+where supported, or **Play in Browser** to continue normally. The choice is never remembered or forced.
+Use the **⛶** button, **Esc**, or **Options → Game Mode** to exit; returning to the title also turns it off.
+Options can enable it again during play. Fullscreen covers both the battlefield and all game menus.
+
+Browsers retain their own escape controls and devices can still handle system gestures (such as Home,
+app switching, or OS back swipes). If fullscreen is unsupported or denied, Game Mode keeps the available
+gesture protections and explains the limitation. Gamepad-only activation may need a tap or keyboard
+press through Options to enter fullscreen. Screen wake lock is optional and released in the background.
+
 | | Keyboard | Mouse / Touch | Gamepad (Xbox layout) |
 |---|---|---|---|
 | Move cursor | Arrows / WASD | hover / tap | D-pad / left stick |

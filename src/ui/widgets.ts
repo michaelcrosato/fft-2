@@ -156,7 +156,7 @@ export async function confirm(text: string, yes = 'Yes', no = 'No', defaultNo = 
 }
 
 export function toast(text: string, ms = 2200) {
-  const t = h('div.panel.toast', null, text);
+  const t = h('div.panel.toast', { style: { animationDuration: `${ms}ms`, width: 'max-content', maxWidth: 'calc(100vw - 48px)' }, role: 'status' }, text);
   uiRoot().appendChild(t);
   setTimeout(() => t.remove(), ms);
 }
