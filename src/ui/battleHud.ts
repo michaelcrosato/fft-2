@@ -67,13 +67,13 @@ export class BattleHud {
   card(u: BattleUnit | null, which: 'a' | 'b', b?: Battle) {
     const old = which === 'a' ? this.cardA : this.cardB;
     old?.remove();
-    if (!u) { if (which === 'a') this.cardA = null; else this.cardB = null; return; }
+    if (!u) { if (which === 'a') this.cardA = null; else { this.cardB = null; this.placePreview(); } return; }
     const el = this.unitCard(u, b);
     el.style.position = 'absolute';
     el.style.bottom = '14px';
     if (which === 'a') el.style.left = '14px'; else el.style.right = '14px';
     this.root.appendChild(el);
-    if (which === 'a') this.cardA = el; else this.cardB = el;
+    if (which === 'a') this.cardA = el; else { this.cardB = el; this.placePreview(); }
   }
 
   unitCard(u: BattleUnit, b?: Battle): HTMLElement {
@@ -177,8 +177,20 @@ export class BattleHud {
       ...lines,
       prevs.length > 4 ? h('div.muted', null, t('hud.preview.more', { count: prevs.length - 4 })) : null);
     this.root.appendChild(this.prev);
+    this.placePreview();
   }
   clearPreview() { this.prev?.remove(); this.prev = null; }
+
+  /** The preview stands clear above the target's card, however tall the card grows (status rows, small windows). */
+  private placePreview() {
+    const prev = this.prev, card = this.cardB;
+    if (!prev) return;
+    prev.style.bottom = '';
+    if (!card?.isConnected) return;
+    const c = card.getBoundingClientRect(), p = prev.getBoundingClientRect(), root = this.root.getBoundingClientRect();
+    const sideBySide = p.right <= c.left || p.left >= c.right;
+    if (!sideBySide && p.bottom > c.top - 8) prev.style.bottom = `${Math.round(root.bottom - c.top + 10)}px`;
+  }
 
   dispose() { this.offDevice(); this.root.remove(); }
 }
