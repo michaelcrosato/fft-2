@@ -1,15 +1,13 @@
 import type { Gender, Zodiac } from '../data/types';
+import { t } from '../i18n';
 
 export const ZODIAC_ORDER: Zodiac[] = [
   'aries', 'taurus', 'gemini', 'cancer', 'leo', 'virgo',
   'libra', 'scorpio', 'sagittarius', 'capricorn', 'aquarius', 'pisces',
 ];
 
-export const ZODIAC_NAMES: Record<Zodiac, string> = {
-  aries: 'Aries', taurus: 'Taurus', gemini: 'Gemini', cancer: 'Cancer', leo: 'Leo', virgo: 'Virgo',
-  libra: 'Libra', scorpio: 'Scorpio', sagittarius: 'Sagittarius', capricorn: 'Capricorn',
-  aquarius: 'Aquarius', pisces: 'Pisces', serpentarius: 'Serpentarius',
-};
+/** A sign's name in the player's language (the hud.zodiac.* lines). */
+export const zodiacName = (sign: Zodiac) => t(`hud.zodiac.${sign}`);
 
 export const ZODIAC_GLYPH: Record<Zodiac, string> = {
   aries: '♈', taurus: '♉', gemini: '♊', cancer: '♋', leo: '♌', virgo: '♍', libra: '♎',

@@ -81,7 +81,7 @@ export const lines: Lines = {
   'hud.preview.more': { one: '+{count} more', other: '+{count} more' },
 };
 
-const ZODIAC = 'A sign of the zodiac (tooltip of its symbol on a unit card).';
+const ZODIAC = 'A sign of the zodiac: the tooltip of its symbol on a unit card, beside the symbol on a unit\'s status screen and the birthday picker, and the name of its Zodiac Stone in the Chronicle.';
 const TERRAIN = 'The ground under the cursor in battle.';
 const GEOMANCY = 'The kind of ground the Geomancer\'s abilities draw on, shown in brackets after the terrain name; lowercase in English.';
 

@@ -1,6 +1,7 @@
 // Every player-facing text in the game's content (src/data), each under a line id. The build writes
 // them into the game-lines block; at start-up localizeContent() swaps in the player's language (or a
 // test language) in place, so the rest of the game reads its data as before.
+import { STATUS } from '../battle/status';
 import { ABILITIES, ARTEFACTS, BATTLES, CHARACTERS, CHRONICLE, ERRANDS, ITEMS, JOBS, MAPS, NODES, SCENES, SIDE, STORY } from '../data/db';
 import { rumors } from '../data/misc/rumors';
 import { ZODIAC_STONES } from '../data/misc/zodiacStones';
@@ -74,6 +75,11 @@ export function contentFields(): Field[] {
   for (const i of ITEMS.values()) {
     prop(out, `item.${slug(i.id)}.name`, i as unknown as Rec, 'name', `An item (${i.kind}).`);
     prop(out, `item.${slug(i.id)}.desc`, i as unknown as Rec, 'desc');
+  }
+  for (const s of Object.values(STATUS)) {
+    const kind = `A ${s.bad ? 'harmful' : 'helpful'} status effect in battle`;
+    prop(out, `status.${slug(s.id)}.name`, s as unknown as Rec, 'name', s.hidden ? `${kind}, rarely shown.` : `${kind}. Pops up over units and labels them on unit cards; keep it short.`);
+    prop(out, `status.${slug(s.id)}.desc`, s as unknown as Rec, 'desc', s.hidden ? `What this ${s.bad ? 'harmful' : 'helpful'} status effect means; rarely shown.` : 'What a status effect does: a tooltip on unit cards, and the Field Manual.');
   }
   for (const c of CHARACTERS.values()) {
     const k = `character.${slug(c.id)}`;

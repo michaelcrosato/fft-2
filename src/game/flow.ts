@@ -13,7 +13,7 @@ import { renderer, rinfo } from '../gfx/renderer';
 import { Rng } from '../core/rng';
 import { MapGrid } from '../battle/grid';
 import { mapDef } from '../data/db';
-import { zodiacFromDate, ZODIAC_NAMES, ZODIAC_GLYPH, ZODIAC_ORDER } from '../battle/zodiac';
+import { zodiacFromDate, zodiacName, ZODIAC_GLYPH, ZODIAC_ORDER } from '../battle/zodiac';
 import { openFormation } from '../ui/menus/formation';
 import { openShop, openRecruit, openTavern, openFurShop } from '../ui/menus/town';
 import { openChronicle } from '../ui/menus/chronicle';
@@ -110,7 +110,7 @@ async function newGameSetup(): Promise<GameState | null> {
   const daySel = h('select', { style: { fontSize: '1.1em' } }, ...Array.from({ length: 31 }, (_, i) => h('option', { value: String(i + 1) }, fmtNum(i + 1)))) as HTMLSelectElement;
   monthSel.value = '1'; daySel.value = '1';
   const zod = h('div', { style: { fontSize: '1.2em', margin: '8px 0' } });
-  const upd = () => { const z = zodiacFromDate(+monthSel.value, +daySel.value); zod.textContent = `${ZODIAC_GLYPH[z]}︎ ${ZODIAC_NAMES[z]}`; };
+  const upd = () => { const z = zodiacFromDate(+monthSel.value, +daySel.value); zod.textContent = `${ZODIAC_GLYPH[z]}︎ ${zodiacName(z)}`; };
   monthSel.onchange = upd; daySel.onchange = upd; upd();
   panel.appendChild(h('div', null, monthSel, daySel));
   panel.appendChild(zod);

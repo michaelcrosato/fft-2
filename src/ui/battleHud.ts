@@ -5,7 +5,7 @@ import { bar } from './widgets';
 import type { BattleUnit } from '../battle/unit';
 import type { Battle, TargetPreview } from '../battle/battle';
 import { STATUS } from '../battle/status';
-import { ZODIAC_GLYPH, compatibility } from '../battle/zodiac';
+import { ZODIAC_GLYPH, compatibility, zodiacName } from '../battle/zodiac';
 import type { Cell } from '../battle/grid';
 import { MapGrid } from '../battle/grid';
 import { portrait, portraitCached } from '../gfx/portraits';
@@ -100,7 +100,7 @@ export class BattleHud {
           h('span.lbl', null, t('hud.ct')), bar('ct', Math.min(100, u.ct), 100), h('span.num', null, t('hud.bar_value', { value: Math.min(100, Math.floor(u.ct)), max: 100 })),
         ),
         h('div.meta', null,
-          h('span.zodiac', { title: t(`hud.zodiac.${u.zodiac}`) }, ZODIAC_GLYPH[u.zodiac] + '︎'),
+          h('span.zodiac', { title: zodiacName(u.zodiac) }, ZODIAC_GLYPH[u.zodiac] + '︎'),
           h('span', null, t('hud.card.brave') + ' ', h('b', null, fmtNum(u.brave))),
           h('span', null, t('hud.card.faith') + ' ', h('b', null, fmtNum(u.faith))),
           h('span', null, t('hud.card.move') + ' ', h('b', null, fmtNum(u.move)), ' ' + t('hud.card.jump') + ' ', h('b', null, fmtNum(u.jump))),

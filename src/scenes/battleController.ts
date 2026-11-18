@@ -238,12 +238,11 @@ export class BattleController {
 
   /** returns true if an action was performed */
   private async actMenu(u: BattleUnit): Promise<boolean> {
+    // the engine names Attack and Defend (battle.cmd.*); the job command lists are named by the data
     const groups = this.b.commandGroups(u);
-    // the engine names Attack and Defend itself; the job command lists are named by the data
-    const groupName = (gr: { id: string; name: string }) => gr.id === 'attack' ? t('battle.cmd.attack') : gr.id === 'defend' ? t('battle.cmd.defend') : gr.name;
     for (;;) {
       const g = await menu({
-        items: groups.map((gr) => ({ label: groupName(gr), value: gr.id, disabled: gr.abilities.length === 0 ? t('battle.act.nothing_learned') : false })),
+        items: groups.map((gr) => ({ label: gr.name, value: gr.id, disabled: gr.abilities.length === 0 ? t('battle.act.nothing_learned') : false })),
         x: 14, bottom: 'var(--menu-bottom)', title: t('battle.cmd.act'), onAction: (a) => this.globalKeys(a),
       }).promise;
       if (g === null) return false;
@@ -258,7 +257,7 @@ export class BattleController {
             const stock = a.consumes ? t('battle.act.stock', { n: this.b.inventory.get(a.consumes) ?? 0 }) : '';
             return { label: a.name, value: a.id, disabled: reason ?? false, right: mp ? t('battle.act.mp_cost', { mp }) : stock || (a.ct ? t('battle.act.ct', { ct: this.b.chargeTicks(u, a) }) : ''), desc: a.desc };
           }),
-          x: 14, bottom: 'var(--menu-bottom)', title: groupName(grp), showDesc: true, maxHeight: 'calc(48 * var(--vh))', onAction: (a) => this.globalKeys(a),
+          x: 14, bottom: 'var(--menu-bottom)', title: grp.name, showDesc: true, maxHeight: 'calc(48 * var(--vh))', onAction: (a) => this.globalKeys(a),
         }).promise;
         if (pick === null) continue;
         ability = ABILITIES.get(pick) ?? null;
@@ -710,9 +709,9 @@ export class BattleController {
     await gameClock.sleep(delay);
     const u = this.b.unit(hi.uid);
     if (hi.miss) {
-      audio.sfx(hi.guard === 'Blocked' ? 'block' : 'miss');
-      this.float(v, hi.guard && hi.guard !== 'Evaded' ? hi.guard : t('battle.pop.miss'), 'miss');
-      v.anim.play(hi.guard === 'Blocked' ? 'guard' : 'dodge');
+      audio.sfx(hi.guardKind === 'blocked' ? 'block' : 'miss');
+      this.float(v, hi.guard ?? t('battle.pop.miss'), 'miss');
+      v.anim.play(hi.guardKind === 'blocked' ? 'guard' : 'dodge');
       return;
     }
     if (hi.dmg) {

@@ -8,7 +8,7 @@ import { BattleUnit } from '../../battle/unit';
 import { portrait } from '../../gfx/portraits';
 import { buildHumanoid } from '../../gfx/models/humanoid';
 import { getMonsterBuilder } from '../../scenes/unitview';
-import { ZODIAC_GLYPH, ZODIAC_NAMES } from '../../battle/zodiac';
+import { ZODIAC_GLYPH, zodiacName } from '../../battle/zodiac';
 import { bar } from '../widgets';
 import type { Element } from '../../data/types';
 
@@ -69,7 +69,7 @@ export function unitPanel(u: RosterUnit, jobOverride?: string): HTMLElement {
   return h('div.panel', { style: { position: 'relative', display: 'grid', gridTemplateColumns: '120px 1fr', gap: '10px 16px', minWidth: 'min(560px, 92vw)' } },
     por,
     h('div', null,
-      h('div', { style: { fontFamily: 'Cinzel, serif', fontWeight: '700', fontSize: '1.2em' } }, u.name, h('span.muted', { style: { marginLeft: '10px', fontSize: '0.75em' } }, `${ZODIAC_GLYPH[u.zodiac]}︎ ${ZODIAC_NAMES[u.zodiac]}`)),
+      h('div', { style: { fontFamily: 'Cinzel, serif', fontWeight: '700', fontSize: '1.2em' } }, u.name, h('span.muted', { style: { marginLeft: '10px', fontSize: '0.75em' } }, `${ZODIAC_GLYPH[u.zodiac]}︎ ${zodiacName(u.zodiac)}`)),
       h('div.muted', null, t('menus.unit.summary', { job: j.name, level: u.level, job_level: unitJobLevel(u, jobId), jp: u.jp[jobId] ?? 0 })),
       h('div.bars', { style: { marginTop: '6px', maxWidth: '300px' } },
         h('span.lbl', null, t('menus.stat.hp')), bar('hp', bu.maxHp, bu.maxHp), h('span.num', null, fmtNum(bu.maxHp)),
