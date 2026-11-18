@@ -3,7 +3,7 @@ import type { Battle, BEvent } from '../src/battle/battle';
 import type { SceneCmd } from '../src/data/types';
 import { BATTLES, STORY, SIDE, JOBS, mapDef } from '../src/data/db';
 import { newGame, joinCharacter } from '../src/game/state';
-import { setupBattle, autoEquip, autoAbilities } from '../src/game/setup';
+import { setupBattle, autoEquip, autoAbilities, deployCells } from '../src/game/setup';
 import { planTurn } from '../src/battle/ai';
 import { MapGrid } from '../src/battle/grid';
 import { Rng } from '../src/core/rng';
@@ -24,14 +24,14 @@ const rng = new Rng(7);
 let gi = 0;
 for (const u of s.roster) { if (!u.charId) { const j = JB[gi++ % JB.length]; const jd = JOBS.get(j); if (jd && (!jd.gender || jd.gender === u.gender)) u.job = j; } if (!u.charId || u.charId === 'rhen') u.equip = {}; setLevel(u, lv); autoEquip(u, s.tier, rng); if (!u.charId) autoAbilities(u, rng, {}); }
 const grid = new MapGrid(mapDef(def.map));
-const cells = (def.deploy ?? grid.def.deploy).filter(([x, z]) => grid.cell(x, z)?.standable && !def.units.some((u) => u.at[0] === x && u.at[1] === z));
+const cells = deployCells(def, grid); // the hero's fixed cell (heroAt) first: the party below lists the hero first
 const pick = [s.roster[0], ...s.roster.filter((r) => r.charId && r.charId !== 'rhen'), ...s.roster.filter((r) => !r.charId)];
 const party = pick.slice(0, Math.min(def.maxDeploy ?? 5, cells.length)).map((unit, i) => ({ unit, x: cells[i][0], z: cells[i][1] }));
 const { battle: b } = setupBattle(s, def, party, { seed: 11 });
 b.heroSid = 'rhen';
 const desc = (u: any) => `${u.name.padEnd(12)} t${u.team} ${u.job.id.padEnd(12)} L${u.level} HP${u.hp}/${u.maxHp} PA${u.pa} MA${u.ma} SP${u.speed} W:${u.roster.equip.rhand ?? '-'} ${u.roster.equip.body ?? ''} R:${u.roster.reaction ?? ''} S:${u.roster.support ?? ''}`;
 for (const u of b.units) console.log(desc(u));
-/** apply the rules-relevant parts of mid-battle scripts (reveals, retreats, forced endings) */
+/** apply the rules-relevant parts of mid-battle scripts (reveals, retreats, defections, forced endings) */
 function applyScript(b: Battle, cmds: SceneCmd[]) {
   for (const c of cmds) {
     switch (c[0]) {
@@ -40,6 +40,7 @@ function applyScript(b: Battle, cmds: SceneCmd[]) {
       case 'battleEnd': b.forced = c[1]; break;
       case 'heal': for (const u of c[1] === '*' || c[1] === 'party' ? b.units.filter((o) => o.baseTeam === 0 && !o.gone) : [b.bySid(c[1])]) if (u) { if (u.has('ko')) b.revive(u, 1); u.hp = u.maxHp; } break;
       case 'status': { const u = b.bySid(c[1]); if (u) { if (c[3]) b.addStatus(u, c[2]); else u.statuses.delete(c[2]); } break; }
+      case 'defect': b.scriptDefect(c[1], c[2]); break;
       case 'if': applyScript(b, c[3] ?? []); break;
       case 'choice': if (c[2][0]) applyScript(b, c[2][0][1]); break;
     }

@@ -8,6 +8,7 @@ import {
 import { rumors } from '../src/data/misc/rumors';
 import { ZODIAC_STONES } from '../src/data/misc/zodiacStones';
 import { MapGrid } from '../src/battle/grid';
+import { battleProblems } from './battle-checks';
 import type { SceneCmd } from '../src/data/types';
 
 const errors: string[] = [];
@@ -81,9 +82,8 @@ for (const b of BATTLES.values()) {
     for (const a of [u.reaction, u.support, u.movement, ...(u.learned ?? [])]) if (a && !ABILITIES.has(a)) err(`battle ${b.id}: unknown ability ${a}`);
     if (u.secondary && !JOBS.has(u.secondary)) err(`battle ${b.id}: unknown secondary ${u.secondary}`);
   }
-  for (const [x, z] of b.deploy ?? g.def.deploy) {
-    if (occupied.has(`${x},${z}`)) err(`battle ${b.id}: deploy cell ${x},${z} occupied by a spawn`);
-  }
+  // deploy cells free of spawns, the fixed hero cell among them, `defect` naming a unit and a team
+  for (const p of battleProblems(b, g)) err(p);
   const v = b.victory;
   if (v.type === 'defeat' || v.type === 'defeatAny') for (const id of v.ids) if (!b.units.some((u) => (u.id ?? u.char) === id)) err(`battle ${b.id}: victory id ${id} not in units`);
   for (const id of b.protect ?? []) if (!b.units.some((u) => (u.id ?? u.char) === id) && !CHARACTERS.has(id)) err(`battle ${b.id}: protect id ${id} not in units or cast`);

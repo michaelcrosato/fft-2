@@ -338,6 +338,9 @@ Early Chapter I battles: party level ≈ 1–8; Ch.II ≈ 8–18; Ch.III ≈ 18�
 ### Victory conditions
 `defeatAll` (default), `defeat` (boss ids), `defeatAny`, `survive` (N hero turns), `reach` (cells, e.g. the sluice lever).
 A boss retreat mid-battle: `events: [{ when: { hpBelow: ['wolfram', 50] }, script: [['say','wolfram','…'], ['retreat','wolfram'], ['battleEnd','victory']] }]`.
+Other battle-script commands: `['reveal', id]`, `['heal', id | 'party']`, `['status', id, 'haste', true]` and
+`['defect', id, team]` (the unit changes sides for good: 0 joins the player's side as an AI-led guest, 1 the enemy).
+`heroAt: [x, z]` on a battle fixes the hero's starting cell; it must be one of the battle's deploy cells.
 
 ### Scenes
 * `map` = scene stage (can be a battle map or a dedicated small scene map like `scene_ygress_hall`; author scene maps
