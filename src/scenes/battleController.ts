@@ -22,6 +22,7 @@ import { loadOptions } from '../game/state';
 import { CameraControls } from '../ui/cameraControls';
 import { gameClock } from '../core/gameClock';
 import { tapTracker } from '../ui/taps';
+import { fmtList, fmtNum, t, tParts, type Values } from '../i18n';
 
 const ANIM_MAP: Partial<Record<AnimKind, ClipName>> = {
   swing: 'swing', thrust: 'thrust', shoot: 'bow', bow: 'bow', gun: 'gun', cast: 'cast', pray: 'pray', punch: 'punch', kick: 'kick',
@@ -37,6 +38,11 @@ const SFX_FOR_VFX: Record<string, string> = {
   buff: 'buff', buffRed: 'buff', buffBlue: 'buff', guard: 'buff', debuff: 'debuff', status: 'status', time: 'time', teleport: 'time', steal: 'steal',
   song: 'song', dance: 'dance', talk: 'magic', summon: 'summon', glyph: 'magic', sparkleGreen: 'heal', jumpImpact: 'hitHeavy',
 };
+
+/** The help-bar line `${base}.touch`, `.pad` or `.keys` (mouse and keyboard share one) for the device in use. */
+function deviceHelp(base: string, values?: Values) {
+  return () => tParts(`${base}.${input.lastDevice === 'touch' ? 'touch' : input.lastDevice === 'pad' ? 'pad' : 'keys'}`, values);
+}
 
 export interface ControllerHooks {
   runScript(index: number): Promise<void>;
@@ -104,7 +110,7 @@ export class BattleController {
       if (v.type === 'reach' && !this.goalShown && !this.b.units.some((o) => o.team !== 0 && o.active && !o.hidden)) {
         this.goalShown = true;
         this.stage.markGoal(v.cells);
-        toast('The way onward reveals itself…', 3000);
+        toast(t('battle.toast.way_onward'), 3000);
       }
       const forcedAi = unit.has('confuse') || unit.has('berserk') || unit.has('charm') || unit.has('chicken') || unit.has('vampire');
       if (unit.controlled && unit.team === 0 && !unit.autoAi && !forcedAi && !this.autoAll && !(window as any).__autoBattle) await this.playerTurn(unit);
@@ -153,17 +159,17 @@ export class BattleController {
       for (;;) {
         if (this.b.result) return;
         this.hud.card(u, 'a', this.b);
-        this.hud.helpText(() => input.lastDevice === 'touch' ? '' : input.lastDevice === 'pad'
-          ? `${input.hint('confirm')} confirm · ${input.hint('rotL')}${input.hint('rotR')} rotate · <kbd>RS</kbd> orbit · ${input.hint('zoomOut')}${input.hint('zoomIn')} zoom · ${input.hint('recenter')} recenter`
-          : '<kbd>↑↓</kbd> choose · <kbd>Enter</kbd> confirm · <kbd>Q</kbd>/<kbd>E</kbd> rotate · drag/wheel camera · <kbd>F</kbd> recenter');
+        // (no help bar on touch screens)
+        const commandHelp = deviceHelp('battle.help.command');
+        this.hud.helpText(() => input.lastDevice === 'touch' ? '' : commandHelp());
         const items: MenuItem<string>[] = [
-          { label: 'Move', value: 'move', disabled: u.moved || !u.canMove, icon: '➤' },
-          { label: 'Act', value: 'act', disabled: u.acted || !u.canAct, icon: '⚔' },
-          { label: 'Wait', value: 'wait', icon: '⌛' },
-          { label: 'Status', value: 'status', icon: '☰' },
-          { label: 'Auto-Battle', value: 'auto', icon: '⚙' },
+          { label: t('battle.cmd.move'), value: 'move', disabled: u.moved || !u.canMove, icon: '➤' },
+          { label: t('battle.cmd.act'), value: 'act', disabled: u.acted || !u.canAct, icon: '⚔' },
+          { label: t('battle.cmd.wait'), value: 'wait', icon: '⌛' },
+          { label: t('battle.cmd.status'), value: 'status', icon: '☰' },
+          { label: t('battle.cmd.auto'), value: 'auto', icon: '⚙' },
         ];
-        const m = menu({ items, x: 14, bottom: 'var(--menu-bottom)', title: u.name, cancelable: true, closeTitle: 'Survey the field', onAction: (a) => this.globalKeys(a) });
+        const m = menu({ items, x: 14, bottom: 'var(--menu-bottom)', title: u.name, cancelable: true, closeTitle: t('battle.cmd.survey'), onAction: (a) => this.globalKeys(a) });
         const choice = await m.promise;
         if (choice === null) {
           // undo move if nothing else done
@@ -175,7 +181,7 @@ export class BattleController {
         }
         if (choice === 'move') {
           const cells = this.b.moveRange(u);
-          const dest = await this.pickTile({ cells: cells.map((c) => [c.x, c.z] as [number, number]), kind: 'move', from: u, help: 'Choose a destination' });
+          const dest = await this.pickTile({ cells: cells.map((c) => [c.x, c.z] as [number, number]), kind: 'move', from: u, help: 'battle.help.move' });
           this.stage.clearHighlight();
           if (!dest) continue;
           const ev = this.b.doMove(u, dest[0], dest[1]);
@@ -192,7 +198,7 @@ export class BattleController {
         if (choice === 'wait') break;
         if (choice === 'status') { await this.statusView(u); continue; }
         if (choice === 'auto') {
-          const all = await confirm('Let this unit act on its own for the rest of the battle?', 'This unit', 'Cancel');
+          const all = await confirm(t('battle.auto.confirm'), t('battle.auto.this_unit'), t('battle.cancel'));
           // autoAi, not controlled=false: the unit stays the player's (crystallizes, keeps Brave/Faith, player colours)
           if (all) { u.autoAi = true; u.ai = 'aggressive'; await this.aiTurn(u); return; }
           continue;
@@ -218,10 +224,12 @@ export class BattleController {
   /** returns true if an action was performed */
   private async actMenu(u: BattleUnit): Promise<boolean> {
     const groups = this.b.commandGroups(u);
+    // the engine names Attack and Defend itself; the job command lists are named by the data
+    const groupName = (gr: { id: string; name: string }) => gr.id === 'attack' ? t('battle.cmd.attack') : gr.id === 'defend' ? t('battle.cmd.defend') : gr.name;
     for (;;) {
       const g = await menu({
-        items: groups.map((gr) => ({ label: gr.name, value: gr.id, disabled: gr.abilities.length === 0 ? 'Nothing learned' : false })),
-        x: 14, bottom: 'var(--menu-bottom)', title: 'Act', onAction: (a) => this.globalKeys(a),
+        items: groups.map((gr) => ({ label: groupName(gr), value: gr.id, disabled: gr.abilities.length === 0 ? t('battle.act.nothing_learned') : false })),
+        x: 14, bottom: 'var(--menu-bottom)', title: t('battle.cmd.act'), onAction: (a) => this.globalKeys(a),
       }).promise;
       if (g === null) return false;
       const grp = groups.find((x) => x.id === g)!;
@@ -232,10 +240,10 @@ export class BattleController {
           items: grp.abilities.map((a) => {
             const reason = this.b.unusableReason(u, a);
             const mp = this.b.mpCost(u, a);
-            const stock = a.consumes ? ` ×${this.b.inventory.get(a.consumes) ?? 0}` : '';
-            return { label: a.name, value: a.id, disabled: reason ?? false, right: mp ? `${mp} MP` : stock || (a.ct ? `CT ${this.b.chargeTicks(u, a)}` : ''), desc: a.desc };
+            const stock = a.consumes ? t('battle.act.stock', { n: this.b.inventory.get(a.consumes) ?? 0 }) : '';
+            return { label: a.name, value: a.id, disabled: reason ?? false, right: mp ? t('battle.act.mp_cost', { mp }) : stock || (a.ct ? t('battle.act.ct', { ct: this.b.chargeTicks(u, a) }) : ''), desc: a.desc };
           }),
-          x: 14, bottom: 'var(--menu-bottom)', title: grp.name, showDesc: true, maxHeight: 'calc(48 * var(--vh))', onAction: (a) => this.globalKeys(a),
+          x: 14, bottom: 'var(--menu-bottom)', title: groupName(grp), showDesc: true, maxHeight: 'calc(48 * var(--vh))', onAction: (a) => this.globalKeys(a),
         }).promise;
         if (pick === null) continue;
         ability = ABILITIES.get(pick) ?? null;
@@ -245,7 +253,7 @@ export class BattleController {
       // sub-choices
       if (ability.special === 'throw') {
         const list = throwables(this.b, String(ability.params?.cat ?? 'shuriken'), u);
-        const it = await menu({ items: list.map((id) => ({ label: ITEMS.get(id)?.name ?? id, value: id, right: `WP ${ITEMS.get(id)?.wp ?? 0} ×${this.b.inventory.get(id)}` })), x: 14, bottom: 'var(--menu-bottom)', title: 'Throw' }).promise;
+        const it = await menu({ items: list.map((id) => ({ label: ITEMS.get(id)?.name ?? id, value: id, right: t('battle.throw.stats', { wp: ITEMS.get(id)?.wp ?? 0, n: this.b.inventory.get(id) ?? 0 }) })), x: 14, bottom: 'var(--menu-bottom)', title: t('battle.throw.title') }).promise;
         if (!it) continue;
         opts.item = it;
       }
@@ -261,12 +269,12 @@ export class BattleController {
 
   private async calcMenu(u: BattleUnit): Promise<ActionOpts['calc'] | null> {
     const learned = (p: string) => u.roster.learned.filter((id) => id.startsWith(p)).map((id) => ABILITIES.get(id)!).filter(Boolean);
-    const attr = await menu({ items: learned('calcAttr').map((a) => ({ label: a.name, value: String(a.params?.value) })), x: 14, bottom: 'var(--menu-bottom)', title: 'Attribute' }).promise;
+    const attr = await menu({ items: learned('calcAttr').map((a) => ({ label: a.name, value: String(a.params?.value) })), x: 14, bottom: 'var(--menu-bottom)', title: t('battle.calc.attribute') }).promise;
     if (!attr) return null;
-    const div = await menu({ items: learned('calcDiv').map((a) => ({ label: a.name, value: String(a.params?.value) })), x: 14, bottom: 'var(--menu-bottom)', title: 'Divisor' }).promise;
+    const div = await menu({ items: learned('calcDiv').map((a) => ({ label: a.name, value: String(a.params?.value) })), x: 14, bottom: 'var(--menu-bottom)', title: t('battle.calc.divisor') }).promise;
     if (!div) return null;
     const spells = u.roster.learned.map((id) => ABILITIES.get(id)).filter((a): a is AbilityDef => !!a && !!a.calc);
-    const sp = await menu({ items: spells.map((a) => ({ label: a.name, value: a.id, desc: a.desc })), x: 14, bottom: 'var(--menu-bottom)', title: 'Spell', showDesc: true, maxHeight: 'calc(48 * var(--vh))' }).promise;
+    const sp = await menu({ items: spells.map((a) => ({ label: a.name, value: a.id, desc: a.desc })), x: 14, bottom: 'var(--menu-bottom)', title: t('battle.calc.spell'), showDesc: true, maxHeight: 'calc(48 * var(--vh))' }).promise;
     if (!sp) return null;
     return { attr, div, spell: sp };
   }
@@ -275,10 +283,10 @@ export class BattleController {
     let cells: Array<[number, number]>;
     if (opts.calc) cells = [[u.x, u.z]];
     else cells = this.b.targetCells(u, a).map((c) => [c.x, c.z] as [number, number]);
-    if (!cells.length) { toast('No valid targets'); return false; }
+    if (!cells.length) { toast(t('battle.toast.no_targets')); return false; }
     const selfOnly = a.shape === 'self' || a.range === 0 && (a.aoe ?? 1) <= 1 || a.shape === 'all' || a.shape === 'allAllies' || a.shape === 'allEnemies' || !!opts.calc;
     const pickOpts = {
-      cells, kind: 'target' as const, from: u, help: `${a.name}: choose a target`,
+      cells, kind: 'target' as const, from: u, help: 'battle.help.target', helpValues: { ability: a.name },
       hover: (x: number, z: number) => {
         const aoe = opts.calc ? this.b.calcTargets(u, opts.calc).map((t) => [t.x, t.z] as [number, number]) : this.b.aoeCells(u, a, x, z).map((c) => [c.x, c.z] as [number, number]);
         this.stage.highlight('aoe', aoe);
@@ -291,7 +299,7 @@ export class BattleController {
     let target: [number, number] | null;
     if (selfOnly && cells.length === 1) {
       pickOpts.hover(cells[0][0], cells[0][1]);
-      target = (await this.confirmHere(`Use ${a.name}?`)) ? cells[0] : null;
+      target = (await this.confirmHere(t('battle.confirm.use', { ability: a.name }))) ? cells[0] : null;
     } else target = await this.pickTile(pickOpts);
     this.stage.clearHighlight(); this.hud.clearPreview(); this.hud.card(null, 'b');
     if (!target) return false;
@@ -301,19 +309,20 @@ export class BattleController {
   }
 
   private async confirmHere(text: string): Promise<boolean> {
-    const r = await menu({ items: [{ label: 'Execute', value: true }, { label: 'Cancel', value: false }], x: 14, bottom: 'var(--menu-bottom)', title: text }).promise;
+    const r = await menu({ items: [{ label: t('battle.confirm.execute'), value: true }, { label: t('battle.cancel'), value: false }], x: 14, bottom: 'var(--menu-bottom)', title: text }).promise;
     return !!r;
   }
 
   // ================================================================ tile picking
-  pickTile(o: { cells: Array<[number, number]>; kind: 'move' | 'target' | 'deploy'; from?: BattleUnit; help?: string; hover?: (x: number, z: number) => void; allowAny?: boolean }): Promise<[number, number] | null> {
+  /** `help`: the help bar's line id without its device ending (see deviceHelp), filled with `helpValues` */
+  pickTile(o: { cells: Array<[number, number]>; kind: 'move' | 'target' | 'deploy'; from?: BattleUnit; help: string; helpValues?: Values; hover?: (x: number, z: number) => void; allowAny?: boolean }): Promise<[number, number] | null> {
     const st = this.stage;
     st.highlight(o.kind, o.cells);
     const valid = new Set(o.cells.map(([x, z]) => x + ',' + z));
     let cx = o.from?.x ?? o.cells[0][0], cz = o.from?.z ?? o.cells[0][1];
     if (!valid.has(cx + ',' + cz) && o.cells.length) [cx, cz] = o.cells[0];
     const el = renderer.domElement;
-    this.hud.helpText(() => input.lastDevice === 'touch' ? `${o.help ?? ''} · tap a tile, tap it again to confirm` : `${o.help ?? ''} · ${input.lastDevice === 'pad' ? `${input.hint('confirm')} confirm · ${input.hint('cancel')} back` : '<kbd>Enter</kbd>/click confirm · <kbd>Esc</kbd>/right-click back'}`);
+    this.hud.helpText(deviceHelp(o.help, o.helpValues));
     this.hud.backButton(true);
     return new Promise((resolve) => {
       // keyboard/gamepad cursor moves pull the camera along; taps and clicks must not
@@ -392,7 +401,7 @@ export class BattleController {
     // arrow tiles around the unit
     const around = FACINGS.map((d) => { const [dx, dz] = d === 'N' ? [0, -1] : d === 'S' ? [0, 1] : d === 'E' ? [1, 0] : [-1, 0]; return { d, x: u.x + dx, z: u.z + dz }; }).filter((c) => this.stage.grid.cell(c.x, c.z));
     this.stage.highlight('move', around.map((c) => [c.x, c.z] as [number, number]), 'facing');
-    this.hud.helpText(() => input.lastDevice === 'touch' ? 'Choose facing · tap the side to face (tap the unit to keep its facing)' : input.lastDevice === 'pad' ? `Choose facing · ${input.hint('left')} · ${input.hint('confirm')} end turn` : 'Choose facing · <kbd>←↑→↓</kbd> or click · <kbd>Enter</kbd> end turn');
+    this.hud.helpText(deviceHelp('battle.help.facing'));
     const el = renderer.domElement;
     return new Promise((resolve) => {
       const set = (d: Facing) => { f = d; v.face(d); };
@@ -451,8 +460,8 @@ export class BattleController {
         if (t && t.alive && t !== u) this.stage.highlight(t.team === u.team ? 'move' : 'enemyMove', this.b.moveRange(t).map((c) => [c.x, c.z] as [number, number]), 'look');
         else this.stage.clearHighlight('look');
       };
-      this.hud.helpText(() => input.lastDevice === 'touch' ? 'Survey the field · tap a unit to see its reach' : `Survey the field · ${input.hint('cancel')} return`);
-      this.hud.backButton(true, 'Done');
+      this.hud.helpText(deviceHelp('battle.help.survey'));
+      this.hud.backButton(true, t('battle.done'));
       const el = renderer.domElement;
       const at = (e: PointerEvent) => { const c = this.stage.pickCell(e.clientX, e.clientY); if (c && (c[0] !== cx || c[1] !== cz)) { cx = c[0]; cz = c[1]; upd(false); } };
       const onMove = (e: PointerEvent) => { if (e.pointerType === 'mouse' && !e.buttons) at(e); };
@@ -475,12 +484,12 @@ export class BattleController {
     const card = this.hud.unitCard(u, this.b);
     const r = u.roster;
     const extra = h('div', { style: { fontSize: '0.85em', marginTop: '6px' } },
-      h('div.kv', null, h('span', null, 'Speed / PA / MA'), h('span', null, `${u.speed} / ${u.pa} / ${u.ma}`)),
-      h('div.kv', null, h('span', null, 'Weapon'), h('span', null, u.weapon ? `${u.weapon.name} (WP ${u.weapon.wp ?? 0})` : 'Bare hands')),
-      h('div.kv', null, h('span', null, 'Secondary'), h('span', null, r.secondary ? JOBS.get(r.secondary)?.skillset.name ?? '-' : '-')),
-      h('div.kv', null, h('span', null, 'Reaction'), h('span', null, u.reactionAbility()?.name ?? '-')),
-      h('div.kv', null, h('span', null, 'Support'), h('span', null, u.supportAbility()?.name ?? '-')),
-      h('div.kv', null, h('span', null, 'Movement'), h('span', null, u.movementAbility()?.name ?? '-')),
+      h('div.kv', null, h('span', null, t('battle.stats.speed_pa_ma')), h('span', null, t('battle.stats.speed_pa_ma_value', { speed: u.speed, pa: u.pa, ma: u.ma }))),
+      h('div.kv', null, h('span', null, t('battle.stats.weapon')), h('span', null, u.weapon ? t('battle.stats.weapon_value', { weapon: u.weapon.name, wp: u.weapon.wp ?? 0 }) : t('battle.stats.bare_hands'))),
+      h('div.kv', null, h('span', null, t('battle.stats.secondary')), h('span', null, r.secondary ? JOBS.get(r.secondary)?.skillset.name ?? '-' : '-')),
+      h('div.kv', null, h('span', null, t('battle.stats.reaction')), h('span', null, u.reactionAbility()?.name ?? '-')),
+      h('div.kv', null, h('span', null, t('battle.stats.support')), h('span', null, u.supportAbility()?.name ?? '-')),
+      h('div.kv', null, h('span', null, t('battle.stats.movement')), h('span', null, u.movementAbility()?.name ?? '-')),
     );
     card.appendChild(h('div', { style: { gridColumn: '1 / span 2' } }, extra));
     card.style.left = '50%'; card.style.top = '50%'; card.style.transform = 'translate(-50%, -50%)';
@@ -562,7 +571,7 @@ export class BattleController {
       case 'charge': {
         const u = this.b.unit(e.uid); const v = this.view(e.uid);
         if (!u || !v) return;
-        await banner(`${u.name}: ${e.name}`, u.team === 1, 900 / this.speed);
+        await banner(t('battle.banner.unit_ability', { unit: u.name, ability: e.name }), u.team === 1, 900 / this.speed);
         const a = ABILITIES.get(e.ability);
         const col = a?.color ?? '#c8a0ff';
         this.auras.set(e.uid, st.vfx.chargeAura(() => v.root.position.clone(), col));
@@ -570,21 +579,21 @@ export class BattleController {
         audio.sfx('charge');
         return;
       }
-      case 'chargeBreak': { this.auras.get(e.uid)?.(); this.auras.delete(e.uid); st.unmarkCharge(e.uid); const v = this.view(e.uid); if (v) this.float(v, 'Interrupted', 'info'); return; }
+      case 'chargeBreak': { this.auras.get(e.uid)?.(); this.auras.delete(e.uid); st.unmarkCharge(e.uid); const v = this.view(e.uid); if (v) this.float(v, t('battle.pop.interrupted'), 'info'); return; }
       case 'hits': await this.playHits(e); return;
-      case 'reaction': { const u = this.b.unit(e.uid); if (u) { audio.sfx('buff', { volume: 0.5 }); await banner(`${u.name}: ${e.name}`, u.team === 1, 700 / this.speed); } return; }
+      case 'reaction': { const u = this.b.unit(e.uid); if (u) { audio.sfx('buff', { volume: 0.5 }); await banner(t('battle.banner.unit_ability', { unit: u.name, ability: e.name }), u.team === 1, 700 / this.speed); } return; }
       case 'status': {
         const v = this.view(e.uid);
         if (!v) return;
         for (const s of e.add ?? []) this.float(v, STATUS[s]?.name ?? s, 'status');
-        for (const s of e.remove ?? []) if (!STATUS[s]?.hidden && s !== 'charging' && s !== 'performing') this.float(v, `-${STATUS[s]?.name ?? s}`, 'info');
+        for (const s of e.remove ?? []) if (!STATUS[s]?.hidden && s !== 'charging' && s !== 'performing') this.float(v, t('battle.pop.status_lost', { status: STATUS[s]?.name ?? s }), 'info');
         return;
       }
-      case 'hp': { const v = this.view(e.uid); if (v && e.delta) { this.float(v, (e.delta > 0 ? '+' : '') + e.delta + (e.reason ? ` ${e.reason}` : ''), e.delta > 0 ? 'heal' : 'dmg'); if (e.delta > 0) st.vfx.play('heal', v.chest, v.root.position.clone()); else v.anim.play('hurt'); await this.wait(350); } return; }
-      case 'mp': { const v = this.view(e.uid); if (v && e.delta > 0) this.float(v, `+${e.delta} MP`, 'mp'); return; }
+      case 'hp': { const v = this.view(e.uid); if (v && e.delta) { this.float(v, hpText(e.delta, e.reason), e.delta > 0 ? 'heal' : 'dmg'); if (e.delta > 0) st.vfx.play('heal', v.chest, v.root.position.clone()); else v.anim.play('hurt'); await this.wait(350); } return; }
+      case 'mp': { const v = this.view(e.uid); if (v && e.delta > 0) this.float(v, t('battle.pop.mp_gain', { n: e.delta }), 'mp'); return; }
       case 'ko': { const v = this.view(e.uid); if (v) { audio.sfx('ko'); await v.ko(); } return; }
-      case 'revive': { const v = this.view(e.uid); if (v) { v.revive(); st.vfx.play('revive', v.chest, v.root.position.clone()); this.float(v, 'Revived', 'heal'); await this.wait(400); } return; }
-      case 'koCount': { const v = this.view(e.uid); if (v) { this.float(v, String(e.n), 'info'); await this.wait(350); } return; }
+      case 'revive': { const v = this.view(e.uid); if (v) { v.revive(); st.vfx.play('revive', v.chest, v.root.position.clone()); this.float(v, t('battle.pop.revived'), 'heal'); await this.wait(400); } return; }
+      case 'koCount': { const v = this.view(e.uid); if (v) { this.float(v, fmtNum(e.n), 'info'); await this.wait(350); } return; }
       case 'crystal': {
         const v = this.view(e.uid);
         if (!v) return;
@@ -601,17 +610,21 @@ export class BattleController {
         if (v) st.vfx.sparkle(v.root.position.clone(), e.kind === 'crystal' ? '#9fd8ff' : '#ffd070');
         audio.sfx(e.kind === 'crystal' ? 'learn' : 'chest');
         if (e.kind === 'crystal') {
-          if (e.learned?.length) toast(`Learned: ${e.learned.map((a) => ABILITIES.get(a)?.name ?? a).slice(0, 4).join(', ')}${e.learned.length > 4 ? '…' : ''}`, 3000);
-          else toast('The crystal restores HP and MP');
-        } else if (e.item) toast(`Found ${ITEMS.get(e.item)?.name ?? e.item}!`);
+          if (e.learned?.length) {
+            // the first four names, then how many more
+            const names = e.learned.map((a) => ABILITIES.get(a)?.name ?? a).slice(0, 4);
+            if (e.learned.length > 4) names.push(t('battle.toast.more', { count: e.learned.length - 4 }));
+            toast(t('battle.toast.learned', { abilities: fmtList(names) }), 3000);
+          } else toast(t('battle.toast.crystal'));
+        } else if (e.item) toast(t('battle.toast.found', { item: ITEMS.get(e.item)?.name ?? e.item }));
         await this.wait(600);
         return;
       }
       case 'text': { const v = this.view(e.uid); if (v) this.float(v, e.text, 'info'); await this.wait(250); return; }
       case 'jumpUp': { const v = this.view(e.uid); if (v) { audio.sfx('jump'); await v.leapUp(); } return; }
       case 'jumpDown': { const v = this.view(e.uid); if (v) { st.focusTile(e.x, e.z); await v.landOn(e.x, e.z); audio.sfx('hitHeavy'); } return; }
-      case 'levelUp': { const v = this.view(e.uid); if (v) { this.float(v, 'Level Up!', 'crit'); st.vfx.rise(v.root.position.clone(), '#ffe070', 30, 2, 0.4, 1.2, 0.12); audio.sfx('levelUp'); await this.wait(500); } return; }
-      case 'teamChange': { const v = this.view(e.uid); const u = this.b.unit(e.uid); if (v && u) { v.setTeam(u.team, u.team === 0 && !u.controlled); this.float(v, u.team === 0 ? 'Ally!' : 'Turned!', 'status'); } return; }
+      case 'levelUp': { const v = this.view(e.uid); if (v) { this.float(v, t('battle.pop.level_up'), 'crit'); st.vfx.rise(v.root.position.clone(), '#ffe070', 30, 2, 0.4, 1.2, 0.12); audio.sfx('levelUp'); await this.wait(500); } return; }
+      case 'teamChange': { const v = this.view(e.uid); const u = this.b.unit(e.uid); if (v && u) { v.setTeam(u.team, u.team === 0 && !u.controlled); this.float(v, u.team === 0 ? t('battle.pop.ally') : t('battle.pop.turned'), 'status'); } return; }
       case 'reveal': { const v = this.view(e.uid); const u = this.b.unit(e.uid); if (v && u) { v.place(u.x, u.z, u.facing); v.root.visible = true; st.vfx.play('teleport', v.chest, v.root.position.clone(), '#ffffff'); } return; }
       case 'leave': { const v = this.view(e.uid); if (v) { await v.tween(0.4, (t) => v.root.scale.setScalar(1 - t)); v.root.visible = false; v.root.scale.setScalar(1); } return; }
       case 'script': await this.hooks.runScript(e.index); this.syncAll(); return;
@@ -677,21 +690,21 @@ export class BattleController {
     const u = this.b.unit(hi.uid);
     if (hi.miss) {
       audio.sfx(hi.guard === 'Blocked' ? 'block' : 'miss');
-      this.float(v, hi.guard && hi.guard !== 'Evaded' ? hi.guard : 'Miss', 'miss');
+      this.float(v, hi.guard && hi.guard !== 'Evaded' ? hi.guard : t('battle.pop.miss'), 'miss');
       v.anim.play(hi.guard === 'Blocked' ? 'guard' : 'dodge');
       return;
     }
     if (hi.dmg) {
       audio.sfx(hi.dmg > (u?.maxHp ?? 100) * 0.3 ? 'hitHeavy' : 'hit');
-      this.float(v, String(hi.dmg), hi.crit ? 'crit' : 'dmg');
+      this.float(v, fmtNum(hi.dmg), hi.crit ? 'crit' : 'dmg');
       if (!hi.ko) v.anim.play('hurt');
     }
-    if (hi.heal) this.float(v, '+' + hi.heal, 'heal', 120);
-    if (hi.mpDmg) this.float(v, `${hi.mpDmg} MP`, 'mp', 160);
-    if (hi.mpHeal) this.float(v, `+${hi.mpHeal} MP`, 'mp', 160);
+    if (hi.heal) this.float(v, t('battle.pop.heal', { n: hi.heal }), 'heal', 120);
+    if (hi.mpDmg) this.float(v, t('battle.pop.mp_loss', { n: hi.mpDmg }), 'mp', 160);
+    if (hi.mpHeal) this.float(v, t('battle.pop.mp_gain', { n: hi.mpHeal }), 'mp', 160);
     let d = 260;
     for (const s of hi.add ?? []) { if (s !== 'ko') this.float(v, STATUS[s]?.name ?? s, 'status', d); d += 180; }
-    for (const s of hi.remove ?? []) { if (s !== 'critical') this.float(v, '-' + (STATUS[s]?.name ?? s), 'info', d); d += 180; }
+    for (const s of hi.remove ?? []) { if (s !== 'critical') this.float(v, t('battle.pop.status_lost', { status: STATUS[s]?.name ?? s }), 'info', d); d += 180; }
     for (const t of hi.text ?? []) { this.float(v, t, 'info', d); d += 200; }
     if (hi.stolen) audio.sfx('steal');
     if (hi.knock) await v.knockTo(hi.knock[0], hi.knock[1]);
@@ -711,6 +724,12 @@ export class BattleController {
     this.hud.dispose();
     this.camUi.dispose();
   }
+}
+
+/** The pop-up for an HP change: gained or lost, with its cause when there is one. */
+function hpText(delta: number, reason?: string): string {
+  if (delta > 0) return reason ? t('battle.pop.heal_reason', { n: delta, reason }) : t('battle.pop.heal', { n: delta });
+  return reason ? t('battle.pop.hp_loss_reason', { n: -delta, reason }) : t('battle.pop.hp_loss', { n: -delta });
 }
 
 /** Map a screen-relative arrow to a grid direction given camera yaw */
