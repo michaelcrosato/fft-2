@@ -4,7 +4,7 @@
 //  animates the returned event lists.
 // ============================================================================
 import type {
-  AbilityDef, BattleDef, EffectSpec, Element, EquipSlot, Facing, FormulaCtx, ItemDef, StatusId, Weather,
+  AbilityDef, BattleDef, EffectSpec, Element, EquipSlot, Facing, FormulaCtx, ItemDef, StatKey, StatusId, Weather,
 } from '../data/types';
 import { ABILITIES, ITEMS, job as getJob } from '../data/db';
 import { Rng } from '../core/rng';
@@ -16,14 +16,30 @@ import { weaponDamage, clampPct } from './formulas';
 import { growRaw, jobLevel, MAX_LEVEL } from './stats';
 import { addJp } from '../game/roster';
 import { SPECIALS } from './specials';
+import { fmtList, t as line } from '../i18n';
+
+// What the engine writes for players (pop-ups, preview text, why an ability is greyed out) goes
+// through the engine.* lines (src/i18n/ui/engine.ts). Game logic never reads that text: it reads ids.
+/** A stat change as it pops up: "PA +1", "Brave -10". */
+const statText = (stat: StatKey, n: number) => line(n >= 0 ? 'engine.stat_up' : 'engine.stat_down', { stat: line(`menus.stat.${stat}`), n: Math.abs(n) });
+/** A change to CT: "CT +20", "CT -20", "CT 0". */
+const ctText = (n: number) => line(n > 0 ? 'engine.ct_up' : n < 0 ? 'engine.ct_down' : 'engine.ct', { n: Math.abs(n) });
+/** A weapon category's name, from the Outfitter's lines: knightSword → Knight Sword. */
+const weaponCatName = (cat: string) => line(`town.item.cat.${cat.replace(/[A-Z]/g, (c) => '_' + c.toLowerCase())}`);
 
 // ---------------------------------------------------------------------------
 //  Events
 // ---------------------------------------------------------------------------
+/** Why a blow missed: dodged, stopped by a shield, by a reaction ability, by Reflect, or no effect at all. */
+export type GuardKind = 'evaded' | 'blocked' | 'reaction' | 'reflect' | 'immune';
+
 export interface HitInfo {
   uid: number;
   miss?: boolean;
-  guard?: string;             // reaction name that blocked it
+  /** why it missed; compare this, never `guard` */
+  guardKind?: GuardKind;
+  /** what pops up instead of "Miss" (a reaction's name, Blocked…); none when simply evaded */
+  guard?: string;
   dmg?: number;               // hp damage (negative = healed by absorb)
   heal?: number;
   mpDmg?: number;
@@ -285,7 +301,7 @@ export class Battle {
     u.koCount--;
     this.emit({ t: 'koCount', uid: u.uid, n: u.koCount });
     if (u.koCount <= 0) {
-      if (u.has('undead') && this.rng.pct(50)) { this.revive(u, 1); this.emit({ t: 'text', uid: u.uid, text: 'Rises again!', color: '#9f9' }); return; }
+      if (u.has('undead') && this.rng.pct(50)) { this.revive(u, 1); this.emit({ t: 'text', uid: u.uid, text: line('engine.pop.rises_again'), color: '#9f9' }); return; }
       // named story characters and guests never crystallize: they withdraw from the field
       if (u.baseTeam === 0 && (this.gentle || u.vip || u.sid === this.heroSid || !!u.roster.charId || !u.controlled)) {
         // gentle mode / story guests: retreat instead of crystallizing
@@ -319,7 +335,7 @@ export class Battle {
     this.emit({ t: 'turn', uid: u.uid });
     if (u.has('doom')) {
       u.doomCount--;
-      this.emit({ t: 'text', uid: u.uid, text: `Doom ${Math.max(0, u.doomCount)}`, color: '#c4f' });
+      this.emit({ t: 'text', uid: u.uid, text: line('engine.pop.doom', { n: Math.max(0, u.doomCount) }), color: '#c4f' });
       if (u.doomCount <= 0) { u.statuses.delete('doom'); this.knockOut(u); u.ct = 0; this.active = null; return false; }
     }
     if (u.has('invisible') && false) u.statuses.delete('invisible');
@@ -411,7 +427,7 @@ export class Battle {
       const d = Math.abs(u.x - x) + Math.abs(u.z - z);
       const chance = d <= u.move ? 100 : 100 - (d - u.move) * 25;
       u.moved = true;
-      if (!this.rng.pct(chance)) { this.emit({ t: 'text', uid: u.uid, text: 'Teleport failed', color: '#aaf' }); return this.flush(); }
+      if (!this.rng.pct(chance)) { this.emit({ t: 'text', uid: u.uid, text: line('engine.pop.teleport_failed'), color: '#aaf' }); return this.flush(); }
       this.emit({ t: 'move', uid: u.uid, path: [[u.x, u.z], [x, z]], teleport: true });
       this.placeUnit(u, x, z);
     } else {
@@ -425,7 +441,7 @@ export class Battle {
       this.placeUnit(u, x, z);
       u.moved = true;
       if (tiles > 0) {
-        if (u.hasMovement('moveHpUp')) this.heal(u, Math.max(1, Math.floor(u.maxHp / 10)), 'Move-HP Up');
+        if (u.hasMovement('moveHpUp')) this.heal(u, Math.max(1, Math.floor(u.maxHp / 10)), ABILITIES.get('moveHpUp')?.name);
         if (u.hasMovement('moveMpUp')) this.healMp(u, Math.max(1, Math.floor(u.maxMp / 10)));
         if (u.hasMovement('moveGetExp')) this.gainExp(u, tiles);
         if (u.hasMovement('moveGetJp')) this.gainJp(u, tiles, false);
@@ -456,7 +472,7 @@ export class Battle {
             u.roster.learned.push(a); u.crystalLearned.push(a); learned.push(a);
           }
         }
-        if (!learned.length) { this.heal(u, u.maxHp, 'Crystal'); this.healMp(u, u.maxMp); }
+        if (!learned.length) { this.heal(u, u.maxHp, line('engine.reason.crystal')); this.healMp(u, u.maxMp); }
         this.emit({ t: 'pickup', uid: u.uid, kind: 'crystal', learned, x, z });
       } else {
         const it = pk.item ?? 'potion';
@@ -504,7 +520,7 @@ export class Battle {
   commandGroups(u: BattleUnit): Array<{ id: string; name: string; abilities: AbilityDef[] }> {
     const out: Array<{ id: string; name: string; abilities: AbilityDef[] }> = [];
     const attack = ABILITIES.get('attack');
-    if (attack) out.push({ id: 'attack', name: 'Attack', abilities: [attack] });
+    if (attack) out.push({ id: 'attack', name: line('battle.cmd.attack'), abilities: [attack] });
     if (u.isMonster) {
       // a player's monster only recalls its secret art with a Beast Lore ally close by
       const lore = u.team !== 0 || this.units.some((o) => o !== u && o.team === u.team && o.alive && !o.gone && o.hasSupport('monsterSkill') && Math.abs(o.x - u.x) + Math.abs(o.z - u.z) <= 3);
@@ -520,23 +536,23 @@ export class Battle {
       const acts = u.skillsetActions(sec);
       if (acts.length) out.push({ id: sj.id, name: sj.skillset.name, abilities: acts });
     }
-    if (u.hasSupport('defend')) { const d = ABILITIES.get('defendCmd'); if (d) out.push({ id: 'defend', name: 'Defend', abilities: [d] }); }
+    if (u.hasSupport('defend')) { const d = ABILITIES.get('defendCmd'); if (d) out.push({ id: 'defend', name: line('battle.cmd.defend'), abilities: [d] }); }
     return out;
   }
 
   /** Why an ability can't be used right now (undefined = usable) */
   unusableReason(u: BattleUnit, a: AbilityDef, noMp = false): string | undefined {
     const mp = this.mpCost(u, a);
-    if (!noMp && mp > u.mp) return 'Not enough MP';
-    if (a.magic && u.has('silence')) return 'Silenced';
-    if (u.has('frog') && a.id !== 'attack' && a.id !== 'frogSpell') return 'Toads can only croak';
-    if (a.requires?.weapon && !a.requires.weapon.includes(u.weaponType())) return 'Needs ' + a.requires.weapon.join('/');
-    if (a.requires?.notWeapon && a.requires.notWeapon.includes(u.weaponType())) return 'Wrong weapon';
-    if (a.consumes && !this.stockOf(u, a.consumes)) return 'None in stock';
-    if (a.requires?.item && this.usesStock(u) && !(this.inventory.get(a.requires.item) ?? 0)) return 'None in stock';
+    if (!noMp && mp > u.mp) return line('engine.unusable.mp');
+    if (a.magic && u.has('silence')) return line('engine.unusable.silenced');
+    if (u.has('frog') && a.id !== 'attack' && a.id !== 'frogSpell') return line('engine.unusable.toad');
+    if (a.requires?.weapon && !a.requires.weapon.includes(u.weaponType())) return line('engine.unusable.needs_weapon', { weapons: fmtList(a.requires.weapon.map(weaponCatName), { type: 'disjunction' }) });
+    if (a.requires?.notWeapon && a.requires.notWeapon.includes(u.weaponType())) return line('engine.unusable.wrong_weapon');
+    if (a.consumes && !this.stockOf(u, a.consumes)) return line('engine.unusable.no_stock');
+    if (a.requires?.item && this.usesStock(u) && !(this.inventory.get(a.requires.item) ?? 0)) return line('engine.unusable.no_stock');
     const sp = a.special ? SPECIALS[a.special] : undefined;
     if (sp?.usable) { const r = sp.usable(this, u, a); if (r) return r; }
-    if (this.deepWaterBlocks(u, a, this.cellOf(u))) return 'In deep water';
+    if (this.deepWaterBlocks(u, a, this.cellOf(u))) return line('engine.unusable.deep_water');
     return undefined;
   }
 
@@ -763,7 +779,7 @@ export class Battle {
     const spell = opts.calc ? ABILITIES.get(opts.calc.spell) : undefined;
     const eff = spell ?? a;
     this.emit({
-      t: 'act', uid: u.uid, ability: eff.id, name: opts.calc ? `${a.name}: ${eff.name}` : eff.name, x, z,
+      t: 'act', uid: u.uid, ability: eff.id, name: opts.calc ? line('engine.banner.calc', { ability: a.name, spell: eff.name }) : eff.name, x, z,
       targets: targets.map((t) => t.uid), anim: a.anim, vfx: eff.vfx, item: opts.item, mimic: opts.mimic,
     });
     if (sp?.resolve) {
@@ -776,9 +792,10 @@ export class Battle {
     for (let t of targets) {
       // reflect
       if (eff.magic && !eff.noReflect && t.has('reflect') && t !== u) {
-        this.emit({ t: 'text', uid: t.uid, text: 'Reflect', color: '#dff' });
+        const reflect = line('engine.reflect');
+        this.emit({ t: 'text', uid: t.uid, text: reflect, color: '#dff' });
         const bounce = this.reflectTarget(u, t);
-        if (!bounce) { hits.push({ uid: t.uid, miss: true, guard: 'Reflect' }); continue; }
+        if (!bounce) { hits.push({ uid: t.uid, miss: true, guardKind: 'reflect', guard: reflect }); continue; }
         t = bounce;
       }
       const h = this.hitUnit(u, t, eff, opts, reactQueue);
@@ -872,31 +889,31 @@ export class Battle {
       const rid = reactAb?.id;
       const adjacent = Math.abs(c.x - t.x) + Math.abs(c.z - t.z) <= 1;
       const byBow = a.id === 'attack' && (c.weapon?.cat === 'bow' || c.weapon?.cat === 'crossbow');
-      if (rid === 'bladeGrasp' && physical && a.evadable && !byBow && this.rng.pct(t.brave)) { h.miss = true; h.guard = reactAb!.name; this.emit({ t: 'reaction', uid: t.uid, name: reactAb!.name }); return h; }
-      if (rid === 'arrowGuard' && byBow && this.rng.pct(t.brave)) { h.miss = true; h.guard = reactAb!.name; this.emit({ t: 'reaction', uid: t.uid, name: reactAb!.name }); return h; }
+      if (rid === 'bladeGrasp' && physical && a.evadable && !byBow && this.rng.pct(t.brave)) { h.miss = true; h.guardKind = 'reaction'; h.guard = reactAb!.name; this.emit({ t: 'reaction', uid: t.uid, name: reactAb!.name }); return h; }
+      if (rid === 'arrowGuard' && byBow && this.rng.pct(t.brave)) { h.miss = true; h.guardKind = 'reaction'; h.guard = reactAb!.name; this.emit({ t: 'reaction', uid: t.uid, name: reactAb!.name }); return h; }
       if (rid === 'catch' && a.anim === 'throw' && opts.item && this.rng.pct(t.brave)) {
-        h.miss = true; h.guard = reactAb!.name; this.emit({ t: 'reaction', uid: t.uid, name: reactAb!.name });
+        h.miss = true; h.guardKind = 'reaction'; h.guard = reactAb!.name; this.emit({ t: 'reaction', uid: t.uid, name: reactAb!.name });
         if (t.team === 0) this.addItem(opts.item, 1);
         return h;
       }
-      if (rid === 'fingerGuard' && a.skillset === 'orator' && this.rng.pct(t.brave)) { h.miss = true; h.guard = reactAb!.name; this.emit({ t: 'reaction', uid: t.uid, name: reactAb!.name }); return h; }
+      if (rid === 'fingerGuard' && a.skillset === 'orator' && this.rng.pct(t.brave)) { h.miss = true; h.guardKind = 'reaction'; h.guard = reactAb!.name; this.emit({ t: 'reaction', uid: t.uid, name: reactAb!.name }); return h; }
       if (rid === 'firstStrike' && physical && adjacent && a.id === 'attack' && this.rng.pct(t.brave)) {
         this.emit({ t: 'reaction', uid: t.uid, name: reactAb!.name });
         this.counterAttack(t, c);
-        h.miss = true; h.guard = reactAb!.name;
+        h.miss = true; h.guardKind = 'reaction'; h.guard = reactAb!.name;
         return h;
       }
     }
     // ---- beast speech: talk skills don't work on monsters without it ----
     if (this.needsBeastSpeech(c, t, a)) {
-      h.miss = true; h.guard = 'No effect'; return h;
+      h.miss = true; h.guardKind = 'immune'; h.guard = line('engine.no_effect'); return h;
     }
     // ---- hit roll ----
     const chance = this.hitChance(c, t, a, wp);
     if (!this.rng.pct(chance)) {
       h.miss = true;
-      if (a.evadable && t.shield && this.rng.pct(50)) h.guard = 'Blocked';
-      else if (a.evadable) h.guard = 'Evaded';
+      if (a.evadable && t.shield && this.rng.pct(50)) { h.guardKind = 'blocked'; h.guard = line('engine.guard.blocked'); }
+      else if (a.evadable) h.guardKind = 'evaded';
       return h;
     }
     // ---- effects ----
@@ -977,7 +994,7 @@ export class Battle {
           }
           if (add.length) (h.add ??= []).push(...add);
           if (rem.length) (h.remove ??= []).push(...rem);
-          if (!add.length && !rem.length && !effects.some((x) => x.type === 'damage' || x.type === 'heal')) h.text = [...(h.text ?? []), 'No effect'];
+          if (!add.length && !rem.length && !effects.some((x) => x.type === 'damage' || x.type === 'heal')) h.text = [...(h.text ?? []), line('engine.no_effect')];
           break;
         }
         case 'stat': {
@@ -992,25 +1009,24 @@ export class Battle {
             case 'mp': this.healMp(t, amt); break;
             default: break;
           }
-          const lbl: Record<string, string> = { brave: 'Brave', faith: 'Faith', pa: 'PA', ma: 'MA', speed: 'Speed', hp: 'HP', mp: 'MP', move: 'Move', jump: 'Jump' };
-          (h.text ??= []).push(`${lbl[e.stat]} ${amt >= 0 ? '+' : ''}${amt}`);
+          (h.text ??= []).push(statText(e.stat, amt));
           break;
         }
         case 'ct': {
           if (e.set !== undefined) t.ct = e.set;
           if (e.add !== undefined) t.ct = Math.max(0, t.ct + e.add);
-          (h.text ??= []).push(e.set !== undefined && e.set >= 100 ? 'Quick!' : e.set === 0 ? 'CT 0' : `CT ${e.add! > 0 ? '+' : ''}${e.add ?? ''}`);
+          (h.text ??= []).push(e.set === undefined ? ctText(e.add ?? 0) : e.set >= 100 ? line('engine.pop.quick') : line('engine.ct', { n: e.set }));
           break;
         }
         case 'breakEquip': {
           const slot = this.shieldSlot(t, e.slot);
           const id = t.roster.equip[slot];
-          if (!id) { (h.text ??= []).push('Nothing to break'); break; }
-          if (t.hasSupport('maintenance')) { (h.text ??= []).push('Maintained'); break; }
+          if (!id) { (h.text ??= []).push(line('engine.break.nothing')); break; }
+          if (t.hasSupport('maintenance')) { (h.text ??= []).push(line('engine.maintained')); break; }
           delete t.roster.equip[slot];
           this.regear(t);
           h.broke = id;
-          (h.text ??= []).push(`${ITEMS.get(id)?.name ?? id} broken!`);
+          (h.text ??= []).push(line('engine.break.broken', { item: ITEMS.get(id)?.name ?? id }));
           break;
         }
         case 'steal': {
@@ -1018,13 +1034,13 @@ export class Battle {
           break;
         }
         case 'invite': {
-          if (!t.recruitable) { (h.text ??= []).push('Refused'); break; }
+          if (!t.recruitable) { (h.text ??= []).push(line('engine.invite.refused')); break; }
           // a foe charmed onto the caster's side still belongs to its own side until invited
           if (t.team !== c.team || t.baseTeam !== c.team) {
             t.team = c.team; t.baseTeam = c.team; t.controlled = c.team === 0; t.statuses.delete('charm');
             if (c.team === 0) this.invited.push(t);
             this.emit({ t: 'teamChange', uid: t.uid, team: t.team });
-            (h.text ??= []).push('Joins your cause!');
+            (h.text ??= []).push(line('engine.invite.joined'));
           }
           break;
         }
@@ -1064,13 +1080,13 @@ export class Battle {
       const it = this.rng.pct(12) ? rare : common;
       this.poached.push(it);
       t.gone = true;
-      (h.text ??= []).push('Poached!');
+      (h.text ??= []).push(line('engine.pop.poached'));
     }
     if (t.alive && t.critical && t.isMonster && c.hasSupport('train') && t.team !== c.team && dealtHp > 0 && t.recruitable && this.rng.pct(60)) {
       t.team = c.team; t.baseTeam = c.team; t.controlled = c.team === 0; t.statuses.delete('charm');
       if (c.team === 0) this.invited.push(t);
       this.emit({ t: 'teamChange', uid: t.uid, team: t.team });
-      (h.text ??= []).push('Tamed!');
+      (h.text ??= []).push(line('engine.pop.tamed'));
     }
     // ---- queue post-hit reactions ----
     if (t !== c && !this.isAlly(c, t) && depth === 0) {
@@ -1124,9 +1140,9 @@ export class Battle {
       // as in resolveAbility: Reflect bounces the spell onto the caster
       if (reflects && t.has('reflect') && t !== u) {
         const bounce = this.reflectTarget(u, t);
-        if (!bounce) return { uid: t.uid, hit: 0, status: 'Reflect' };
+        if (!bounce) return { uid: t.uid, hit: 0, status: line('engine.reflect') };
         const p = this.previewOn(u, bounce, eff, opts);
-        p.status = p.status ? `Reflected: ${p.status}` : 'Reflected';
+        p.status = p.status ? line('engine.preview.reflected_effects', { effects: p.status }) : line('engine.preview.reflected');
         return p;
       }
       return this.previewOn(u, t, eff, opts);
@@ -1168,32 +1184,32 @@ export class Battle {
           else p.mp = -(amt);
           break;
         }
-        case 'revive': if (t.has('ko')) { if (!t.has('undead')) { p.heal = Math.floor(t.maxHp * e.pct); status.push('Revive'); } } else if (t.has('undead')) { if (t.boss) p.dmg = (p.dmg ?? 0) + Math.floor(t.maxHp * 0.12); else p.ko = true; } break;
+        case 'revive': if (t.has('ko')) { if (!t.has('undead')) { p.heal = Math.floor(t.maxHp * e.pct); status.push(line('engine.preview.revive')); } } else if (t.has('undead')) { if (t.boss) p.dmg = (p.dmg ?? 0) + Math.floor(t.maxHp * 0.12); else p.ko = true; } break;
         case 'status':
           for (const s of e.add ?? []) if (!t.has(s) && !t.immune.has(s)) status.push(STATUS[s].name);
-          for (const s of e.remove ?? []) if (t.has(s)) status.push('-' + STATUS[s].name);
+          for (const s of e.remove ?? []) if (t.has(s)) status.push(line('engine.preview.status_removed', { status: STATUS[s].name }));
           break;
-        case 'stat': status.push(`${e.stat} ${e.amount > 0 ? '+' : ''}${e.amount}`); break;
+        case 'stat': status.push(statText(e.stat, e.amount)); break;
         case 'special':
           if (e.id === 'instantKo') {
-            if (t.boss || t.immune.has('ko')) status.push('Resisted');
+            if (t.boss || t.immune.has('ko')) status.push(line('engine.resisted'));
             else if (t.has('undead')) p.heal = (p.heal ?? 0) + t.maxHp - t.hp;
-            else { p.ko = true; status.push('KO'); }
+            else { p.ko = true; status.push(line('engine.preview.ko')); }
           }
           else if (e.id === 'gravity') { if (!t.boss) p.dmg = Math.min(t.hp, Math.max(1, Math.floor(t.maxHp * Number(a.params?.pct ?? 0.25)))); }
           else if (e.id === 'fullRestore') p.heal = t.maxHp - t.hp;
           else if (e.id === 'wish') p.heal = Math.floor(c.maxHp / 5) * 2;
           break;
-        case 'steal': status.push('Steal'); break;
-        case 'breakEquip': status.push('Break'); break;
-        case 'invite': status.push('Invite'); break;
-        case 'ct': status.push(e.set !== undefined ? `CT ${e.set}` : `CT ${e.add}`); break;
+        case 'steal': status.push(line('engine.preview.steal')); break;
+        case 'breakEquip': status.push(line('engine.preview.break')); break;
+        case 'invite': status.push(line('engine.preview.invite')); break;
+        case 'ct': status.push(e.set !== undefined ? line('engine.ct', { n: e.set }) : ctText(e.add ?? 0)); break;
         default: break;
       }
     }
-    for (const sc of a.statusChance ?? []) status.push(`${STATUS[sc.status].name} ${sc.chance ?? 100}%`);
+    for (const sc of a.statusChance ?? []) status.push(line('engine.preview.status_chance', { status: STATUS[sc.status].name, chance: sc.chance ?? 100 }));
     if (p.dmg !== undefined && p.dmg >= t.hp && t.alive) p.ko = true;
-    if (status.length) p.status = status.join(', ');
+    if (status.length) p.status = fmtList(status, { style: 'narrow' });
     void sp;
     return p;
   }
@@ -1255,25 +1271,25 @@ export class Battle {
         if (t.critical && brave()) { say(); this.healMp(t, t.maxMp); }
         break;
       case 'criticalQuick':
-        if (t.critical && brave()) { say(); t.ct = 100; this.emit({ t: 'text', uid: t.uid, text: 'Quick!', color: '#ff9' }); }
+        if (t.critical && brave()) { say(); t.ct = 100; this.emit({ t: 'text', uid: t.uid, text: line('engine.pop.quick'), color: '#ff9' }); }
         break;
       case 'regenerator':
         if (dealt > 0 && brave()) { say(); if (this.addStatus(t, 'regen')) this.emit({ t: 'status', uid: t.uid, add: ['regen'] }); }
         break;
       case 'speedSave':
-        if (dealt > 0 && brave()) { say(); t.buff.speed++; this.emit({ t: 'text', uid: t.uid, text: 'Speed +1', color: '#9cf' }); }
+        if (dealt > 0 && brave()) { say(); t.buff.speed++; this.emit({ t: 'text', uid: t.uid, text: statText('speed', 1), color: '#9cf' }); }
         break;
       case 'paSave':
-        if (dealt > 0 && brave()) { say(); t.buff.pa++; this.emit({ t: 'text', uid: t.uid, text: 'PA +1', color: '#f96' }); }
+        if (dealt > 0 && brave()) { say(); t.buff.pa++; this.emit({ t: 'text', uid: t.uid, text: statText('pa', 1), color: '#f96' }); }
         break;
       case 'maSave':
-        if (dealt > 0 && brave()) { say(); t.buff.ma++; this.emit({ t: 'text', uid: t.uid, text: 'MA +1', color: '#c9f' }); }
+        if (dealt > 0 && brave()) { say(); t.buff.ma++; this.emit({ t: 'text', uid: t.uid, text: statText('ma', 1), color: '#c9f' }); }
         break;
       case 'braveUp':
-        if (dealt > 0 && brave()) { say(); t.brave = Math.min(100, t.brave + 3); this.emit({ t: 'text', uid: t.uid, text: 'Brave +3', color: '#fc6' }); }
+        if (dealt > 0 && brave()) { say(); t.brave = Math.min(100, t.brave + 3); this.emit({ t: 'text', uid: t.uid, text: statText('brave', 3), color: '#fc6' }); }
         break;
       case 'faithUp':
-        if (dealt > 0 && brave()) { say(); t.faith = Math.min(100, t.faith + 3); this.emit({ t: 'text', uid: t.uid, text: 'Faith +3', color: '#ffd' }); }
+        if (dealt > 0 && brave()) { say(); t.faith = Math.min(100, t.faith + 3); this.emit({ t: 'text', uid: t.uid, text: statText('faith', 3), color: '#ffd' }); }
         break;
       case 'caution':
         if (dealt > 0 && brave()) { say(); t.statuses.set('defending', 0); this.emit({ t: 'status', uid: t.uid, add: ['defending'] }); }
@@ -1311,7 +1327,7 @@ export class Battle {
         }
         break;
       case 'gilSnapper':
-        if (dealt > 0 && t.team === 0 && brave()) { say(); this.gil.value += dealt; this.lootGil += dealt; this.emit({ t: 'text', uid: t.uid, text: `+${dealt} gil`, color: '#fd6' }); }
+        if (dealt > 0 && t.team === 0 && brave()) { say(); this.gil.value += dealt; this.lootGil += dealt; this.emit({ t: 'text', uid: t.uid, text: line('engine.pop.gil', { count: dealt }), color: '#fd6' }); }
         break;
       default: break;
     }
@@ -1501,7 +1517,7 @@ export class Battle {
     this.placeUnit(t, dest.x, dest.z);
     if (fall > t.jump && t.alive) {
       const d = this.damage(t, Math.floor(t.maxHp * Math.min(0.5, 0.1 * fall)));
-      if (d) this.emit({ t: 'hp', uid: t.uid, delta: -d, reason: 'Fall' });
+      if (d) this.emit({ t: 'hp', uid: t.uid, delta: -d, reason: line('engine.reason.fall') });
     }
   }
 
@@ -1520,26 +1536,26 @@ export class Battle {
     if (slot === 'gil') {
       const amt = Math.floor(t.level * c.speed * 2 + this.rng.int(10, 60));
       if (c.team === 0) { this.gil.value += amt; this.lootGil += amt; }
-      (h.text ??= []).push(`Stole ${amt} gil`);
+      (h.text ??= []).push(line('engine.steal.gil', { count: amt }));
       return;
     }
     if (slot === 'exp') {
       const amt = Math.min(t.roster.exp, 30 + this.rng.int(0, 40));
       t.roster.exp -= amt;
       this.gainExp(c, amt);
-      (h.text ??= []).push(`Stole ${amt} EXP`);
+      (h.text ??= []).push(line('engine.steal.exp', { n: amt }));
       return;
     }
-    if (t.hasSupport('maintenance')) { (h.text ??= []).push('Maintained'); return; }
+    if (t.hasSupport('maintenance')) { (h.text ??= []).push(line('engine.maintained')); return; }
     let s: EquipSlot | undefined = slot === 'any' ? (['accessory', 'head', 'body', 'lhand', 'rhand'] as EquipSlot[]).find((x) => t.roster.equip[x]) : slot;
-    if (!s) { (h.text ??= []).push('Nothing to steal'); return; }
+    if (!s) { (h.text ??= []).push(line('engine.steal.nothing')); return; }
     const id = t.roster.equip[s];
-    if (!id) { (h.text ??= []).push('Nothing to steal'); return; }
+    if (!id) { (h.text ??= []).push(line('engine.steal.nothing')); return; }
     delete t.roster.equip[s];
     this.regear(t);
     if (c.team === 0) { this.loot.push(id); this.addItem(id, 1); }
     h.stolen = id;
-    (h.text ??= []).push(`Stole ${ITEMS.get(id)?.name ?? id}!`);
+    (h.text ??= []).push(line('engine.steal.item', { item: ITEMS.get(id)?.name ?? id }));
   }
 
   /** recompute after equipment was stolen/broken; drop permanent statuses the lost gear granted */
@@ -1609,7 +1625,7 @@ export class Battle {
       const tx = m.x + (x - u.x), tz = m.z + (z - u.z);
       const c = this.grid.cell(tx, tz);
       if (!c || c.hole) continue;
-      this.emit({ t: 'text', uid: m.uid, text: 'Mimic!', color: '#fcf' });
+      this.emit({ t: 'text', uid: m.uid, text: line('engine.pop.mimic'), color: '#fcf' });
       this.resolveAbility(m, a, tx, tz, { ...opts, mimic: true, depth: 1 });
     }
   }
@@ -1621,12 +1637,12 @@ export class Battle {
     this.events = [];
     if (facing && facing !== u.facing) { u.facing = facing; this.emit({ t: 'face', uid: u.uid, dir: facing }); }
     if (u.alive) {
-      if (u.has('poison')) { const d = this.damage(u, Math.max(1, Math.floor(u.maxHp / 8))); this.emit({ t: 'hp', uid: u.uid, delta: -d, reason: 'Poison' }); }
-      if (u.has('regen') && u.alive) this.heal(u, Math.max(1, Math.floor(u.maxHp / 8)), 'Regen');
+      if (u.has('poison')) { const d = this.damage(u, Math.max(1, Math.floor(u.maxHp / 8))); this.emit({ t: 'hp', uid: u.uid, delta: -d, reason: line('engine.reason.poison') }); }
+      if (u.has('regen') && u.alive) this.heal(u, Math.max(1, Math.floor(u.maxHp / 8)), line('engine.reason.regen'));
       const c = this.cellOf(u);
       if (c.terrain === 'l' && !u.has('float') && !u.hasMovement('lavaWalk') && !u.job.flying && u.alive) {
         const d = this.damage(u, Math.max(1, Math.floor(u.maxHp / 10)));
-        this.emit({ t: 'hp', uid: u.uid, delta: -d, reason: 'Lava' });
+        this.emit({ t: 'hp', uid: u.uid, delta: -d, reason: line('engine.reason.lava') });
       }
       if (c.terrain === 'p' && !u.has('float') && u.alive && this.addStatus(u, 'poison')) this.emit({ t: 'status', uid: u.uid, add: ['poison'] });
     }

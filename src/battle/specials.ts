@@ -5,6 +5,7 @@ import type { BattleUnit } from './unit';
 import type { Cell } from './grid';
 import { MapGrid } from './grid';
 import { ABILITIES, ITEMS } from '../data/db';
+import { t as line } from '../i18n';
 
 export interface Special {
   /** return a reason string if the ability can't be used */
@@ -54,7 +55,7 @@ export function throwables(b: Battle, cat: string, u?: BattleUnit): string[] {
 
 export const SPECIALS: Record<string, Special> = {
   /** learnable passive component (jump ranges, arithmancer terms) — never shown as a command */
-  passive: { usable: () => 'Passive' },
+  passive: { usable: () => line('engine.unusable.passive') },
 
   jump: {
     range: (b, u) => {
@@ -69,7 +70,7 @@ export const SPECIALS: Record<string, Special> = {
 
   /** Ninja throw — item chosen by UI/AI (opts.item) */
   throw: {
-    usable: (b, u, a) => (throwables(b, String(a.params?.cat ?? 'shuriken'), u).length ? undefined : 'Nothing to throw'),
+    usable: (b, u, a) => (throwables(b, String(a.params?.cat ?? 'shuriken'), u).length ? undefined : line('engine.unusable.nothing_to_throw')),
     range: (b, u) => ({ r: Math.max(1, u.move), min: 1, v: 99, line: false }),
     start: (b, u, a, x, z, opts) => {
       const list = throwables(b, String(a.params?.cat ?? 'shuriken'), u);
@@ -87,7 +88,7 @@ export const SPECIALS: Record<string, Special> = {
       const kat = a.requires?.item;
       if (kat && b.usesStock(u) && b.rng.pct(12)) {
         b.takeItem(kat);
-        b.emit({ t: 'text', uid: u.uid, text: `${ITEMS.get(kat)?.name ?? 'Katana'} shattered!`, color: '#faa' });
+        b.emit({ t: 'text', uid: u.uid, text: line('engine.pop.shattered', { item: ITEMS.get(kat)?.name ?? kat }), color: '#faa' });
       }
     },
   },
@@ -118,7 +119,7 @@ export const SPECIALS: Record<string, Special> = {
     usable: (b, u) => {
       const attrs = u.roster.learned.filter((id) => id.startsWith('calcAttr'));
       const divs = u.roster.learned.filter((id) => id.startsWith('calcDiv'));
-      return attrs.length && divs.length ? undefined : 'Learn an attribute and a divisor';
+      return attrs.length && divs.length ? undefined : line('engine.unusable.calc_terms');
     },
     range: () => ({ r: 0, min: 0, v: 99, line: false }),
   },
@@ -162,7 +163,7 @@ export const SPECIALS: Record<string, Special> = {
   gravity: {
     effect: (b, c, t, a, h) => {
       const p = Number(a.params?.pct ?? 0.25);
-      if (t.boss) { h.text = [...(h.text ?? []), 'Resisted']; return; }
+      if (t.boss) { h.text = [...(h.text ?? []), line('engine.resisted')]; return; }
       const d = b.damage(t, Math.max(1, Math.floor(t.maxHp * p)));
       h.dmg = (h.dmg ?? 0) + d;
     },
@@ -171,7 +172,7 @@ export const SPECIALS: Record<string, Special> = {
   /** Death / instant KO — bosses immune */
   instantKo: {
     effect: (b, c, t, a, h) => {
-      if (t.boss || t.immune.has('ko')) { h.text = [...(h.text ?? []), 'Resisted']; return; }
+      if (t.boss || t.immune.has('ko')) { h.text = [...(h.text ?? []), line('engine.resisted')]; return; }
       if (t.has('undead')) { b.heal(t, t.maxHp, undefined, false); h.heal = t.maxHp; return; }
       b.knockOut(t); h.ko = true;
     },

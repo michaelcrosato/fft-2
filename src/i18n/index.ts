@@ -63,7 +63,8 @@ export const pieces = (line: string) => cut(lang, line);
 const intlLang = isTestLanguage ? lang.slice(0, 2) : lang;
 export const fmtNum = (n: number) => { try { return new Intl.NumberFormat(intlLang).format(n); } catch { return String(n); } };
 export const fmtDate = (ms: number) => { try { return new Intl.DateTimeFormat(intlLang, { dateStyle: 'medium', timeStyle: 'short' }).format(ms); } catch { return new Date(ms).toISOString(); } };
-export const fmtList = (items: string[]) => { try { return new Intl.ListFormat(intlLang, { style: 'long', type: 'conjunction' }).format(items); } catch { return items.join(', '); } };
+/** A list in the player's language: "A, B, and C" (or "A or B" with type 'disjunction', "A, B, C" with style 'narrow'). */
+export const fmtList = (items: string[], opts: Intl.ListFormatOptions = {}) => { try { return new Intl.ListFormat(intlLang, { style: 'long', type: 'conjunction', ...opts }).format(items); } catch { return items.join(', '); } };
 /** Capitals in the player's language (Turkish i → İ). */
 export const upper = (s: string) => s.toLocaleUpperCase(intlLang);
 /** Sort names as the player's language does. */
