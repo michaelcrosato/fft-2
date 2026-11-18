@@ -141,8 +141,17 @@ class InputManager {
 
   /** `<kbd>` label for an action on the current device (help bars) */
   hint(a: Action): string {
-    const l = (this.lastDevice === 'pad' ? PAD_LABEL : KB_LABEL)[a] ?? a;
-    return `<kbd>${l}</kbd>`;
+    return `<kbd>${this.label(a)}</kbd>`;
+  }
+
+  /**
+   * The key or button that does an action on the device in use, as plain text: what a {key:…}
+   * tag in a line shows. Besides the actions, `arrows`, `updown` and `orbit` name groups of controls.
+   */
+  label(a: string): string {
+    const pad = this.lastDevice === 'pad';
+    const table: Record<string, string | undefined> = pad ? { ...PAD_LABEL, arrows: 'D-pad', updown: 'D-pad', orbit: 'RS', zoom: 'LT/RT' } : { ...KB_LABEL, arrows: '←↑→↓', updown: '↑↓', orbit: 'drag', zoom: '+/−' };
+    return table[a] ?? a;
   }
 
   /** short controller rumble (only while the player is using a gamepad) */

@@ -1,3 +1,4 @@
+import { dir, t } from "../i18n";
 import { h } from "./dom";
 import { input } from "./input";
 
@@ -29,13 +30,14 @@ class LoadingScreen {
 					"div.loading",
 					{ id: "loading", style: { opacity: "0" } },
 					h("div.loading-spinner", { "aria-hidden": "true" }),
-					h("div.loading-title", null, "Loading…"),
+					h("div.loading-title", null, t("common.loading.title")),
 					h("div", { id: "loadmsg", role: "status", "aria-live": "polite" }),
 				);
 				document.body.appendChild(this.el);
 			}
 			// Outside #ui so clearing menus or scripted fades cannot remove the loader.
-			this.el.setAttribute("aria-label", "Loading game");
+			this.el.setAttribute("aria-label", t("common.loading.label"));
+			this.el.dir = dir;
 			document.getElementById("app")?.setAttribute("aria-busy", "true");
 			this.pop = input.push(() => true, true);
 		}
@@ -92,7 +94,7 @@ class LoadingScreen {
 			h(
 				"div.loading",
 				{ id: "loading" },
-				h("div.loading-title", null, "Unable to continue"),
+				h("div.loading-title", null, t("common.loading.failed_title")),
 				h("div", { id: "loadmsg", role: "alert" }),
 			);
 		const el = this.el;
@@ -102,7 +104,7 @@ class LoadingScreen {
 		el.querySelector(".bar")?.remove();
 		const label = el.querySelector("#loadmsg");
 		if (label)
-			label.textContent = `Unable to load: ${error instanceof Error ? error.message : String(error)}`;
+			label.textContent = t("common.loading.failed", { error: error instanceof Error ? error.message : String(error) });
 		el.querySelector("button")?.remove();
 		this.pop?.();
 		this.pop = input.push((action) => {
@@ -112,7 +114,7 @@ class LoadingScreen {
 		const button = h(
 			"button.btn",
 			{ type: "button", onclick: () => location.reload() },
-			"Reload game",
+			t("common.loading.reload"),
 		);
 		el.appendChild(button);
 		button.focus();

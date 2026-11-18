@@ -14,6 +14,9 @@ import type { Backend } from './gfx/three';
 import { toast } from './ui/widgets';
 import { SIDE, NODES } from './data/db';
 import { loading, paintLoading } from './ui/loading';
+import { dir, fillPage, setControlLabel, t } from './i18n';
+import { localizeContent } from './i18n/content';
+import { uiRoot } from './ui/dom';
 
 const q = new URLSearchParams(location.search);
 // Debug URLs (README): throwaway test parties that autosave over the real save slots,
@@ -28,15 +31,20 @@ function setLoad(p: number, msg?: string) {
 const tick = paintLoading;
 
 async function boot() {
-  await loading.begin('Waking the renderer…');
+  // the player's language goes into the content before anything is shown
+  localizeContent();
+  setControlLabel((action) => input.label(action));
+  fillPage();
+  uiRoot().dir = dir;
+  await loading.begin(t('common.loading.renderer'));
   const opts = loadOptions();
   input.init();
-  window.addEventListener('gamepadconnected', (e) => toast(`🎮 Controller connected${/xbox|xinput/i.test(e.gamepad.id) ? ' (Xbox)' : /dualsense|dualshock|playstation|054c/i.test(e.gamepad.id) ? ' (PlayStation)' : ''}`));
-  window.addEventListener('gamepaddisconnected', () => toast('Controller disconnected'));
+  window.addEventListener('gamepadconnected', (e) => toast(`🎮 ${t(/xbox|xinput/i.test(e.gamepad.id) ? 'common.pad.connected_xbox' : /dualsense|dualshock|playstation|054c/i.test(e.gamepad.id) ? 'common.pad.connected_playstation' : 'common.pad.connected')}`));
+  window.addEventListener('gamepaddisconnected', () => toast(t('common.pad.disconnected')));
   audio.setVolumes?.({ music: opts.music, sfx: opts.sfx });
   // pointerdown alone doesn't count as a user activation for iOS Safari audio; attachUnlock also listens to touchend/click
   audio.attachUnlock();
-  setLoad(0.1, 'Waking the renderer…');
+  setLoad(0.1, t('common.loading.renderer'));
   const BACKENDS = ['webgpu', 'webgl2', 'webgl1'];
   const QUALITIES = ['ultra', 'high', 'medium', 'low', 'auto'];
   const qRenderer = q.get('renderer'), qQuality = q.get('quality');
@@ -50,13 +58,13 @@ async function boot() {
   await loadTSL();
   // downloads while the textures below are painted
   preloadPostEffects();
-  setLoad(0.3, 'Painting the land…');
+  setLoad(0.3, t('common.loading.land'));
   const texIds: TexId[] = ['grass', 'dirt', 'cobble', 'rock', 'brick', 'planks', 'roof', 'plaster', 'stoneWall', 'riverbed', 'sand', 'sandstone', 'moss', 'carpet', 'snow', 'marsh'];
   for (let i = 0; i < texIds.length; i++) { getTexture(texIds[i]); setLoad(0.3 + (0.5 * i) / texIds.length); if (i % 4 === 3) await tick(); }
-  setLoad(0.85, 'Summoning beasts…');
+  setLoad(0.85, t('common.loading.beasts'));
   await loadMonsterBuilder();
   const game = new Game();
-  setLoad(0.9, 'Opening the chronicle…');
+  setLoad(0.9, t('common.loading.chronicle'));
   // The destination releases the loader after its real first frame is ready.
 
   if (DEBUG_HOOKS && (await runDebugHooks(game))) return;
@@ -141,7 +149,7 @@ function lostCount(): number { try { return Number(sessionStorage.getItem(LOST_K
 /** the GPU device / GL context is gone: the canvas can't recover, so offer a reload (progress is in the autosave) */
 function showRendererLost() {
   try { sessionStorage.setItem(LOST_KEY, String(lostCount() + 1)); } catch { /* private mode */ }
-  loading.fail(new Error('The graphics device stopped responding. Your last autosave is safe. Reload to continue.'));
+  loading.fail(new Error(t('common.gpu_lost')));
 }
 
 // World-map actions also run from event handlers rather than the awaited story loop.

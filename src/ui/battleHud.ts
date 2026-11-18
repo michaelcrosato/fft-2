@@ -1,4 +1,5 @@
 // Battle HUD: unit cards, turn order, tile info, help bar, action preview.
+import { dir, type Part } from '../i18n';
 import { h, uiRoot } from './dom';
 import { bar } from './widgets';
 import type { BattleUnit } from '../battle/unit';
@@ -33,6 +34,8 @@ export function portraitFor(u: BattleUnit): Promise<string> {
   }, bg);
 }
 
+type HelpSrc = string | Part[] | (() => string | Part[]);
+
 export class BattleHud {
   root: HTMLElement;
   private cardA: HTMLElement | null = null;
@@ -41,7 +44,7 @@ export class BattleHud {
   private tile: HTMLElement | null = null;
   private help: HTMLElement | null = null;
   private prev: HTMLElement | null = null;
-  private helpSrc: string | (() => string) = '';
+  private helpSrc: HelpSrc = '';
   private back: HTMLElement | null = null;
   private offDevice: () => void;
   showAT = true;
@@ -123,12 +126,16 @@ export class BattleHud {
   }
 
   /** help bar; pass a function to have it re-rendered when the input device changes */
-  helpText(src: string | (() => string)) {
+  /** The help bar: a line (from tParts) whose {key:…} controls are drawn as key caps. */
+  helpText(src: HelpSrc) {
     this.helpSrc = src;
     this.help?.remove();
-    const html = typeof src === 'function' ? src() : src;
-    if (!html) { this.help = null; return; }
-    this.help = h('div.helpbar', { html });
+    const parts = typeof src === 'function' ? src() : src;
+    const list = typeof parts === 'string' ? (parts ? [parts] : []) : parts;
+    if (!list.length) { this.help = null; return; }
+    this.help = h('div.helpbar');
+    this.help.dir = dir;
+    for (const p of list) this.help.append(typeof p === 'string' ? p : h('kbd', null, input.label(p.key)));
     this.root.appendChild(this.help);
   }
 

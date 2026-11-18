@@ -1,4 +1,5 @@
 // Persistent game state + save slots.
+import { t } from '../i18n';
 import type { RosterUnit } from './roster';
 import { addExp, addJp, createCharacter, createGeneric, newUid, randomName, setLevel } from './roster';
 import { autoEquip } from './setup';
@@ -242,7 +243,7 @@ export function listSaves(): Array<SlotInfo | null> {
   for (let i = 0; i < SLOTS; i++) {
     const s = loadGame(i);
     if (!s) { out.push(null); continue; }
-    out.push({ slot: i, heroName: s.heroName, chapter: s.chapter, location: s.location, playtime: s.playtime, savedAt: s.savedAt ?? 0, level: partyLevel(s), objective: STORY[s.storyIndex]?.objective ?? 'The tale is told.' });
+    out.push({ slot: i, heroName: s.heroName, chapter: s.chapter, location: s.location, playtime: s.playtime, savedAt: s.savedAt ?? 0, level: partyLevel(s), objective: STORY[s.storyIndex]?.objective ?? t('common.tale_told') });
   }
   return out;
 }

@@ -1,10 +1,11 @@
+import { t } from '../i18n';
 import { h } from './dom';
 
 /** Kept outside #ui so scenes and world-map overlays cannot remove the controls. */
 export function gameToolbar(): HTMLElement {
   let bar = document.getElementById('game-controls');
   if (!bar) {
-    bar = h('div.game-toolbar', { id: 'game-controls', role: 'toolbar', 'aria-label': 'Game controls' });
+    bar = h('div.game-toolbar', { id: 'game-controls', role: 'toolbar', 'aria-label': t('common.toolbar_label') });
     document.body.appendChild(bar);
   }
   return bar;
