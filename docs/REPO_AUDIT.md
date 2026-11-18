@@ -177,3 +177,28 @@ test unless noted; `npm test` covers the engine, state, audio, texture and input
   to screen readers.
 - The repository is public and ships third-party Final Fantasy Tactics audio placeholders
   marked for internal testing only.
+
+# Pass 4 — 52in1 (November 2026)
+
+The work list is `docs/PLAN-52IN1.md`. Each entry below says what changed and how it is checked.
+
+## Vercel retired
+
+`vercel.json`, `.vercelignore` and the versioned audio cache rule are gone; the Vercel project no
+longer existed. 52in1 is the game's public home, and `npm run package` builds what it imports.
+
+## Original music and sound
+
+| Change | Checked by |
+| --- | --- |
+| All 61 third-party placeholder files (Final Fantasy Tactics music and The Ivalice Chronicles effects), their manifest, catalogue and checks are removed. The build shrinks from 65 MB to under 5 MB. | `e2e/audio.spec.ts` asserts no audio file is requested. |
+| A synthesizer replaces file playback: oscillator voices for sustained instruments, procedurally rendered samples for plucked, struck and percussion ones, a look-ahead sequencer, rooms (convolution reverb), a limiter. The engine's API is unchanged. | `tests/audio.test.ts`: scheduling, crossfades, once-songs, 52in1 volumes, ducking, voice limits, low quality. |
+| An original score: 24 cues on five leitmotifs, written in a small notation. Loops are seamless intro-plus-body forms instead of fade tails. | Each note's timing, range and velocity; every cue the code names; slicing time never drops or doubles a note; the body repeats exactly. |
+| 58 original sound effects, each its own design (the placeholders shared one sound across up to five cues). No voices: the dialogue blip is gone and creature calls are non-vocal. | Every effect renders finite, normalized and deterministic; plucked strings are in tune within 5 cents. |
+| Inside 52in1 the music and effects volumes multiply by `AIHubSettings.music` and `.effects`, and follow its `change` event; the engine never applies a master volume of its own over 52in1's, and resumes only on a gesture or a returning page. | `tests/audio.test.ts`. |
+| Phones and the lowest graphics preset use lighter synthesis (one voice per note, no vibrato, no reverb). Fast notes never get unison or vibrato, and fixed filters are shared per part. | `npm run audio:verify`: a 45 s battle cue renders in ~3 s (high) and ~1 s (low) in headless Chromium. |
+| Scene scripts' sound words (`sword`, `scream`, `thunder`…) map to effects in one table the validator also uses; the validator rejects unknown music and effects. | `npm run validate`. |
+| The credits roll names the original score instead of the placeholders. | — |
+
+`npm run audio:verify` renders every cue through the real engine and checks clipping, loudness,
+DC offset, loop seams and render cost; the audition page measures any single cue.

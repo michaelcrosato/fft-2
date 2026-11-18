@@ -5,6 +5,7 @@ import type { Stage } from './stage';
 import type { UnitView } from './unitview';
 import type { ClipName } from '../gfx/models/anim';
 import { THREE } from '../gfx/three';
+import { sfxFor } from '../audio/sfx';
 import { audio } from '../audio/audio';
 import { h, uiRoot } from '../ui/dom';
 import { input } from '../ui/input';
@@ -181,7 +182,7 @@ async function runCmd(c: SceneCmd, host: SceneHost): Promise<void> {
       return;
     }
     case 'music': if (c[1]) audio.playMusic(c[1], { fade: 1.2 }); else audio.stopMusic(1.2); return;
-    case 'sfx': audio.sfx(({ gunshot: 'gun', stone: 'hit', sword: 'swing', slash: 'swing', splash: 'water', fire: 'fire', scream: 'hitHeavy', knock: 'door', footsteps: 'step', crowd: 'bell', thunder: 'thunderclap', lightning: 'bolt', explosion: 'explosion', magic: 'magic', heal: 'heal' } as Record<string, string>)[c[1]] ?? c[1]); return;
+    case 'sfx': audio.sfx(sfxFor(c[1])); return;
     case 'vfx': {
       const [, id, at] = c;
       let p: import('three/webgpu').Vector3 | undefined;

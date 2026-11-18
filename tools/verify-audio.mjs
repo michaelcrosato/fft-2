@@ -1,124 +1,98 @@
-// Run against a dev server: node tools/verify-audio.mjs http://127.0.0.1:5173
-import assert from "node:assert/strict";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { chromium } from "playwright";
+#!/usr/bin/env node
+// Renders every music cue and sound effect through the real engine (an OfflineAudioContext in
+// headless Chromium) and checks it: no clipping, sensible loudness, no DC offset, no click where a
+// looped body starts again, and faster than real time. Writes tools/out/audio-verification/report.json.
+// Usage: npm run audio:verify [-- --only battle1,hit] [--seconds 40] [--low]   (--low: the phones' lighter synthesis)
+import { mkdirSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { createServer } from 'vite';
+import { chromium } from 'playwright';
 
-const base = process.argv[2];
-if (!base)
-	throw new Error("Pass the URL of this game’s running Vite dev server.");
-const manifest = JSON.parse(
-	await readFile(
-		new URL("../src/audio/manifest.json", import.meta.url),
-		"utf8",
-	),
-);
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const OUT = path.join(ROOT, 'tools', 'out', 'audio-verification');
+const argv = process.argv.slice(2);
+const only = argv.includes('--only') ? argv[argv.indexOf('--only') + 1].split(',') : null;
+const maxSeconds = argv.includes('--seconds') ? Number(argv[argv.indexOf('--seconds') + 1]) : 45;
+const low = argv.includes('--low');
+
+const server = await createServer({ root: ROOT, logLevel: 'error', server: { port: 0, host: '127.0.0.1' } });
+await server.listen();
+const url = server.resolvedUrls.local[0];
 const browser = await chromium.launch();
-const output = new URL("./out/audio-verification/", import.meta.url);
-await mkdir(output, { recursive: true });
+const page = await browser.newPage();
+const failures = [];
+const report = { music: {}, sfx: {} };
 try {
-	const page = await browser.newPage();
-	const errors = [];
-	page.on("pageerror", (e) => errors.push(e.message));
-	page.on("console", (m) => {
-		if (m.type() === "error" || m.text().includes("[audio]"))
-			errors.push(m.text());
-	});
-	await page.goto(new URL("audio-test.html", base).href);
-	await page.locator("#unlock").click();
-	await page.waitForFunction(() => window.audio?.unlocked);
-	const decoded = [];
-	// Decode every local file and inspect the actual samples, including each cue's excerpt.
-	for (const [id, asset] of Object.entries(manifest.assets)) {
-		const cues = Object.entries(manifest.sfx).filter(([, c]) => c.asset === id);
-		const result = await page.evaluate(
-			async ({ asset, cues }) => {
-				const ctx = new AudioContext();
-				try {
-					const response = await fetch(new URL(asset.src, document.baseURI));
-					if (!response.ok)
-						throw new Error(`HTTP ${response.status}: ${asset.src}`);
-					const buffer = await ctx.decodeAudioData(
-						await response.arrayBuffer(),
-					);
-					const samples = buffer.getChannelData(0);
-					const peak = (start, end) => {
-						let max = 0;
-						for (let i = start; i < end; i++)
-							max = Math.max(max, Math.abs(samples[i]));
-						return max;
-					};
-					return {
-						duration: buffer.duration,
-						peak: peak(0, samples.length),
-						cues: cues.map(([name, c]) => ({
-							name,
-							peak: peak(
-								Math.floor((c.offset ?? 0) * buffer.sampleRate),
-								Math.min(
-									samples.length,
-									Math.floor(
-										((c.offset ?? 0) + (c.duration ?? buffer.duration)) *
-											buffer.sampleRate,
-									),
-								),
-							),
-						})),
-					};
-				} finally {
-					await ctx.close();
-				}
-			},
-			{ asset, cues },
-		);
-		assert.ok(result.peak > 0.0001, `${id} is silent`);
-		assert.ok(
-			Math.abs(result.duration - asset.duration) < 0.15,
-			`${id} duration mismatch`,
-		);
-		for (const cue of result.cues)
-			assert.ok(cue.peak > 0.0001, `${cue.name} excerpt is silent`);
-		decoded.push({ id, ...result });
-	}
-	console.log(
-		`Decoded ${decoded.length} files; every effect excerpt contains audio.`,
-	);
-	const playback = [];
-	for (const id of Object.keys(manifest.music)) {
-		await page.evaluate(
-			(id) => audio.playMusic(id, { fade: 0, restart: true }),
-			id,
-		);
-		await page.waitForFunction(
-			(id) => audio.debug().track === id && audio.debug().time > 0.2,
-			id,
-		);
-		await page.waitForFunction(() => {
-			const b = new Float32Array(audio.analyser.fftSize);
-			audio.analyser.getFloatTimeDomainData(b);
-			return b.some((v) => Math.abs(v) > 0.0001);
-		});
-		playback.push(await page.evaluate(() => audio.debug()));
-	}
-	await page.locator("#stop").click();
-	await page.waitForFunction(() => audio.debug().musicVoices === 0);
-	await page
-		.getByRole("button", { name: "SFX storm (voice limit)", exact: true })
-		.click();
-	await page.waitForFunction(() => audio.debug().sfxVoices > 2);
-	assert.equal((await page.evaluate(() => audio.debug())).error, null);
-	await page.waitForFunction(() => audio.debug().sfxVoices === 0);
-	assert.deepEqual(errors, []);
-	await page.screenshot({
-		path: new URL("audition.png", output).pathname,
-		fullPage: true,
-	});
-	await writeFile(
-		new URL("results.json", output),
-		JSON.stringify({ decoded, playback, errors }, null, 2),
-	);
-	console.log(
-		`Played ${playback.length} music cues through the mixer; SFX stress and cleanup passed. No audio errors.`,
-	);
+  await page.goto(`${url}audio-test.html`);
+  await page.waitForFunction(() => typeof window.renderOffline === 'function' && !!window.audio, null, { timeout: 60_000 });
+  const cues = await page.evaluate(() => ({ music: window.audio.trackIds, sfx: window.audio.sfxIds }));
+  for (const kind of ['music', 'sfx']) {
+    for (const id of cues[kind]) {
+      if (only && !only.includes(id)) continue;
+      const r = await page.evaluate(async ({ kind, id, maxSeconds, low }) => {
+        const song = kind === 'music' ? window.audio.song(id) : null;
+        const lead = window.OFFLINE_LEAD;
+        const intro = lead + (song?.intro ? (song.intro.beats * 60) / (song.intro.bpm ?? song.bpm) : 0);
+        const body = song ? (song.body.beats * 60) / (song.body.bpm ?? song.bpm) : 0;
+        // a looping song renders past its first seam; a once-song renders whole
+        const seconds = kind === 'music' ? Math.min(maxSeconds, song.once ? intro - lead + body + 3 : intro - lead + body + 4) : 0;
+        const t0 = performance.now();
+        const b = await window.renderOffline(kind, id, seconds, { sampleRate: 44100, low });
+        const ms = performance.now() - t0;
+        let peak = 0, sum = 0, dc = 0, n = 0, nan = 0;
+        const jumps = [];
+        for (let c = 0; c < b.numberOfChannels; c++) {
+          const d = b.getChannelData(c);
+          let worst = 0;
+          for (let i = 0; i < d.length; i++) {
+            const v = d[i];
+            if (!Number.isFinite(v)) { nan++; continue; }
+            const a = Math.abs(v);
+            if (a > peak) peak = a;
+            sum += v * v; dc += v; n++;
+            if (i) worst = Math.max(worst, Math.abs(v - d[i - 1]));
+          }
+          jumps.push(worst);
+        }
+        // the seam: the largest sample-to-sample step within 10 ms of the body's restart, against the
+        // same moment of the first pass (the same notes start there, without a click)
+        let seam = null;
+        if (song && !song.once && intro + body < lead + seconds) {
+          const w = Math.round(0.01 * b.sampleRate);
+          const stepNear = (t) => {
+            const at = Math.round(t * b.sampleRate);
+            let m = 0;
+            for (let c = 0; c < b.numberOfChannels; c++) {
+              const d = b.getChannelData(c);
+              for (let i = Math.max(1, at - w); i < Math.min(d.length, at + w); i++) m = Math.max(m, Math.abs(d[i] - d[i - 1]));
+            }
+            return m;
+          };
+          seam = stepNear(intro + body) / Math.max(1e-4, stepNear(intro), Math.max(...jumps) * 0.05);
+        }
+        const db = (x) => (x > 0 ? 20 * Math.log10(x) : -Infinity);
+        return { seconds: b.duration, renderMs: Math.round(ms), peakDb: db(peak), rmsDb: db(Math.sqrt(sum / Math.max(1, n))), dc: dc / Math.max(1, n), nan, seam };
+      }, { kind, id, maxSeconds, low });
+      report[kind][id] = r;
+      const problems = [];
+      if (r.nan) problems.push(`${r.nan} non-finite samples`);
+      if (r.peakDb > -0.1) problems.push(`clips (peak ${r.peakDb.toFixed(2)} dBFS)`);
+      if (kind === 'music' && (r.rmsDb < -34 || r.rmsDb > -12)) problems.push(`loudness ${r.rmsDb.toFixed(1)} dB RMS, outside −34…−12`);
+      if (kind === 'sfx' && r.peakDb < -24) problems.push(`nearly silent (peak ${r.peakDb.toFixed(1)} dBFS)`);
+      if (Math.abs(r.dc) > 0.01) problems.push(`DC offset ${r.dc.toFixed(4)}`);
+      if (r.seam !== null && r.seam > 3) problems.push(`a click at the loop seam (${r.seam.toFixed(2)}× the first pass)`);
+      if (kind === 'music' && r.renderMs > r.seconds * 1000 * 0.75) problems.push(`too slow to render: ${r.renderMs} ms for ${r.seconds.toFixed(1)} s`);
+      const line = `${problems.length ? '✗' : '✓'} ${kind} ${id.padEnd(12)} ${r.seconds.toFixed(1).padStart(5)} s · peak ${r.peakDb.toFixed(1).padStart(6)} dB · rms ${r.rmsDb.toFixed(1).padStart(6)} dB · ${String(r.renderMs).padStart(5)} ms${r.seam !== null ? ` · seam ${r.seam.toFixed(2)}` : ''}`;
+      console.log(problems.length ? `${line}\n    ${problems.join('; ')}` : line);
+      if (problems.length) failures.push(`${kind} ${id}: ${problems.join('; ')}`);
+    }
+  }
 } finally {
-	await browser.close();
+  await browser.close();
+  await server.close();
 }
+mkdirSync(OUT, { recursive: true });
+writeFileSync(path.join(OUT, 'report.json'), JSON.stringify({ when: new Date().toISOString(), failures, ...report }, null, 2));
+console.log(failures.length ? `\n${failures.length} cue(s) failed` : '\nall cues pass');
+process.exit(failures.length ? 1 : 0);

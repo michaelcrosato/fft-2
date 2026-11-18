@@ -201,7 +201,6 @@ export function say(speaker: string, text: string, o: SayOpts = {}): Promise<voi
       last = now;
       const n = Math.min(text.length, Math.floor(acc));
       if (n > shown) {
-        if (n - shown >= 1 && (n % 3 === 0)) audio.sfx('textBlip', { volume: 0.25 });
         shown = n; txt.textContent = text.slice(0, shown);
       }
       if (shown >= text.length) { done = true; next.style.visibility = 'visible'; if (o.auto) gameClock.schedule(finish, o.auto); return; }
