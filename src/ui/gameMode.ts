@@ -1,4 +1,5 @@
 // Browser immersion is opt-in for each campaign entry, never a saved preference.
+import { dir, t } from '../i18n';
 import { h } from './dom';
 import { input } from './input';
 import { toast } from './widgets';
@@ -117,12 +118,7 @@ class GameMode {
     this.wasFullscreen = this.fullscreen;
     for (const listener of this.listeners) listener();
     void this.keepAwake(); // an optional API must never delay starting a campaign
-    toast(
-      this.fullscreen
-        ? 'Fullscreen on. Exit from the Menu or with Esc.'
-        : 'Game Mode protections on; fullscreen is unavailable. You can retry from the Menu with a tap or key press. Exit from the Menu or with Esc.',
-      6500,
-    );
+    toast(t(this.fullscreen ? 'gamemode.on_fullscreen' : 'gamemode.on_without_fullscreen'), 6500);
   }
 
   exit() {
@@ -179,8 +175,8 @@ export const gameMode = new GameMode();
 
 /** The Menu's fullscreen entry (Game Mode without fullscreen where the browser has none). */
 export function fullscreenLabel(): string {
-  if (!gameMode.fullscreenAvailable) return gameMode.active ? 'Exit Game Mode' : 'Game Mode';
-  return gameMode.active ? 'Exit Fullscreen' : 'Fullscreen';
+  if (!gameMode.fullscreenAvailable) return t(gameMode.active ? 'gamemode.exit_game_mode' : 'gamemode.game_mode');
+  return t(gameMode.active ? 'gamemode.exit_fullscreen' : 'gamemode.fullscreen');
 }
 
 /** Call inside the click or key press: browsers only grant fullscreen to a user gesture. */
@@ -196,25 +192,14 @@ export function promptGameMode(): Promise<void> {
       'aria-labelledby': 'game-mode-title',
       'aria-describedby': 'game-mode-description',
     }) as HTMLDialogElement;
-    const enable = h('button.btn', { type: 'button' }, 'Enable Game Mode') as HTMLButtonElement;
-    const decline = h('button.btn.ghost', { type: 'button' }, 'Play in Browser') as HTMLButtonElement;
+    dialog.dir = dir;
+    const enable = h('button.btn', { type: 'button' }, t('gamemode.prompt.enable')) as HTMLButtonElement;
+    const decline = h('button.btn.ghost', { type: 'button' }, t('gamemode.prompt.decline')) as HTMLButtonElement;
     dialog.append(
-      h('h2', { id: 'game-mode-title' }, 'Fullscreen Game Mode?'),
-      h(
-        'p',
-        { id: 'game-mode-description' },
-        'Hide browser controls, reduce accidental edge swipes and keep the screen awake while you play, where supported.',
-      ),
-      h('p.muted', null, 'Exit anytime from the Menu or with Esc. Your device may still allow system gestures.'),
-      ...(!gameMode.fullscreenAvailable
-        ? [
-            h(
-              'p',
-              null,
-              'Fullscreen is unavailable in this browser. Game Mode can still reduce accidental browser gestures.',
-            ),
-          ]
-        : []),
+      h('h2', { id: 'game-mode-title' }, t('gamemode.prompt.question')),
+      h('p', { id: 'game-mode-description' }, t('gamemode.prompt.explain')),
+      h('p.muted', null, t('gamemode.prompt.how_to_exit')),
+      ...(!gameMode.fullscreenAvailable ? [h('p', null, t('gamemode.prompt.no_fullscreen'))] : []),
       h('div.game-mode-actions', null, enable, decline),
     );
     let busy = false;

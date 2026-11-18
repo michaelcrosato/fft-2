@@ -1,13 +1,16 @@
 // "How to Play" — field manual, reference tables and controls.
 
 import { fieldManual } from "../../data/guides/fieldManual";
+import { t } from "../../i18n";
 import { h } from "../dom";
+import { input } from "../input";
 import { menu } from "../widgets";
 import { overlay } from "./common";
 
 export async function openHelp(parent?: HTMLElement) {
-	const ov = overlay("How to Play", parent);
-	const topics = fieldManual();
+	const ov = overlay(t("manual.screen_title"), parent);
+	const pad = input.lastDevice === "pad";
+	const topics = fieldManual({ pad });
 	let body = null as HTMLElement | null;
 	let textPane = null as HTMLElement | null;
 	let shown = -1;
@@ -63,7 +66,7 @@ export async function openHelp(parent?: HTMLElement) {
 			h(
 				"div.muted",
 				{ style: { fontSize: ".82em", flexShrink: "0" } },
-				"Scroll text: ←/→ · Page Up/Down · wheel · swipe",
+				t(pad ? "manual.scroll_hint_pad" : "manual.scroll_hint"),
 			),
 			textPane,
 		);
@@ -73,10 +76,10 @@ export async function openHelp(parent?: HTMLElement) {
 		// Choosing keeps the topic open; Back leaves. Reference text scrolls
 		// independently of the topic selector with keyboard, gamepad or touch.
 		await menu({
-			items: topics.map((t, i) => ({ label: t.title, value: i })),
+			items: topics.map((topic, i) => ({ label: topic.title, value: i })),
 			x: 16,
 			y: 64,
-			title: "Topics",
+			title: t("manual.topics"),
 			parent: ov.root,
 			keepOpenOnChoose: true,
 			maxHeight: "calc(70 * var(--vh))",

@@ -1,0 +1,198 @@
+// How to Play: the field manual's topics (src/data/guides/fieldManual.ts) and its screen
+// (src/ui/menus/help.ts). Each topic is a title and its paragraphs, one line per paragraph;
+// tables built from the game's data use one line per row pattern.
+import type { Lines } from '../core';
+
+export const lines: Lines = {
+  'manual.screen_title': 'How to Play',
+  'manual.topics': 'Topics',
+  'manual.scroll_hint': 'Scroll text: {key:left}/{key:right} · Page Up/Down · wheel · swipe',
+  'manual.scroll_hint_pad': 'Scroll text: {key:arrows} ←/→',
+
+  'manual.first_battle.title': 'Before the Battle',
+  'manual.first_battle.p1': 'Read the victory condition before deploying. Some battles require a particular foe defeated, a position reached, or an ally protected. A protected ally falling or turning to Stone can end that battle immediately.',
+  'manual.first_battle.p2': 'In Formation, choose jobs, learn abilities, set your secondary skillset and passive abilities, then check equipment. Bring a way to restore HP, a way to revive fallen allies, and supplies for your Items commands. A learned command does not provide its consumable.',
+  'manual.first_battle.p3': 'Check the target preview and Turn Order before committing. Keep a healer within reach of the front line, spread out against area attacks, and find a safe approach to archers and casters on high ground. Guests fight for your side under their own orders.',
+
+  'manual.controls.title': 'Controls',
+  'manual.controls.keyboard': 'Keyboard: arrows/WASD move the cursor, Enter/Space confirm, Esc/Backspace go back. Camera: Q/E rotate, R toggles a high angle, +/- zoom, F recenters. When no menu is open in battle (for example during an enemy turn) the arrows pan the camera. Tab shows the turn order; hold Shift to fast-forward animations and text.',
+  'manual.controls.mouse': 'Mouse: hover a tile to inspect it, click to confirm, right-click to go back. Drag to orbit the camera (it settles on the nearest corner), right-drag or Shift+drag to pan, wheel or trackpad pinch to zoom.',
+  'manual.controls.touch': 'Touch: tap a tile to select it and tap again to confirm. Drag with one finger to orbit; pinch to zoom and drag two fingers to pan. The round buttons at the bottom of the battlefield rotate, zoom (hold), tilt and recenter the camera.',
+  'manual.controls.gamepad': 'Gamepad (Xbox layout; on PlayStation A=✕ B=○ X=□ Y=△): D-pad or left stick move, A confirm, B back, Start/Y menu, View turn order. Camera: right stick orbits and tilts, LT/RT zoom, LB/RB rotate 90°, L3 high angle, R3 recenter. Hold X to fast-forward.',
+  'manual.controls.this_manual': 'In this manual, {key:up}/{key:down} chooses a topic. {key:left}/{key:right} or Page Up/Page Down scrolls its text; mouse wheel and touch scrolling work too.',
+  'manual.controls.this_manual_pad': 'In this manual, {key:arrows} ↑/↓ chooses a topic and {key:arrows} ←/→ scrolls its text.',
+
+  'manual.turns.title': 'Turns & CT',
+  'manual.turns.p1': "Every unit has a Charge Time (CT) gauge. Each clocktick it fills by the unit's effective Speed; at 100 or more the unit is ready to act. Haste accelerates that gain, Slow reduces it, and Stop freezes it. Faster soldiers may act several times before a slower one.",
+  'manual.turns.p2': 'On a turn you may Move and Act once each, in either order, then choose a facing. Moving and acting spends 100 CT; doing only one spends 80; simply Waiting spends 60. Any overflow can carry forward, up to 60 CT after the turn. Waiting can therefore bring the next turn sooner.',
+  'manual.turns.p3': 'Charging or taking a Jump pauses normal CT gain until the action resolves. Songs and dances repeat while the performer continues to receive turns. The Turn Order list ({key:turnList}) includes charged actions; judge a cast by where it appears among enemy turns.',
+
+  'manual.targeting.title': 'Targeting & Charge',
+  'manual.targeting.p1': 'An ability has a targeting range and may cover an area around its centre. Height tolerance can exclude a nearby tile. Read the preview for everyone caught in the effect: many spells can hurt comrades, while some arts exclude one side entirely.',
+  'manual.targeting.p2': 'Charged, single-target actions follow the selected unit unless they are projectiles. Area actions stay centred on the chosen tile. An enemy may leave that area, or a friend may enter it, before the effect arrives. Jump also attacks its chosen tile when the Lancer lands.',
+  'manual.targeting.p3': 'MP is paid when casting starts. A charge interrupted by KO or a disabling status is lost. Charging and Performing suppress evasion; physical attacks against a charging unit are also stronger. Guard a caster until the spell lands.',
+  'manual.targeting.p4': 'Reflect can return eligible magic to its living caster, including a helpful spell cast on someone else. If that caster also has Reflect, the bounced spell has no target. Check the descriptions of summons and other arts that bypass Reflect.',
+
+  'manual.terrain.title': 'Terrain & Facing',
+  'manual.terrain.p1': 'Move controls travel distance; Jump controls changes in elevation and small gaps. Allies can be passed through, but you cannot finish on an occupied tile. Enemies block ordinary paths. Movement abilities can change those rules.',
+  'manual.terrain.p2': "High ground extends a bow's reach, but bows cannot shoot a target too close. Guns and crossbows need a clear shot; spears reach along a straight line. Check the highlighted target tiles instead of judging distance alone.",
+  'manual.terrain.p3': "Front attacks face job evasion, shields and accessories; side attacks bypass job evasion; rear attacks bypass shields too. Weapon Guard adds a weapon's evasion from the front. End your turn facing the main threat.",
+  'manual.terrain.p4': 'Deep water limits most actions without suitable movement abilities or Float. Poisonous ground can inflict Poison at turn end; lava can burn an unprotected unit. Float also blocks earth damage. Teleport ignores paths and height, but each tile beyond normal Move reduces success by 25%, up to three extra tiles. A failed attempt still spends your Move.',
+
+  'manual.brave_faith.title': 'Brave & Faith',
+  'manual.brave_faith.p1': "Brave is the percentage chance used by many reactions. It also contributes to barehanded and knight's-sword damage. Below 10 Brave, a unit becomes a Chicken and flees instead of obeying normal orders.",
+  'manual.brave_faith.p2': "Faith scales many spells through both caster and target. High Faith improves casting and incoming magical healing, but also makes hostile magic more dangerous. Low Faith can weaken a healer's attempt to restore or revive you. Items and many martial techniques use other rules.",
+  'manual.brave_faith.p3': 'Speechcraft can change these values in battle. Afterward, one quarter of the net battle change persists, rounded toward zero; permanent values stay between 1 and 97. Four points gained therefore leave one point behind. Temporary Faith and Doubt statuses substitute 100 or 0 for spell calculations without changing the underlying statistic.',
+
+  'manual.zodiac.title': 'Zodiac Compatibility',
+  'manual.zodiac.p1': 'Compatibility modifies many damage, healing and success calculations. The target card shows the relationship; check it when a spell or attack seems unexpectedly weak.',
+  'manual.zodiac.p2': 'Signs four places apart around the zodiac have Good compatibility (×1.25). Signs three apart have Bad compatibility (×0.75). Opposite signs are Best (×1.5) for a man and woman, Worst (×0.5) for two of the same sex, and Bad when either unit is a monster. Other pairings are neutral, including Serpentarius.',
+  'manual.zodiac.p3': "Better compatibility helps healing as well as harm. A healer and their usual front-line partner can benefit from a favourable pairing. Compatibility does not override a target's status immunity or elemental absorption.",
+
+  'manual.jp.title': 'Learning & Job Points',
+  'manual.jp.p1': "Actions earn EXP and Job Points in the acting unit's current job. A secondary skillset still trains the current job. Ordinary movement, Waiting and Defend do not award action JP; specific movement abilities can award their own gains.",
+  'manual.jp.p2': "One quarter of action JP, rounded down, is shared with other human allies on the field who have not left it. The shared JP belongs to the acting unit's job even when those allies are using different jobs. JP Boost increases the user's gain and the amount available to share.",
+  'manual.jp.p3': 'Formation → Learn Abilities spends the JP stored in a chosen job. Spending never lowers job level: levels use lifetime JP earned, while purchases use the remaining balance. Buying a reaction, support or movement ability does not equip it; use Set Abilities afterward.',
+  'manual.jp.table_heading': 'Job levels by total JP:',
+  'manual.jp.table_row': 'Lv{level}: {jp} JP',
+  'manual.jp.p4': 'Unit level is separate. Every 100 EXP raises it, up to 99, with growth based on the current job.',
+
+  'manual.job_tree.title': 'Job Unlocks',
+  'manual.job_tree.p1': 'Every prerequisite below is a job level, and a job needs all of the levels listed for it. Change Job shows your own progress and why a job is locked.',
+  'manual.job_tree.row': '{job}: {requirements}',
+  'manual.job_tree.row_men': '{job} (men): {requirements}',
+  'manual.job_tree.row_women': '{job} (women): {requirements}',
+  'manual.job_tree.requirement': '{job} Lv{level}',
+  'manual.job_tree.from_start': 'Available from the start',
+  'manual.job_tree.p2': "Named allies retain their unique calling and can train in generic jobs. Rhen's personal Squire progress counts toward Squire prerequisites. Monsters keep their own species.",
+
+  'manual.loadout.title': 'Abilities & Equipment',
+  'manual.loadout.p1': "A human unit has its job's main skillset plus one secondary skillset. Only learned commands are available, apart from free commands granted by the job. A Cleric with Items still needs to learn Potion or Phoenix Down and carry the supplies.",
+  'manual.loadout.p2': 'Set one Reaction, one Support and one Movement ability. Learned passives can serve another job; innate abilities belong to the current job. Check these slots when changing roles. An equipment-granting support occupies the same slot that could hold JP Boost or another support.',
+  'manual.loadout.p3': 'Job and support rules determine which gear fits. Changing jobs or removing an equipment support returns incompatible gear to inventory. Two-handed weapons leave no room for a shield. Dual Wield permits a second one-handed weapon; Optimize Gear does not choose it for you.',
+  'manual.loadout.p4': 'Outfitter details list elemental protection, status immunities and starting or constant effects. An accessory can solve a dangerous encounter even without impressive stat bonuses. Safeguard protects equipment from theft and breakage.',
+
+  'manual.healing.title': 'Healing & Supplies',
+  'manual.healing.p1': 'Items commands use shared party stock. Chemists can throw consumables four tiles; other jobs use them at short range unless Throw Items is equipped. Guests carry their own limited supplies.',
+  'manual.healing.p2': 'Potions restore HP and ethers restore MP without charging. White Magic offers stronger and wider healing, but needs MP, time and suitable Faith. Chakra restores HP and MP without consumables; surrounding targets must stand at the same height.',
+  'manual.healing.p3': "Phoenix Down, Raise and the Monk's Revive return a KO'd ally before their countdown expires. Ordinary healing does not revive them. Reraise revives its bearer at the next KO countdown step with a little HP.",
+  'manual.healing.p4': 'Undead reverse ordinary HP healing and resist normal revival while fallen. Revival effects instead fell a living undead foe, with reduced effect on bosses. Inspect a creature before selecting a cure.',
+
+  'manual.cures.title': 'Cures & Dispel',
+  'manual.cures.p1': 'Different remedies remove different conditions. This list follows the commands available in this game. Learned item commands still consume the named supplies.',
+  'manual.cures.row': '{ability}: {statuses}.',
+  'manual.cures.p2': "Haste and Slow replace one another; Regen and Poison do the same. Physical damage can break Confuse and Charm, while damaging attacks wake Sleep. Reapplying the Toad spell to a toad lifts that curse. Constant effects supplied by a job or equipment cannot be removed with an ordinary cure.",
+
+  'manual.ailments.title': 'Ailment Reference',
+  'manual.ailments.p1': "Durations count shared clockticks. No timed expiry means you need a cure or the condition's own removal rule. Doom uses the unit's turn countdown instead. Gear and some enemies can grant immunity.",
+  'manual.ailments.p2': 'Stone counts as out of the fight even though the unit is alive. Losing every active ally can end the battle before you get another chance to cure them.',
+
+  'manual.boons.title': 'Boon Reference',
+  'manual.boons.p1': 'These are statuses, separate from learned support abilities. Timed effects wear off as the shared clock advances; constant effects from equipment or a job remain.',
+  'manual.boons.p2': 'The White Magic spell called Wall grants Protect and Shell. The separate Wall status listed here is a stronger effect used by other arts; names alone do not guarantee identical protection.',
+
+  'manual.status.timed': { one: '{status} — {desc} {count} clocktick.', other: '{status} — {desc} {count} clockticks.' },
+  'manual.status.timed_replaces': { one: '{status} — {desc} {count} clocktick. Replaces {statuses}.', other: '{status} — {desc} {count} clockticks. Replaces {statuses}.' },
+  'manual.status.untimed': '{status} — {desc} No timed expiry.',
+  'manual.status.untimed_replaces': '{status} — {desc} No timed expiry. Replaces {statuses}.',
+
+  'manual.reactions.title': 'Reactions & Counters',
+  'manual.reactions.p1': 'A reaction needs its particular trigger as well as an eligible unit. Most rolls use Brave as a percentage. Counter needs a damaging physical hit and a living attacker within weapon reach.',
+  'manual.reactions.p2': "Sleep, Stop, Stone, Confuse, Charm, Berserk, Toad, Chicken and Disabled prevent normal reactions. Airborne and KO'd units cannot react. Some defensive reactions intervene before a hit; others need damage or Critical HP (one fifth of maximum HP or less).",
+  'manual.reactions.p3': 'Auto-Potion spends the best potion in party stock: X-Potion, then Hi-Potion, then Potion. It needs damage, survival, supplies and a successful Brave roll. Counter Magic needs enough MP to answer the spell. Mana Shield needs enough MP to pay the whole incoming hit.',
+  'manual.reactions.p4': 'Defend is an action granted by the Defend support. Its stance doubles evasion until the next turn. Charging and Performing suppress evasion even when equipment would normally offer protection.',
+
+  'manual.special_arts.title': 'Specialised Commands',
+  'manual.special_arts.p1': 'Leap: learned Horizontal and Vertical Jump abilities expand reach; only the greatest value on each axis matters. The Lancer leaves the field, then strikes the chosen tile after a delay based on Speed. Spears strengthen the blow. A moving target can escape.',
+  'manual.special_arts.p2': "Geomancy: this game's terrain-specific arts require a matching target tile. Check each art's highlighted tiles. This differs from guides that choose an art from the caster's footing.",
+  'manual.special_arts.p3': 'Iaido: keep the named katana in inventory to release its spirit. The equipped blade is not a substitute for that spare. There is a 12% chance of consuming it after use. Throw always consumes the selected throwable or weapon.',
+  'manual.special_arts.p4': 'Bardsong and Dance repeat while the performer waits. Moving or acting ends the performance. Mimics echo eligible allied actions relative to their own position, so the same offset can strike a different group. Mimics have no native weapon or armour proficiencies and no abilities to buy.',
+
+  'manual.arithmeticks.title': 'Arithmeticks',
+  'manual.arithmeticks.p1': 'Learn an attribute and a divisor, then a spell permitted by the Arithmeticks menu. Choose CT, Level, EXP or Height and a multiple of 3, 4 or 5, or a prime number. Only learned terms are offered.',
+  'manual.arithmeticks.p2': 'The spell resolves immediately without MP on every eligible unit matching the formula, except units currently jumping or absent from the field. Revival spells target fallen units and living undead; other spells target living units. Allies, enemies and the caster can all be included. Review every highlighted target.',
+  'manual.arithmeticks.p3': "Height uses the tile's height, adding its water depth when a Floating unit rides above it. It does not use Jump. CT and EXP change during play. A multiple test includes zero; the prime test excludes zero and one.",
+  'manual.arithmeticks.p4': 'You can begin with one attribute, one divisor and a suitable spell. More terms give you more ways to select the right group.',
+
+  'manual.fallen.title': 'Falling & Crystals',
+  'manual.fallen.p1': "At 0 HP a unit is KO'd. Its counter decreases on three scheduled KO turns at a fixed cadence. Revive it before the last count. The hero's expired countdown causes defeat; a protected ally may cause defeat immediately on falling.",
+  'manual.fallen.p2': 'Ordinary recruits and monsters can become a crystal or chest and be permanently lost. Named allies and guests normally withdraw instead. Gentle mode lets ordinary allies withdraw too, but the hero and mission-protection conditions still matter.',
+  'manual.fallen.p3': "End movement on a crystal to collect it. Humans inherit eligible abilities they do not yet know. A crystal from a unit in a unique job does not pass on its action abilities; monsters' crystals teach no abilities. If nothing can be learned, it restores HP and MP instead. Collecting a chest grants its item.",
+  'manual.fallen.p4': "The battle ends when its objective is met. Collect a distant chest before the last enemy falls. An ally still KO'd when you win is not the same as an ally whose countdown has expired.",
+
+  'manual.travel.title': 'Towns & Travel',
+  'manual.travel.p1': 'Travel follows known roads. Each stop advances one day, including stops along a longer route. The current objective identifies where the story continues; arriving there can begin the next event.',
+  'manual.travel.p2': 'Open country may trigger an ambush. Towns provide an Outfitter, Soldier Office and Tavern where available; some have a Fur Shop. Outfitter stock improves as the campaign advances. Item details show which soldiers can use it.',
+  'manual.travel.p3': 'The Soldier Office hires generic humans for gil, up to the normal company limit of 24. Formation lets you rename or dismiss ordinary recruits; dismissal returns their equipment. Named allies cannot be dismissed there.',
+  'manual.travel.p4': "Read Tavern rumours as events unfold. Some record a lead that opens an optional journey; others explain Ivaldis. Chronicle keeps the company's history and discoveries, and the map shows the roads currently open.",
+
+  'manual.errands.title': 'Errands & Discoveries',
+  'manual.errands.p1': 'Tavern errands send one to three available generic humans away. Story characters and monsters cannot go. Pay the fee, choose the party, and keep enough soldiers home for your next battle. Away soldiers cannot deploy.',
+  'manual.errands.p2': 'World-map travel advances days. Here, the party returns automatically on its due date; there is no need to revisit the posting tavern. Errands underway lists outstanding assignments.',
+  'manual.errands.p3': "Success depends on preferred jobs, the attribute each posting favours (Brave, Faith, level, PA, MA or Speed), and the number sent. It is not guaranteed. Successful errands grant their listed rewards, including JP in each soldier's current job; some grant an artefact, item or new destination.",
+  'manual.errands.p4': 'On failure the fee is spent and the soldiers return empty-handed, but an eligible unfinished errand can be attempted again. An artefact is a Chronicle discovery, not necessarily usable equipment.',
+
+  'manual.monsters.title': 'Recruiting Monsters',
+  'manual.monsters.p1': 'Invite persuades eligible foes to join. Speechcraft needs Beast Speech to reach monsters; Orators have it innately, and another job must equip it. Bosses, protected figures and unrecruitable creatures refuse.',
+  'manual.monsters.p2': 'Tame can recruit a hostile monster when a damaging hit leaves it alive at Critical HP. Charm only changes sides temporarily. Keep a recruit from crystallizing before the battle ends.',
+  'manual.monsters.p3': "Monsters cannot change jobs, buy abilities or wear equipment. They gain techniques at their species' listed levels. A secret art also needs an allied Beast Lore user within three tiles. See the Chronicle bestiary for individual arts and traits.",
+  'manual.monsters.p4': 'After victory, eligible unnamed monsters occasionally produce a youngster of their own species if the company has room. Youngsters join immediately. Named creatures and species that cannot breed produce none.',
+
+  'manual.treasure.title': 'Poaching & Treasure',
+  'manual.treasure.p1': 'Equip Poach and fell an enemy monster with a poaching reward. Its body is removed, and a common or rarer item enters Fur Shop stock after battle. Visit a Fur Shop and buy it to add it to your inventory.',
+  'manual.treasure.p2': 'Treasure Hunter finds hidden items when movement ends on their tile. Each cache can be collected once during that battle. Brave is the chance of finding its common item; lower Brave improves the rare-item chance. Weigh that against weaker reactions and becoming a Chicken below 10 Brave.',
+  'manual.treasure.p3': "Chests left by fallen units need no Treasure Hunter. Steal takes a foe's equipment and adds it to stock; breaking equipment destroys it. Safeguard can block both attempts. An empty slot offers nothing to take.",
+
+  'manual.saves.title': 'Saves & Options',
+  'manual.saves.p1': 'Save from the world menu into one of seven manual slots. The eighth slot is reserved for autosave. Keep a manual record before a long sequence of story battles so you can return to Formation and shops if you need a different plan.',
+  'manual.saves.p2': "Saves belong to this browser's local storage. Another browser or device does not automatically share them. Continue opens the newest save; Load lets you choose a slot.",
+  'manual.saves.p3': 'Options adjusts difficulty, battle and text speed, Gentle mode and random encounters. Turning random encounters off removes wandering ambushes; story objectives remain. Gentle mode prevents ordinary allies crystallizing, while hero and protected-unit defeat conditions remain.',
+  'manual.saves.p4': "Reopen this manual from Options → How to Play. Its job requirements, cures and status durations reflect this game's rules.",
+
+  'manual.references.title': 'About this Manual',
+  'manual.references.p1': 'Final Fealty Tactics is an original adaptation with its own names, story and mechanical choices. This manual describes the game you are playing. External guides may describe different job requirements, targeting rules, durations or edition-specific features.',
+  'manual.references.p2': "The supplied reference sites informed the topics covered here. StrategyWiki's Gameplay page explains the original job and command structure; the Final Fantasy Wiki's status and errand pages offer further background. The descriptions in this manual are original and follow Final Fealty's rules.",
+  'manual.references.link_ffwiki': 'Final Fantasy Wiki — Final Fantasy Tactics',
+  'manual.references.link_iffwiki': 'Independent Final Fantasy Wiki — Final Fantasy Tactics',
+  'manual.references.link_strategywiki': 'StrategyWiki — Final Fantasy Tactics',
+  'manual.references.link_strategywiki_gameplay': 'StrategyWiki — Gameplay',
+  'manual.references.link_ffwiki_statuses': 'Final Fantasy Wiki — Statuses',
+  'manual.references.link_ffwiki_errands': 'Final Fantasy Wiki — Errands',
+};
+
+const KEYS = 'Key names (Enter, Space, Esc, Backspace, Tab, Shift, Page Up…) are written as the keys of a keyboard in your language label them; single letters are the keys themselves and stay as they are.';
+const LINK = 'The title of a link to an outside website (in English). Keep the site name as it is; you may translate the page name after the dash.';
+
+export const notes: Record<string, string> = {
+  'manual.screen_title': 'The title of the How to Play screen, a manual of the game\'s rules.',
+  'manual.topics': 'The heading of the list of How to Play topics.',
+  'manual.scroll_hint': 'How to scroll a topic\'s text: the keys, the mouse wheel or a swipe. Page Up/Down are keyboard keys: write them as keyboards in your language label them.',
+  'manual.scroll_hint_pad': 'How to scroll a topic\'s text with a gamepad: {key:arrows} is the D-pad, pressed left or right.',
+  'manual.controls.keyboard': `The keyboard's controls, always shown whatever device is in use. ${KEYS}`,
+  'manual.controls.mouse': 'The mouse\'s controls. Shift is the keyboard key.',
+  'manual.controls.gamepad': 'The gamepad\'s controls. Button names (A, B, X, Y, LB, RB, LT, RT, L3, R3, Start, View) are printed on the controller: keep them. ✕ ○ □ △ are PlayStation buttons.',
+  'manual.controls.this_manual': 'How to use this manual with the keyboard, mouse or touch. Page Up/Page Down are keyboard keys: write them as keyboards in your language label them.',
+  'manual.controls.this_manual_pad': 'How to use this manual with a gamepad: {key:arrows} is the D-pad.',
+  'manual.turns.p1': 'A clocktick is one step of the battle clock.',
+  'manual.turns.p3': '{key:turnList} is the key or button that shows the Turn Order list.',
+  'manual.jp.table_heading': 'Above a row of job levels and the Job Points (JP) each needs.',
+  'manual.jp.table_row': 'One job level and the total Job Points it needs. Lv is short for level; JP for Job Points.',
+  'manual.job_tree.row': 'A job and what unlocks it: {requirements} is a list of job levels, or "Available from the start".',
+  'manual.job_tree.row_men': 'A job only men can take, and what unlocks it.',
+  'manual.job_tree.row_women': 'A job only women can take, and what unlocks it.',
+  'manual.job_tree.requirement': 'One requirement: a job at a level. Lv is short for level.',
+  'manual.job_tree.from_start': 'Shown after a job\'s name: the job needs no other job.',
+  'manual.cures.row': 'An ability or item and the statuses it removes.',
+  'manual.status.timed': 'A status, its description (a sentence or two) and how long it lasts. A clocktick is one step of the battle clock.',
+  'manual.status.timed_replaces': 'A status, its description (a sentence or two), how long it lasts and the statuses it replaces. A clocktick is one step of the battle clock.',
+  'manual.status.untimed': 'A status and its description (a sentence or two): it lasts until cured or removed.',
+  'manual.status.untimed_replaces': 'A status, its description (a sentence or two) and the statuses it replaces: it lasts until cured or removed.',
+  'manual.saves.p4': 'Options and How to Play are the names of menus: use the same words as those menus.',
+  'manual.references.p2': 'StrategyWiki and the Final Fantasy Wiki are websites: keep their names.',
+  'manual.references.link_ffwiki': LINK,
+  'manual.references.link_iffwiki': LINK,
+  'manual.references.link_strategywiki': LINK,
+  'manual.references.link_strategywiki_gameplay': LINK,
+  'manual.references.link_ffwiki_statuses': LINK,
+  'manual.references.link_ffwiki_errands': LINK,
+};
