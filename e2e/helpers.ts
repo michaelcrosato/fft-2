@@ -99,11 +99,17 @@ export async function expectNoOverlap(page: Page, a: string, b: string) {
  * Install a fake standard-mapping gamepad before the page loads. Drive it with
  * `pad.tap(i)` (one clean press), `pad.hold(i, v)`, `pad.axis(i, v)` from the test.
  */
-export async function installFakeGamepad(page: Page) {
-  await page.addInitScript(() => {
+/** The ids browsers give the two pads (Chrome's form). A DualSense has 18 buttons: 16 is PS, 17 the touchpad. */
+export const PAD_IDS = {
+  xbox: 'Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e Product: 0b13)',
+  playstation: 'DualSense Wireless Controller (STANDARD GAMEPAD Vendor: 054c Product: 0ce6)',
+} as const;
+
+export async function installFakeGamepad(page: Page, kind: keyof typeof PAD_IDS = 'xbox') {
+  await page.addInitScript(([id, count]) => {
     const pad = {
-      id: 'Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e Product: 0b13)', index: 0, connected: true, mapping: 'standard', timestamp: 0,
-      axes: [0, 0, 0, 0], buttons: Array.from({ length: 17 }, () => ({ pressed: false, touched: false, value: 0 })),
+      id, index: 0, connected: true, mapping: 'standard', timestamp: 0,
+      axes: [0, 0, 0, 0], buttons: Array.from({ length: count }, () => ({ pressed: false, touched: false, value: 0 })),
     };
     (window as any).__pad = pad;
     // taps: pressed for exactly one poll of the game, released on the next (2 → pressed, 1 → released, 0 → done)
@@ -120,7 +126,7 @@ export async function installFakeGamepad(page: Page) {
         return [pad, null, null, null];
       },
     });
-  });
+  }, [PAD_IDS[kind], kind === 'playstation' ? 18 : 17] as const);
   const set = (fn: string) => page.evaluate(fn);
   return {
     /** one clean press + release as seen by the game's poll loop, however slowly the page runs */

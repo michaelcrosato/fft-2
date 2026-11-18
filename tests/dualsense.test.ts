@@ -91,10 +91,12 @@ describe('DualSense reports', () => {
 // ---------------------------------------------------------------- the facade, inside 52in1
 describe('the DualSense inside 52in1', () => {
   const calls: Array<[string, unknown, unknown?]> = [];
+  const changeListeners: Array<() => void> = [];
   let settings: Record<string, unknown>;
   beforeEach(() => {
     vi.resetModules();
     calls.length = 0;
+    changeListeners.length = 0;
     settings = {
       music: 1, effects: 1,
       dualsense: {
@@ -103,7 +105,7 @@ describe('the DualSense inside 52in1', () => {
         light: (c: unknown) => calls.push(['light', c]),
         trigger: (w: unknown, e: unknown) => calls.push(['trigger', w, e]),
       },
-      addEventListener() {},
+      addEventListener(type: string, fn: () => void) { if (type === 'change') changeListeners.push(fn); },
     };
     vi.stubGlobal('window', { AIHubSettings: settings, localStorage: { getItem: () => null, setItem() {} } });
   });
@@ -129,6 +131,28 @@ describe('the DualSense inside 52in1', () => {
     (settings.dualsense as Record<string, unknown>).connected = false;
     expect(dualsense.source).toBeNull();
     expect(dualsense.caps).toEqual({ lightbar: false, triggers: false, motion: false, touchpad: false });
+  });
+
+  it('follows 52in1\'s change event: tells Options, and sends the light again after a change', async () => {
+    const { dualsense } = await import('../src/ui/dualsense');
+    await dualsense.init();
+    expect(changeListeners).toHaveLength(1);
+    let heard = 0;
+    const off = dualsense.onChange(() => heard++);
+    dualsense.light('#3b82f6');
+    dualsense.light('#3b82f6');
+    expect(calls).toEqual([['light', '#3b82f6']]);
+    // the player switches the light bar off and on again in 52in1's Settings
+    (settings.dualsense as Record<string, unknown>).lightbar = false;
+    changeListeners[0]();
+    (settings.dualsense as Record<string, unknown>).lightbar = true;
+    changeListeners[0]();
+    expect(heard).toBe(2);
+    dualsense.light('#3b82f6');
+    expect(calls).toEqual([['light', '#3b82f6'], ['light', '#3b82f6']]);
+    off();
+    changeListeners[0]();
+    expect(heard).toBe(2);
   });
 });
 
@@ -166,5 +190,13 @@ describe('controller rules', () => {
     expect(input.padKind).toBe('playstation');
     expect(input.label('confirm')).toBe('✕');
     expect(padKindOf('Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e)')).toBe('xbox');
+    // haptics: a dual-rumble pulse, a spell's by its element (ice: one sharp snap on the light motor)
+    const effects: Array<[string, { strongMagnitude: number; weakMagnitude: number }]> = [];
+    (pad as unknown as { vibrationActuator: unknown }).vibrationActuator = { playEffect: (type: string, o: { strongMagnitude: number; weakMagnitude: number }) => { effects.push([type, o]); return Promise.resolve(); } };
+    input.haptic('ice');
+    input.haptic('earth');
+    expect(effects.map(([type]) => type)).toEqual(['dual-rumble', 'dual-rumble']);
+    expect(effects[0][1].strongMagnitude).toBeLessThan(effects[0][1].weakMagnitude);
+    expect(effects[1][1].strongMagnitude).toBeGreaterThan(effects[1][1].weakMagnitude);
   });
 });

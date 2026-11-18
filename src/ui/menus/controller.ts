@@ -32,8 +32,8 @@ export async function openController(parent?: HTMLElement) {
         { label: '', value: 'sep1', sep: true },
         { label: t('controller.dualsense'), value: 'status', right: st.right, desc: st.desc, disabled: true },
         ...(dualsense.canConnect && dualsense.source !== 'webhid'
-          // the browser's device list opens only inside the click or key press
-          ? [{ label: t('controller.connect'), value: 'connect', desc: st.desc, onChoose: () => { pendingConnect = dualsense.connect(); } }]
+          // the browser's device list opens only inside a click or key press, never a controller's button
+          ? [{ label: t('controller.connect'), value: 'connect', desc: st.desc, onChoose: () => { pendingConnect = input.lastDevice === 'pad' ? null : dualsense.connect(); } }]
           : []),
         { label: t('controller.light'), value: 'light', right: onOff(o.dsLight), desc: t('controller.light_desc'), disabled: dualsense.source !== null && !caps.lightbar },
         { label: t('controller.triggers'), value: 'triggers', right: onOff(o.dsTriggers), desc: t('controller.triggers_desc'), disabled: dualsense.source !== null && !caps.triggers },
@@ -49,6 +49,7 @@ export async function openController(parent?: HTMLElement) {
       if (!pick || pick === 'back') return;
       last = pick;
       const cycle = <T,>(arr: T[], v: T) => arr[(arr.indexOf(v) + 1) % arr.length];
+      if (pick === 'connect' && !pendingConnect) { toast(t('controller.connect_by_hand')); continue; }
       if (pick === 'connect' && pendingConnect) {
         const ok = await pendingConnect;
         pendingConnect = null;

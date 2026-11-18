@@ -186,6 +186,9 @@ The work list is `docs/PLAN-52IN1.md`. Each entry below says what changed and ho
 
 `vercel.json`, `.vercelignore` and the versioned audio cache rule are gone; the Vercel project no
 longer existed. 52in1 is the game's public home, and `npm run package` builds what it imports.
+`git grep -i vercel` now finds only this dated history, the dated plan (`docs/PLAN-52IN1.md`), and
+52in1's own tools in `tools/hub/`, kept unmodified (a `.vercel` folder in the checker's list of secret
+folders, and the harness's `serverCell`).
 
 ## Original music and sound
 
@@ -212,7 +215,8 @@ DC offset, loop seams and render cost; the audition page measures any single cue
 | The battle engine's own words (pop-ups, guard words, HP-change reasons, why an action is unusable, preview effects) go through `t()`. Code compares a stable `guardKind` instead of the shown word. | `tests/engine-lines.test.ts`: the same blows land the same in English and in a stubbed translation. `npm run sim` is unchanged (30 wins, 42 losses). |
 | Content (jobs, abilities, items, characters, maps, battles, scenes, story, the Chronicle, status names and descriptions) is swapped in place at start-up from the lines block; zodiac signs come from one helper. | `tests/i18n.test.ts`, `tests/engine-lines.test.ts` |
 | The build writes all 8,000-odd lines into the page's `game-lines` block. A Language menu on the title appears once there are two languages and the address chose none. | `npm run build` fails on an id with two texts. |
-| Menus in right-to-left languages mirror the glove and the values. | `e2e/languages.spec.ts` (en-XA, zh-XC, ar-XB: no English left on the title). |
+| Menus in right-to-left languages mirror the glove and the values. | `e2e/languages.spec.ts` |
+| Sweeps in the three test languages over the title, a new game, Options and Controller, a cutscene, a battle turn with the Game Menu, and the Chronicle: in en-XA no text outside the lines' brackets (names and key labels aside), in zh-XC no row, panel or page overflowing, in ar-XB menus and dialogue right to left. | `e2e/languages.spec.ts` |
 | The formation's rename used `prompt()`; it is an in-game field now, which takes IME, touch and gamepad. | — |
 
 ## Controllers and the DualSense
@@ -224,6 +228,8 @@ DC offset, loop seams and render cost; the audition page measures any single cue
 | Haptic patterns for hits, heavy blows, critical hits, knockouts, spells, level-ups and landings, scaled by a Vibration setting. | — |
 | A DualSense's light bar (side colour, reddening and pulsing as the unit weakens; moods for the world map, towns, victory and defeat), adaptive zoom triggers, gyro camera and touchpad gestures: through `window.AIHubSettings.dualsense` inside 52in1, or over WebHID on a page of its own. The 52in1 package compiles WebHID out. | `tests/dualsense.test.ts` (report bytes from 52in1's own vectors; the facade only uses what the player allows). |
 | **Options → Controller** holds all of it. Inside 52in1 there is no Game Mode prompt or option: 52in1 owns the window. | — |
+| The facade follows 52in1's `change` event: Options hears it, and the light bar is sent again after the player changes a setting. | `tests/dualsense.test.ts` |
+| Every screen on a controller alone, with a simulated DualSense and an Xbox pad: title, Options, Controller, How to Play, the Language menu, deployment, a battle turn (menus, tile picking, facing, the Game Menu, turn order), results, game over, formation, equipment and renaming, shop, tavern, world map and its menu, the Chronicle, a cutscene with a choice, and the versus hand-over. | `e2e/controller.spec.ts` |
 
 ## 52in1 catalogue, sessions and versus
 
@@ -235,6 +241,9 @@ DC offset, loop seams and render cost; the audition page measures any single cue
 | Trials: five fixed battles for parallel rounds. | `npm run sim:trials`: the company wins 70–100% AI against AI, in a median 21–42 turns. |
 | Moments: five one-turn puzzles. | `tests/moments.test.ts`: each has 1–2 plays (of 37–438) that clear it on every seed, and none clears by standing still. |
 | Hot-seat versus on the title, with a hand-over screen between players. | `e2e/versus.spec.ts` |
+| The hand-off package (with its credit) passes all 119 checks against the wall with no warning; it is recognised as build 2 of `github-fft-2`. The draft CI builds is missing only the credit (`hub:model`, `hub:effort`, `hub:harness`), which `npm run hub:check` allows. | `npm run package`, `npm run hub:check` |
+| Console output: on the title, in a battle and in a scene the game itself logs no warning or error; the only lines are the browser's (a software GL driver's notes and, in headless Chrome, no WebGPU adapter). Every e2e spec fails on a console error, a page error or a request to another site. | `e2e/helpers.ts` (`watchErrors`) |
+| Start-up: in a session the game says hello at once and is ready about 4.4 s later at low quality in software rendering (a moment's fresh load: about 4 s), well inside the hub's 20 s; the hub's harness shows it. Outside a session the title is up in about 3 s on the same software renderer (`e2e/boot.spec.ts`). Nothing needed lazy-loading. | `npm run hub:harness` |
 
 ## Fixes and small improvements
 
@@ -244,8 +253,34 @@ DC offset, loop seams and render cost; the audition page measures any single cue
 | `game.ts`: the dead `r === heroU ? false : false`, the `void THREE; void rinfo; …` line and its unused imports are gone; `runBattle`'s comment no longer promises `'retreat'`. | `npx tsc` |
 | The action preview could overlap the target's unit card when the card ran taller than the fixed offset (seen at 960×720). It now moves up above the card. | Cover frame at 960×720. |
 | Screen readers: menus are list boxes with `aria-selected` rows, and a polite live region speaks the row in focus and each line of dialogue and narration. | `e2e/a11y.spec.ts` |
+| Spell impacts rumble by element (fire swells, ice snaps, lightning crackles, earth rumbles low…), on any pad that rumbles. | `tests/dualsense.test.ts` |
+| Choosing *Connect a DualSense…* with a controller's button no longer tries to open the browser's device list (browsers allow it only for a click, tap or key): a note says to choose it by hand. | — |
 | Letter-key hints (M, Q, E, R, F) show the keyboard's own layout where the browser gives it (`navigator.keyboard.getLayoutMap`). | — |
+| Items can carry `noInvite`: a wearer refuses Invite and Tame from either side (`BattleUnit.recruitable`), so the AI skips them and the preview shows "Refused". The Nightshade Armlet (sold from tier 6) and the Barrette carry it, their descriptions say so, and the shop's item panel lists it under *Immune to* (docs/TODO.md). | `tests/recruit-defect-deploy.test.ts` › invite-proof gear |
+| New battle-script command `['defect', id, team]` (`Battle.scriptDefect`): moves a unit to another side for good, lifts Charm and emits `teamChange`; a foe who joins fights as an AI guest. It works in the game's battle hooks, the cutscene runner and the simulators (docs/TODO.md). | `tests/recruit-defect-deploy.test.ts` › the defect script command |
+| `BattleDef.heroAt` fixes the hero's starting cell: `deployCells()` puts it first, the deploy screen keeps the hero on it and others off it, and the simulators follow it. The validator (`tools/battle-checks.ts`) rejects a hero cell that isn't a standable deploy cell, and a `defect` naming an unknown unit or team (docs/TODO.md). | `tests/recruit-defect-deploy.test.ts` › a fixed hero cell |
 | Preview stat changes read "PA +2" (not "pa +2"), weapon requirements "Needs Sword or Knight Sword" (not "Needs sword/knightSword"). | `tests/engine-lines.test.ts` |
+
+## Correctness review (Phase 7, item 8)
+
+`npm run sim:fuzz` (`tools/fuzzbattles.ts`) plays every story and side battle AI against AI over two
+seeds, and again with half the turns taking a random usable action (`CHAOS=1`), checking the engine's
+invariants after every move, action and turn: HP and MP in range, KO units at 0 HP with no stray
+statuses, Critical following HP, charges and performances paired, one unit per tile on standable
+ground, teams changed only by Charm, pickups only of crystals and chests. It found four faults, now
+fixed, and CI runs it both ways.
+
+| Change | Checked by |
+| --- | --- |
+| Silence cancelled a song's or dance's charge but left the performer "Performing": it never sang again and, as the AI saw nothing to do, stood idle for the rest of the battle. Songs and dances are not spells: Silence now leaves a performance going (Stop, Sleep and the rest still end it). In the campaign sim one battle changes (`b_barrowvale`, where a silenced enemy performer used to stand idle; now 29 wins, 43 losses). | `tests/engine-regressions.test.ts` › performances and Silence |
+| A level-up mid-battle raised max HP without re-checking Critical, so the status (the kneel, Critical-only reactions, the AI's healing order) could stay on a unit no longer in danger. | `tests/engine-regressions.test.ts` › level-ups mid-battle |
+| A unit knocked out by a counter during its own action still levelled up from it, and the level-up's HP growth left it KO'd with HP. It now stays at 0 HP until revived. | `tests/engine-regressions.test.ts` › retreats and levels while down |
+| A unit that retreated by script mid-charge kept its Charging status with no charge behind it. | `tests/engine-regressions.test.ts` › retreats and levels while down |
+
+Reviewed and left as they are: a performer's next repeat is held as a charge without the Charging
+status by design (Performing already makes it unable to dodge). Saves are validated field by field
+and migrated on load (`tests/state-regressions.test.ts`); input and the screens are covered by the
+controller, language and menu e2e above.
 
 ## Late-game winnability
 
@@ -261,6 +296,8 @@ outliers). A better bot for the player's side would make this a sharper tool.
 
 ## Known, not changed (Pass 4)
 
+- Terrain-changing script commands, decor offsets, held props and riding animations (docs/TODO.md's
+  optional list) stay open: no content needs them.
 - The third-party audio placeholders noted above are gone (Pass 4, *Original music and sound*).
 - Spell meshes and status badges are still rebuilt per use; portraits still encode synchronously.
   Neither shows in a session round (a few ms per effect), so they wait for a performance pass.

@@ -107,6 +107,9 @@ async function browserAPIs(page: Page, mode: 'supported' | 'denied' | 'missing' 
 test('Continue and Load always ask; declining, returning to title, and cancelling a load work', async ({
   page,
 }, info) => {
+  // five full loads of the world map and the title: in software rendering beside another worker
+  // this runs past the suite's 180 s, so it gets twice that
+  test.setTimeout(360_000);
   const errors = watchErrors(page);
   await savedCampaign(page);
   await browserAPIs(page, 'supported');

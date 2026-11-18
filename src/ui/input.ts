@@ -63,7 +63,9 @@ export function padKindOf(id: string): PadKind {
   if (/054c|dualsense|dualshock|playstation/i.test(id)) return 'playstation';
   return 'generic';
 }
-type Haptic = 'hit' | 'heavy' | 'crit' | 'ko' | 'spell' | 'level' | 'land';
+type Haptic = 'hit' | 'heavy' | 'crit' | 'ko' | 'spell' | 'level' | 'land'
+  // a spell's impact, by its element
+  | 'fire' | 'ice' | 'lightning' | 'water' | 'earth' | 'wind' | 'holy' | 'dark';
 /** Short, distinct pulses: [strong motor, weak motor, ms, delay ms]. */
 const HAPTICS: Record<Haptic, Array<[number, number, number, number]>> = {
   hit: [[0.3, 0.5, 60, 0]],
@@ -73,6 +75,16 @@ const HAPTICS: Record<Haptic, Array<[number, number, number, number]>> = {
   spell: [[0.15, 0.75, 140, 0]],
   level: [[0, 0.35, 60, 0], [0, 0.55, 60, 100], [0, 0.8, 90, 200]],
   land: [[0.55, 0.15, 55, 0]],
+  // spells by element: fire swells, ice snaps, lightning crackles, water rolls, earth rumbles low,
+  // wind brushes past, holy rings, darkness throbs
+  fire: [[0.2, 0.5, 70, 0], [0.45, 0.8, 110, 80]],
+  ice: [[0, 0.9, 45, 0]],
+  lightning: [[0.1, 0.9, 30, 0], [0.1, 0.9, 30, 60], [0.3, 1, 40, 120]],
+  water: [[0.25, 0.45, 160, 0]],
+  earth: [[0.9, 0.1, 180, 0]],
+  wind: [[0, 0.35, 220, 0]],
+  holy: [[0, 0.6, 60, 0], [0, 0.4, 120, 90]],
+  dark: [[0.6, 0.2, 90, 0], [0.6, 0.2, 90, 200]],
 };
 
 function editable(t: EventTarget | null): boolean {

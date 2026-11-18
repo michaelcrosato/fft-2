@@ -42,6 +42,7 @@ export const lines: Lines = {
   'town.item.always': 'Always',
   'town.item.on_battle_start': 'On entering battle',
   'town.item.immune': 'Immune to',
+  'town.item.invite': 'Invite and Tame',
   'town.item.absorbs': 'Absorbs',
   'town.item.nullifies': 'Nullifies',
   'town.item.halves': 'Halves',

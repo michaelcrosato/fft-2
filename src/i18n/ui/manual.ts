@@ -133,7 +133,7 @@ export const lines: Lines = {
   'manual.errands.p4': 'On failure the fee is spent and the soldiers return empty-handed, but an eligible unfinished errand can be attempted again. An artefact is a Chronicle discovery, not necessarily usable equipment.',
 
   'manual.monsters.title': 'Recruiting Monsters',
-  'manual.monsters.p1': 'Invite persuades eligible foes to join. Speechcraft needs Beast Speech to reach monsters; Orators have it innately, and another job must equip it. Bosses, protected figures and unrecruitable creatures refuse.',
+  'manual.monsters.p1': 'Invite persuades eligible foes to join. Speechcraft needs Beast Speech to reach monsters; Orators have it innately, and another job must equip it. Bosses, protected figures, unrecruitable creatures and wearers of invite-proof gear refuse; that gear also keeps your own soldiers from an enemy Orator.',
   'manual.monsters.p2': 'Tame can recruit a hostile monster when a damaging hit leaves it alive at Critical HP. Charm only changes sides temporarily. Keep a recruit from crystallizing before the battle ends.',
   'manual.monsters.p3': "Monsters cannot change jobs, buy abilities or wear equipment. They gain techniques at their species' listed levels. A secret art also needs an allied Beast Lore user within three tiles. See the Chronicle bestiary for individual arts and traits.",
   'manual.monsters.p4': 'After victory, eligible unnamed monsters occasionally produce a youngster of their own species if the company has room. Youngsters join immediately. Named creatures and species that cannot breed produce none.',

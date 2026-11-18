@@ -7,7 +7,7 @@ import { runScene, type SceneHost } from '../scenes/cutscene';
 import { UnitView, loadMonsterBuilder, getMonsterBuilder } from '../scenes/unitview';
 import { BATTLES, SCENES, STORY, SIDE, CHARACTERS, JOBS, ITEMS, ABILITIES, CHRONICLE } from '../data/db';
 import type { BattleDef, CharacterDef, Facing, JobDef, SceneDef, StoryStep, SideQuestStep, EnvTime, Weather } from '../data/types';
-import { setupBattle, applyResults, type DeployChoice } from './setup';
+import { setupBattle, applyResults, deployCells, type DeployChoice } from './setup';
 import type { GameState, Options } from './state';
 import { saveGame, joinCharacter, leaveCharacter, addItem, hero, loadOptions, AUTOSAVE_SLOT } from './state';
 import type { RosterUnit } from './roster';
@@ -346,6 +346,14 @@ export class Game {
             for (const u of list) { if (u.has('ko')) b.revive(u, 1); u.hp = u.maxHp; u.mp = u.maxMp; const v = stage.views.get(u.uid); if (v) { v.revive(); stage.vfx.play('healBig', v.chest, v.root.position.clone()); } }
           },
           status: (sid, s, on) => { const u = b.bySid(sid); if (!u) return; if (on) b.addStatus(u, s); else u.statuses.delete(s); },
+          defect: async (sid, team) => {
+            const u = b.bySid(sid); if (!u) return;
+            b.scriptDefect(sid, team);
+            const v = stage.views.get(u.uid);
+            if (!v) return;
+            if (v.root.visible) await stage.vfx.play('talk', v.chest, v.root.position.clone(), '#ffe6a0');
+            v.setTeam(u.team, u.team === 0 && !u.controlled);
+          },
         };
         // map battle unit sids to their views for the script
         try { await this.playBattleScript(ev.script, b, stage, hooks); } finally { b.scriptDone(index); }
@@ -436,7 +444,10 @@ export class Game {
 
   // ============================================================ deployment
   private async deploy(stage: Stage, def: BattleDef, preview: import('../battle/battle').Battle): Promise<DeployChoice[] | null> {
-    const cells = (def.deploy ?? stage.def.deploy).filter(([x, z]) => stage.grid.cell(x, z)?.standable && !preview.unitAt(x, z));
+    const cells = deployCells(def, stage.grid, (x, z) => !!preview.unitAt(x, z));
+    // a battle may fix the hero's starting cell: it comes first in `cells`, and nobody else may take it
+    const heroFixed = !!def.heroAt && cells[0]?.[0] === def.heroAt[0] && cells[0]?.[1] === def.heroAt[1];
+    const openCells = heroFixed ? cells.slice(1) : cells;
     const max = Math.min(def.maxDeploy ?? 5, cells.length);
     const avail = this.state.roster.filter((r) => !r.errand);
     const heroU = hero(this.state);
@@ -486,13 +497,14 @@ export class Game {
         const r = avail.find((x) => 'u:' + x.uid === pick)!;
         if (placements.has(r)) {
           if (r === heroU) {
+            if (heroFixed) { toast(t('game.deploy.hero_fixed', { name: heroU.name })); continue; }
             // move the hero to another cell
             const cell = await this.pickDeployCell(stage, cells);
             if (cell) { const other = [...placements.entries()].find(([, c]) => c[0] === cell[0] && c[1] === cell[1]); if (other) placements.set(other[0], placements.get(r)!); placements.set(r, cell); }
           } else {
             const act = await menu({ items: [{ label: t('game.deploy.reposition'), value: 'pos' }, { label: t('game.deploy.withdraw'), value: 'out', disabled: forced.includes(r) ? t('game.deploy.must_fight') : false }], x: '50%', y: '50%', className: 'centered', title: r.name }).promise;
             if (act === 'out') placements.delete(r);
-            if (act === 'pos') { const cell = await this.pickDeployCell(stage, cells); if (cell) { const other = [...placements.entries()].find(([, c]) => c[0] === cell[0] && c[1] === cell[1]); if (other) placements.set(other[0], placements.get(r)!); placements.set(r, cell); } }
+            if (act === 'pos') { const cell = await this.pickDeployCell(stage, openCells); if (cell) { const other = [...placements.entries()].find(([, c]) => c[0] === cell[0] && c[1] === cell[1]); if (other) placements.set(other[0], placements.get(r)!); placements.set(r, cell); } }
           }
         } else {
           if (placements.size >= max) { toast(t('game.deploy.full', { count: max })); continue; }

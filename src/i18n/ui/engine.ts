@@ -93,7 +93,7 @@ export const notes: Record<string, string> = {
   'engine.steal.item': FLOAT + ' {item} is what the thief took.',
   'engine.steal.gil': FLOAT + ' Gil is money.',
   'engine.steal.exp': FLOAT + ' EXP is experience points.',
-  'engine.invite.refused': FLOAT + ' An enemy refused to be talked into joining the party.',
+  'engine.invite.refused': FLOAT + ' An enemy refused to be talked into joining the party. Also in the action preview, for a target that cannot be invited.',
   'engine.invite.joined': FLOAT + ' An enemy was persuaded to join the player\'s side.',
   'engine.reason.fall': REASON + ' Damage from falling after being knocked back off a ledge.',
   'engine.reason.poison': REASON + ' Damage from the Poison status.',

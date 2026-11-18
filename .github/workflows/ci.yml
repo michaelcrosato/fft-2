@@ -32,6 +32,11 @@ jobs:
       - run: npm run build
       # AI-vs-AI run of every battle; fails on a stall or exception
       - run: npm run sim
+      # every battle's invariants, AI against AI and with random actions
+      - run: npm run sim:fuzz
+      - run: npm run sim:fuzz
+        env:
+          CHAOS: '1'
       # the 52in1 Trials stay winnable in a session's few minutes
       - run: npm run sim:trials
       # the 52in1 package: its size and files, no WebHID, and every catalogue check but the
@@ -39,6 +44,40 @@ jobs:
       - run: npm run hub:check
 
   browser-smoke:
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      # software rendering on the runner: low quality, and headed under Xvfb with software GL, which
+      # draws several times faster than headless Chromium's SwiftShader
+      - run: xvfb-run -a npx playwright test --headed --project=chromium e2e/boot.spec.ts e2e/languages.spec.ts e2e/a11y.spec.ts
+        env:
+          E2E_QUALITY: low
+          E2E_WORKERS: 2
+          LIBGL_ALWAYS_SOFTWARE: '1'
+      # a 52in1 parallel round with one player in 52in1's own harness (dist/ is the e2e build)
+      - run: npm run hub:harness -- dist --only parallel --players 1
+      # every music cue and sound effect rendered offline: clipping, loudness, loop seams
+      - run: npm run audio:verify
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            e2e-report
+            e2e-results
+          retention-days: 7
+
+  # Firefox and WebKit (Safari's engine), where the runner can run them: the boot, the title, a new
+  # game, the gamepad and the menus' screen-reader roles
+  other-browsers:
     needs: check
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -49,20 +88,18 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      # software rendering on the runner: low quality keeps frame times reasonable
-      - run: npx playwright test --project=chromium e2e/boot.spec.ts e2e/languages.spec.ts e2e/a11y.spec.ts
+      - run: npx playwright install --with-deps firefox webkit
+      # headed under Xvfb with software GL, as tools/browser-test.sh runs them: headless Firefox on the
+      # runner has no WebGL
+      - run: xvfb-run -a npx playwright test --headed --project=firefox --project=webkit e2e/boot.spec.ts e2e/a11y.spec.ts
         env:
           E2E_QUALITY: low
           E2E_WORKERS: 2
-      # a 52in1 parallel round with one player in 52in1's own harness (dist/ is the e2e build)
-      - run: npm run hub:harness -- dist --only parallel --players 1
-      # every music cue and sound effect rendered offline: clipping, loudness, loop seams
-      - run: npm run audio:verify
+          LIBGL_ALWAYS_SOFTWARE: '1'
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
-          name: playwright-report
+          name: playwright-report-other-browsers
           path: |
             e2e-report
             e2e-results

@@ -8,7 +8,8 @@ secret skills gated by level, boss hpMult above 999.
 
 Open:
 - [x] heal/cure-on-hit weapons (Healing Staff heals; White Staff / Octagon Pole cure on hit)
-- [ ] invite immunity accessories
+- [x] invite immunity accessories — `noInvite` on an item makes its wearer refuse Invite and Tame, from either side:
+  the Nightshade Armlet (sold from tier 6) and the Barrette; the action preview shows "Refused"
 - [x] Golem — by design grants Protect party-wide instead of a damage pool
 - [x] Iaido/Geomancy magic attack/defense modifiers
 - [x] player monsters' secret art requires a Beast Lore ally within 3 tiles
@@ -20,8 +21,9 @@ away, coward AI flees, AI prioritises raising the leader/wards, wards have doubl
 Umbral HP compressed, portrait-aspect FOV, WebGL1 portrait render target, job list in job-tree order.
 
 Nice-to-have (not required by any content):
-- [ ] `defect` scene command (switch a unit's team mid-battle)
-- [ ] fixed hero deploy cell per battle
+- [x] `defect` scene command (switch a unit's team mid-battle): `['defect', id, team]` in a battle event's script
+- [x] fixed hero deploy cell per battle: `BattleDef.heroAt`, honoured by the deploy screen and the simulators,
+  checked by the content validator
 - [ ] terrain-changing script commands (gates, sluices)
 - [ ] decor x/z offsets, held props, riding animations
-- [ ] invite-immunity accessories
+- [x] invite-immunity accessories (see Open)
