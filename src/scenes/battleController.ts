@@ -20,6 +20,7 @@ import { THREE } from '../gfx/three';
 import { h, uiRoot } from '../ui/dom';
 import { loadOptions } from '../game/state';
 import { CameraControls } from '../ui/cameraControls';
+import { lightFor, lightForTurn } from '../ui/dualsense/lightbar';
 import { gameClock } from '../core/gameClock';
 import { tapTracker } from '../ui/taps';
 import { fmtList, fmtNum, t, tParts, type Values } from '../i18n';
@@ -46,6 +47,8 @@ function deviceHelp(base: string, values?: Values) {
 
 export interface ControllerHooks {
   runScript(index: number): Promise<void>;
+  /** A unit is about to take its turn (52in1 sessions watch for the moment a puzzle turn passes). */
+  onTurn?(unit: BattleUnit): void;
 }
 
 export class BattleController {
@@ -105,6 +108,8 @@ export class BattleController {
       if (this.b.result) break;
       if (!unit) continue;
       this.hud.turnList(this.b);
+      this.hooks.onTurn?.(unit);
+      if (loadOptions().dsLight) lightForTurn(unit.team, unit.hp, unit.maxHp);
       // reach objectives: once the field is clear, show the way onward
       const v = this.b.def.victory;
       if (v.type === 'reach' && !this.goalShown && !this.b.units.some((o) => o.team !== 0 && o.active && !o.hidden)) {
@@ -119,7 +124,10 @@ export class BattleController {
     }
     this.hud.card(null, 'a'); this.hud.card(null, 'b'); this.hud.helpText(''); this.hud.clearPreview();
     this.stage.clearHighlight(); this.stage.hideCursor();
-    return this.b.result ?? 'defeat';
+    const result = this.b.result ?? 'defeat';
+    if (loadOptions().dsLight) lightFor(result);
+    input.haptic(result === 'victory' ? 'level' : 'ko');
+    return result;
   }
 
   // ================================================================ sync visuals with engine state
@@ -591,7 +599,7 @@ export class BattleController {
       }
       case 'hp': { const v = this.view(e.uid); if (v && e.delta) { this.float(v, hpText(e.delta, e.reason), e.delta > 0 ? 'heal' : 'dmg'); if (e.delta > 0) st.vfx.play('heal', v.chest, v.root.position.clone()); else v.anim.play('hurt'); await this.wait(350); } return; }
       case 'mp': { const v = this.view(e.uid); if (v && e.delta > 0) this.float(v, t('battle.pop.mp_gain', { n: e.delta }), 'mp'); return; }
-      case 'ko': { const v = this.view(e.uid); if (v) { audio.sfx('ko'); await v.ko(); } return; }
+      case 'ko': { const v = this.view(e.uid); if (v) { audio.sfx('ko'); input.haptic('ko'); await v.ko(); } return; }
       case 'revive': { const v = this.view(e.uid); if (v) { v.revive(); st.vfx.play('revive', v.chest, v.root.position.clone()); this.float(v, t('battle.pop.revived'), 'heal'); await this.wait(400); } return; }
       case 'koCount': { const v = this.view(e.uid); if (v) { this.float(v, fmtNum(e.n), 'info'); await this.wait(350); } return; }
       case 'crystal': {
@@ -622,8 +630,8 @@ export class BattleController {
       }
       case 'text': { const v = this.view(e.uid); if (v) this.float(v, e.text, 'info'); await this.wait(250); return; }
       case 'jumpUp': { const v = this.view(e.uid); if (v) { audio.sfx('jump'); await v.leapUp(); } return; }
-      case 'jumpDown': { const v = this.view(e.uid); if (v) { st.focusTile(e.x, e.z); await v.landOn(e.x, e.z); audio.sfx('hitHeavy'); } return; }
-      case 'levelUp': { const v = this.view(e.uid); if (v) { this.float(v, t('battle.pop.level_up'), 'crit'); st.vfx.rise(v.root.position.clone(), '#ffe070', 30, 2, 0.4, 1.2, 0.12); audio.sfx('levelUp'); await this.wait(500); } return; }
+      case 'jumpDown': { const v = this.view(e.uid); if (v) { st.focusTile(e.x, e.z); await v.landOn(e.x, e.z); audio.sfx('hitHeavy'); input.haptic('land'); } return; }
+      case 'levelUp': { const v = this.view(e.uid); if (v) { this.float(v, t('battle.pop.level_up'), 'crit'); st.vfx.rise(v.root.position.clone(), '#ffe070', 30, 2, 0.4, 1.2, 0.12); audio.sfx('levelUp'); input.haptic('level'); await this.wait(500); } return; }
       case 'teamChange': { const v = this.view(e.uid); const u = this.b.unit(e.uid); if (v && u) { v.setTeam(u.team, u.team === 0 && !u.controlled); this.float(v, u.team === 0 ? t('battle.pop.ally') : t('battle.pop.turned'), 'status'); } return; }
       case 'reveal': { const v = this.view(e.uid); const u = this.b.unit(e.uid); if (v && u) { v.place(u.x, u.z, u.facing); v.root.visible = true; st.vfx.play('teleport', v.chest, v.root.position.clone(), '#ffffff'); } return; }
       case 'leave': { const v = this.view(e.uid); if (v) { await v.tween(0.4, (t) => v.root.scale.setScalar(1 - t)); v.root.visible = false; v.root.scale.setScalar(1); } return; }
@@ -681,6 +689,12 @@ export class BattleController {
       delay += 90;
     }
     if (e.hits.some((x) => x.crit)) { audio.sfx('crit'); st.shake(0.18, 0.25); }
+    // one pulse for the whole blow: the strongest thing it did
+    const heavy = e.hits.some((x) => { const u = this.b.unit(x.uid); return !!x.dmg && x.dmg > (u?.maxHp ?? 100) * 0.3; });
+    if (e.hits.some((x) => x.crit)) input.haptic('crit');
+    else if (heavy) input.haptic('heavy');
+    else if (e.hits.some((x) => x.dmg)) input.haptic(ABILITIES.get(e.ability)?.magic ? 'spell' : 'hit');
+    else if (e.hits.some((x) => x.heal) && ABILITIES.get(e.ability)?.magic) input.haptic('spell');
     await Promise.all(tasks);
     await this.wait(250);
   }

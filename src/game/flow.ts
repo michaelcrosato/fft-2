@@ -21,6 +21,7 @@ import { openOptions, openSaveLoad } from '../ui/menus/system';
 import { fullscreenLabel, gameMode, promptGameMode, toggleFullscreen } from '../ui/gameMode';
 import { setContextMenu, setGameMenuVisible } from '../ui/gameMenu';
 import { loading } from '../ui/loading';
+import { lightFor, lightOff } from '../ui/dualsense/lightbar';
 import { tapTracker } from '../ui/taps';
 import { fmtNum, t, upper } from '../i18n';
 
@@ -40,6 +41,7 @@ export async function runTitle(game: Game) {
   let spin = 0;
   game.setScreen({ update: (dt) => { spin += dt * 0.03; world.camYaw = 0.35 + spin; world.update(dt); }, render: () => world.render(), resize: (w, hh) => world.resize(w, hh), dispose: () => world.dispose() });
   audio.playMusic('title', { fade: 2 });
+  lightOff();
   const logo = h('div', { style: { position: 'absolute', left: '50%', top: '14%', transform: 'translateX(-50%)', textAlign: 'center', pointerEvents: 'none', textShadow: '0 3px 12px #000, 0 0 30px rgba(0,0,0,.6)' } },
     // sizes also capped by height so the logo stays clear of the menu on landscape phones
     h('div', { style: { fontFamily: 'Cinzel, serif', fontWeight: '700', fontSize: 'min(8vw, 64px, 12vh)', letterSpacing: '0.12em', color: '#f4dc98', whiteSpace: 'nowrap' } }, upper(t('flow.title.logo_main'))),
@@ -260,6 +262,7 @@ async function worldLoop(game: Game): Promise<'title' | 'continue'> {
   input.analogCamera = true;
   game.setScreen({ update: (dt) => { padCamera(dt); world.update(dt); }, render: () => world.render(), resize: (w, hh) => world.resize(w, hh), dispose: () => { input.analogCamera = false; world.dispose(); } });
   audio.playMusic('worldmap', { fade: 1.5 });
+  if (loadOptions().dsLight) lightFor('world');
   const hud = h('div.passthru', { style: { position: 'absolute', inset: '0' } });
   uiRoot().appendChild(hud);
   worldHud = hud;
@@ -472,13 +475,13 @@ async function nodeMenu(game: Game, world: WorldView, nodeId: string): Promise<'
     items.push({ label: t('flow.place.depart'), value: 'leave' });
     const info = h('div.panel', { style: { left: '50%', top: '12px', transform: 'translateX(-50%)', maxWidth: 'min(640px, 90vw)', textAlign: 'center', padding: '6px 16px' } }, h('h2', null, node.name), h('div.muted', null, node.desc));
     uiRoot().appendChild(info);
-    if (node.kind === 'town' || node.kind === 'castle') audio.playMusic('town', { fade: 1.2 });
+    if (node.kind === 'town' || node.kind === 'castle') { audio.playMusic('town', { fade: 1.2 }); if (loadOptions().dsLight) lightFor('town'); }
     const auto = (window as any).__autoPlay && stepHere?.at === nodeId;
     const m = menu({ items, x: 14, y: '28%', title: node.region, cancelable: true });
     if (auto) m.close();
     const pick = auto ? 'story' : await m.promise;
     info.remove();
-    if (pick === null || pick === 'leave') { audio.playMusic('worldmap', { fade: 1.2 }); return 'stay'; }
+    if (pick === null || pick === 'leave') { audio.playMusic('worldmap', { fade: 1.2 }); if (loadOptions().dsLight) lightFor('world'); return 'stay'; }
     if (pick === 'story' && stepHere) {
       return hudHidden(async () => {
         const ok = await game.runStep(stepHere);
