@@ -1,5 +1,5 @@
-# Checks every push to main and every pull request. Vercel repeats the unit tests and
-# build before publishing; this catches failures before a merge and adds the browser smoke test.
+# Checks every push to main and every pull request: unit tests, type check, content and
+# audio validation, the bundle and the campaign simulation, then a browser smoke test.
 name: CI
 
 on:

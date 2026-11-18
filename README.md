@@ -105,7 +105,7 @@ tools/          content validator, campaign simulator, screenshot helpers
 Checks: `npm run typecheck`, `npm test`, `npm run validate` (content cross-references),
 `npm run sim` (AI-vs-AI simulation of every battle, including scripted events; fails on a stall or exception).
 GitHub Actions (`.github/workflows/ci.yml`) runs these and a Chromium boot smoke test on every push to
-`main` and every pull request. Use Node 22 (`.nvmrc`), the version Vercel builds with.
+`main` and every pull request. Use Node 22 (`.nvmrc`).
 Every commit ships immediately: `npm run ship` pushes and merges it into `main` (see `AGENTS.md`).
 
 See the [repository audit](docs/REPO_AUDIT.md) for recent bug fixes, cleanup and deployment checks.
@@ -188,10 +188,6 @@ There are no external audio requests at runtime and no synthesized fallback. Unk
 manifest's `fallbackSfx` cue. Music streams from local MP3 files; short effects are decoded and
 cached after the first user gesture. Music crossfades, volume controls, ducking, pan, pitch,
 background suspension and the dev audition page remain available.
-
-Audio requests include their manifest checksum in the URL. Vercel caches these versioned
-files for a year in the browser; replacing a file changes its cache key automatically.
-Unversioned URLs and the entry HTML still revalidate so updated content is not hidden by caching.
 
 All 24 music files are already compressed to 128 kbps stereo MP3. Only the requested music
 is streamed, and scene changes do not wait for a full track download or PCM decode.
