@@ -4,8 +4,9 @@
 //   package/covers/<slug>/0.jpg 1.jpg 2.jpg   the screenshots tools/covers.mjs took
 // then runs tools/hub/catalogue-check.mjs on it and zips it as package.zip.
 //
-// Usage: node tools/package.mjs [--folder github-fft-2-v2] [--offline] [--no-build] [--no-zip]
+// Usage: node tools/package.mjs [--folder github-fft-2-v2] [--offline] [--no-build] [--no-zip] [--draft]
 //                               [--model "…"] [--effort low|medium|high|xhigh|max|ultra] [--harness "…"]
+// --draft (CI, npm run hub:check): the hand-off's credit and covers may be missing; every other check must pass.
 // The credit (--model, --effort, --harness) is written into the packaged page only, never into the repo.
 import { spawnSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
@@ -23,7 +24,7 @@ const LIMITS = { files: 100, bytes: 95 * MiB, file: 25 * MiB };
 const NEVER = /(^|\/)(\.env[^/]*|\.git|node_modules|\.DS_Store|[^/]*\.map)(\/|$)/;
 
 function args(argv) {
-  const out = { folder: 'github-fft-2-v2', offline: false, build: true, zip: true, model: '', effort: '', harness: '' };
+  const out = { folder: 'github-fft-2-v2', offline: false, build: true, zip: true, draft: false, model: '', effort: '', harness: '' };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     const value = () => {
@@ -35,6 +36,7 @@ function args(argv) {
     else if (a === '--offline') out.offline = true;
     else if (a === '--no-build') out.build = false;
     else if (a === '--no-zip') out.zip = false;
+    else if (a === '--draft') out.draft = true;
     else if (a === '--model') out.model = value();
     else if (a === '--effort') out.effort = value();
     else if (a === '--harness') out.harness = value();
@@ -113,13 +115,18 @@ function main() {
   console.log(`package/games/${opt.folder}: ${list.length} files, ${(total / MiB).toFixed(2)} MiB · slug ${slug}`);
   for (const p of problems) console.error(`✗ ${p}`);
 
-  const check = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'hub', 'catalogue-check.mjs'), OUT, ...(opt.offline ? ['--offline'] : [])], { cwd: ROOT, stdio: 'inherit' });
+  const check = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'hub', 'catalogue-check.mjs'), OUT, ...(opt.offline ? ['--offline'] : [])], { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] });
+  process.stdout.write(check.stdout ?? '');
+  // a draft passes when its only errors are the credit and covers that come at hand-off
+  const HANDOFF = /no hub:model|covers\/[^ ]+ is missing/;
+  const blocking = (check.stdout ?? '').split('\n').filter((l) => /^\s+✗ /.test(l) && !(opt.draft && HANDOFF.test(l)));
+  if (opt.draft) console.log(blocking.length ? `✗ ${blocking.length} check(s) fail besides the hand-off's credit and covers` : '✓ draft package: every check passes but the hand-off\'s credit and covers');
   if (opt.zip && !problems.length) {
     const z = spawnSync('zip', ['-qr', path.join(ROOT, 'package.zip'), '.'], { cwd: OUT, stdio: 'inherit' });
     if (z.error) console.warn('! zip is not installed: package/ is the package');
     else if (z.status === 0) console.log(`package.zip: ${(statSync(path.join(ROOT, 'package.zip')).size / MiB).toFixed(2)} MiB`);
   }
-  if (problems.length || check.status !== 0) process.exitCode = 1;
+  if (problems.length || (opt.draft ? blocking.length > 0 : check.status !== 0)) process.exitCode = 1;
 }
 
 try {

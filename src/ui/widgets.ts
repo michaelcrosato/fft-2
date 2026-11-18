@@ -44,6 +44,19 @@ export interface MenuOpts<T> {
 
 export interface MenuHandle<T> { promise: Promise<T | null>; close: () => void; el: HTMLElement; refresh: (items: MenuItem<T>[]) => void; }
 
+/** A polite live region: screen readers speak the menu row in focus and each line of dialogue. */
+let live: HTMLElement | null = null;
+export function announce(text: string) {
+  if (typeof document === 'undefined') return;
+  if (!live?.isConnected) {
+    live = h('div.sr-only', { 'aria-live': 'polite', 'aria-atomic': 'true', role: 'status' });
+    document.body.appendChild(live);
+  }
+  // a fresh node each time, so the same words said twice are spoken twice
+  live.replaceChildren(h('span', null, text));
+}
+
+let menuIds = 0;
 export function menu<T = string>(o: MenuOpts<T>): MenuHandle<T> {
   let items = o.items;
   const el = h('div.panel.menu' + (o.className ? '.' + o.className.split(' ').join('.') : ''));
@@ -57,7 +70,9 @@ export function menu<T = string>(o: MenuOpts<T>): MenuHandle<T> {
     el.appendChild(close);
     el.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); audio.sfx('cancel'); finish(null); });
   }
-  const list = h('div.scroll');
+  // a list box: the row in focus is aria-selected and spoken through the live region
+  const list = h('div.scroll', { role: 'listbox', 'aria-label': o.title ?? '' });
+  const menuId = `menu${++menuIds}`;
   if (o.maxHeight) list.style.maxHeight = o.maxHeight;
   el.appendChild(list);
   const desc = h('div.desc');
@@ -76,6 +91,7 @@ export function menu<T = string>(o: MenuOpts<T>): MenuHandle<T> {
     rows = items.map((it, i) => {
       if (it.sep) return list.appendChild(h('div.sep')) as HTMLElement;
       const row = h('div.item' + (it.disabled ? '.disabled' : ''), {
+        role: 'option', id: `${menuId}-${i}`, 'aria-selected': 'false', ...(it.disabled ? { 'aria-disabled': 'true' } : {}),
         // Layout changes can emit pointerenter beneath a stationary cursor (notably WebKit).
         // Only mouse movement takes selection back from keyboard/gamepad; touch still selects on tap.
         onpointermove: (e: PointerEvent) => { if (e.pointerType === 'mouse') setSel(i, false); },
@@ -95,8 +111,12 @@ export function menu<T = string>(o: MenuOpts<T>): MenuHandle<T> {
     if (i === sel && !force) return; // re-hovering the same row must not re-run onHover
     if (i !== sel && sound) audio.sfx('cursor');
     rows[sel]?.classList.remove('sel');
+    rows[sel]?.setAttribute('aria-selected', 'false');
     sel = i;
     rows[sel]?.classList.add('sel');
+    rows[sel]?.setAttribute('aria-selected', 'true');
+    if (rows[sel]) list.setAttribute('aria-activedescendant', rows[sel].id);
+    { const it = items[sel]; if (it) announce([it.label, it.right, typeof it.disabled === 'string' ? it.disabled : ''].filter(Boolean).join(', ')); }
     rows[sel]?.scrollIntoView?.({ block: 'nearest' });
     const it = items[sel];
     if (o.showDesc) desc.textContent = typeof it?.disabled === 'string' ? it.disabled : it?.desc ?? '';
@@ -193,6 +213,7 @@ export function say(speaker: string, text: string, o: SayOpts = {}): Promise<voi
   uiRoot().appendChild(box);
   dlgEl = box;
   box.dir = dir;
+  announce(speaker ? `${speaker}: ${text}` : text);
   return new Promise((resolve) => {
     // reveal whole letters (whole words in Arabic script), over the time the original line takes
     const steps = pieces(text);
@@ -247,6 +268,7 @@ export async function narrate(text: string, timing = text.length): Promise<void>
   const p = h('p');
   const el = h('div.narration', null, p);
   el.dir = dir;
+  announce(text);
   el.style.opacity = '0';
   el.style.transition = 'opacity 0.6s';
   uiRoot().appendChild(el);
