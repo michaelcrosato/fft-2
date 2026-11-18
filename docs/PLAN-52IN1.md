@@ -16,7 +16,7 @@ ships on its own, as AGENTS.md says.
 | 5 — Controllers and the DualSense | done: Options → Controller |
 | 6 — 52in1 sessions | done: Trials, Moments, hot-seat versus; `npm run hub:harness` passes |
 | 7 — Bugs and low-hanging fruit | done, or deferred with a reason in `docs/REPO_AUDIT.md` (*Pass 4*) |
-| 8 — Stretch: online versus | not started (the plan starts it only after 9) |
+| 8 — Stretch: online versus | done: `shared-world versus 2`, named once the harness passed it (2 players, host leaving, server copy) |
 | 9 — Docs, CI, screenshots, hand-off | done; the package is built at hand-off with the credit |
 
 ## The goal
@@ -687,24 +687,26 @@ Import steps for the owner, in a clone of `michaelcrosato/52in1`. Its
 
 ## Definition of done
 
-- [ ] No Vercel config or wording is left, apart from dated history in `docs/REPO_AUDIT.md`.
-- [ ] No third-party audio in the tree or the build. Every music and SFX cue is an
+Ticked as each was checked; the evidence is in `docs/REPO_AUDIT.md` (*Pass 4 — 52in1*).
+
+- [x] No Vercel config or wording is left, apart from dated history in `docs/REPO_AUDIT.md`.
+- [x] No third-party audio in the tree or the build. Every music and SFX cue is an
       original synthesized composition or effect, there are no voices, and
       `npm run audio:verify` passes.
-- [ ] `npm test`, `npm run build` and `npm run sim` (0 stalls, 0 errors) pass, and so
+- [x] `npm test`, `npm run build` and `npm run sim` (0 stalls, 0 errors) pass, and so
       does Playwright in Chromium, plus Firefox and WebKit where they can run.
-- [ ] `npm run package` makes at most 100 files and 95 MiB, and `catalogue-check` shows
+- [x] `npm run package` makes at most 100 files and 95 MiB, and `catalogue-check` shows
       no errors. Each warning is explained, and the screenshots have been looked at.
-- [ ] `npm run hub:harness` passes for every online mode `hub:multiplayer` names, and the
+- [x] `npm run hub:harness` passes for every online mode `hub:multiplayer` names, and the
       game still runs outside a session.
-- [ ] The `game-lines` block passes the checker, and the `en-XA`, `zh-XC` and `ar-XB`
+- [x] The `game-lines` block passes the checker, and the `en-XA`, `zh-XC` and `ar-XB`
       sweeps pass.
-- [ ] Every screen works on a controller. Create + Options and PS are left to 52in1.
+- [x] Every screen works on a controller. Create + Options and PS are left to 52in1.
       PlayStation glyphs show for PlayStation pads. The DualSense extras work through a
       mocked `AIHubSettings`, and the WebHID report bytes match the ported vectors.
-- [ ] Phase 7's items are each fixed or deferred with a reason, and REPO_AUDIT's
+- [x] Phase 7's items are each fixed or deferred with a reason, and REPO_AUDIT's
       *Pass 4 — 52in1* lists every fix.
-- [ ] README.md, AGENTS.md and the docs describe the new state.
+- [x] README.md, AGENTS.md and the docs describe the new state.
 - [ ] Everything is merged into `main`, with no open PR, branch or stash.
 - [ ] The final package has been sent to the owner with the import steps.
 
