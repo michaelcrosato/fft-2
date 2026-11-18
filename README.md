@@ -155,18 +155,23 @@ npm run sim:trials    # plays each Trial AI against AI: win rate and turns to wi
 ```
 src/battle/     headless battle engine (CT loop, formulas, statuses, reactions, AI) — deterministic
 src/data/       all content as typed data (jobs, abilities, items, monsters, cast, maps, battles, scenes, story)
-src/game/       game state, saves, battle setup, story flow, world travel
+src/game/       game state, saves, battle setup, story flow, world travel; 52in1 sessions (session.ts),
+                Trials and Moments set-up (trial.ts) and hot-seat versus (versus.ts)
+src/i18n/       Languages v1: t(), the line catalogs (ui/), content localization, the game-lines extractor
 src/gfx/        renderer bootstrap, post-processing (TSL), terrain, props, models, animation, VFX, portraits
 src/scenes/     battle stage, unit views, battle controller, cutscene runner, world map
-src/ui/         DOM UI: widgets, battle HUD, menus (formation, town, chronicle, options)
+src/ui/         DOM UI: widgets, battle HUD, menus (formation, town, chronicle, options, controller),
+                input (keyboard, mouse, touch, gamepads) and the DualSense (dualsense/)
 src/audio/      the synthesizer: instruments, sequencer, the original score (score/) and sound effects
 docs/DESIGN.md  naming bible, story outline, content conventions
 tools/          content validator, campaign simulator, audio verification, 52in1 package and checks (hub/)
 ```
 
 Checks: `npm run typecheck`, `npm test`, `npm run validate` (content cross-references),
-`npm run sim` (AI-vs-AI simulation of every battle, including scripted events; fails on a stall or exception).
-GitHub Actions (`.github/workflows/ci.yml`) runs these and a Chromium boot smoke test on every push to
+`npm run sim` (AI-vs-AI simulation of every battle, including scripted events; fails on a stall or exception;
+`VETERAN=1` plays a careful player's party over three seeds), `npm run sim:trials`, `npm run hub:check`.
+GitHub Actions (`.github/workflows/ci.yml`) runs these, then in Chromium a boot smoke test, the test languages,
+the menus' screen-reader roles, a 52in1 session round and the offline audio check, on every push to
 `main` and every pull request. Use Node 22 (`.nvmrc`).
 Every commit ships immediately: `npm run ship` pushes and merges it into `main` (see `AGENTS.md`).
 

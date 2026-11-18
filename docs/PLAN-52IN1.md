@@ -4,6 +4,21 @@ Written 18 November 2026 from a read of this repository and of `michaelcrosato/5
 at commit `fdc2dd62`. It is the work list for the `/goal` that carries it out. Each phase
 ships on its own, as AGENTS.md says.
 
+## Status (carried out)
+
+| Phase | State |
+|---|---|
+| 0 — Baseline and 52in1 tools | done |
+| 1 — Retire Vercel | done |
+| 2 — Original music and sound, no voices | done (`npm run audio:verify`) |
+| 3 — Languages v1 (building) | done: every line through `t()` or content; test languages in e2e |
+| 4 — Catalogue v1 | done: `npm run hub:check` passes but the hand-off's credit and covers |
+| 5 — Controllers and the DualSense | done: Options → Controller |
+| 6 — 52in1 sessions | done: Trials, Moments, hot-seat versus; `npm run hub:harness` passes |
+| 7 — Bugs and low-hanging fruit | done, or deferred with a reason in `docs/REPO_AUDIT.md` (*Pass 4*) |
+| 8 — Stretch: online versus | not started (the plan starts it only after 9) |
+| 9 — Docs, CI, screenshots, hand-off | done; the package is built at hand-off with the credit |
+
 ## The goal
 
 1. Retire everything Vercel.

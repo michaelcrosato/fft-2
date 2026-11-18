@@ -12,13 +12,20 @@ Repo rules for every coding agent (Claude Code reads this through `CLAUDE.md`).
 - Never leave an open PR, an unmerged pushed branch or a stash behind. If you find one, merge
   it (or close it and delete its branch when it is obsolete).
 - Before shipping, run the checks that fit the change: `npm test` and `npm run build`
-  (type check, content/audio validation, bundle); `npm run sim` for battle/AI changes.
-  CI (`.github/workflows/ci.yml`) re-runs them on `main`. The game's public home is 52in1:
-  `npm run package` builds the package 52in1 imports (`tools/hub/README.md`).
+  (type check, content/audio validation, bundle); `npm run sim` for battle/AI changes;
+  `npm run hub:check` and `npm run hub:harness` for anything a 52in1 session touches (boot,
+  `src/game/session.ts`, Trials, Moments, the head tags). CI (`.github/workflows/ci.yml`)
+  re-runs them on `main`. The game's public home is 52in1: `npm run package` builds the
+  package 52in1 imports (`tools/hub/README.md`).
 
 ## Project notes
 
+- Every line a player sees goes through `t()` with its id in a catalog under `src/i18n/ui/`
+  (content stays in `src/data/` and is localized in place). Check new screens with
+  `?lang=en-XA`, `?lang=zh-XC` and `?lang=ar-XB` (README, *Languages*).
+- Never write a model name into the repository: the credit goes into the packaged page only,
+  through `npm run package -- --model … --effort … --harness …` at hand-off.
 - Node 22 (`.nvmrc`). Scripts and test commands: `README.md`.
 - Audit history and known follow-ups: `docs/REPO_AUDIT.md`; browser matrix: `docs/COMPATIBILITY.md`.
-- Work in progress: `docs/PLAN-52IN1.md` (the 52in1 package, original audio, sessions,
-  languages, DualSense).
+- The 52in1 plan and what it delivered: `docs/PLAN-52IN1.md` (the package, original audio,
+  sessions, languages, DualSense); its record is *Pass 4* in `docs/REPO_AUDIT.md`.

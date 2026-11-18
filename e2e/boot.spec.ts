@@ -46,9 +46,11 @@ test('gamepad drives the menus', async ({ page }, info) => {
   await waitForUiText(page, 'New Game');
   const sel = () => page.locator('.title-menu .item.sel').textContent().catch(() => '');
   await expect(page.locator('.title-menu .item.sel')).toHaveText(/New Game/);
-  // d-pad down twice (Load Game is disabled without saves, but can be highlighted)
+  // d-pad down three times (Load Game is disabled without saves, but can be highlighted)
   await pad.tap(13);
   await expect(page.locator('.title-menu .item.sel')).toHaveText(/Load Game/);
+  await pad.tap(13);
+  await expect(page.locator('.title-menu .item.sel')).toHaveText(/Versus/);
   await pad.tap(13);
   await expect(page.locator('.title-menu .item.sel')).toHaveText(/Options/);
   await pad.tap(0); // A
