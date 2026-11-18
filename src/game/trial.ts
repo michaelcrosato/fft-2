@@ -24,9 +24,8 @@ export function presetBattle(p: PresetBattle, seed: number): { state: GameState;
   state.inventory = { ...p.items };
   const party: DeployChoice[] = p.company.map((sp) => ({ unit: spawnRoster(sp, sp.level as number, TIER, rng), x: sp.at[0], z: sp.at[1] }));
   state.roster = party.map((c) => c.unit);
-  // a knocked-out member leaves the field rather than turning to crystal: nothing to pick up
-  (state as GameState & { __gentle?: boolean }).__gentle = true;
-  const setup = setupBattle(state, p.battle, party, { seed: rng.int(1, 1e9), difficulty: 'normal' });
+  // gentle: a knocked-out member leaves the field rather than turning to crystal, so nothing to pick up
+  const setup = setupBattle(state, p.battle, party, { seed: rng.int(1, 1e9), difficulty: 'normal', gentle: true });
   // the company answers to the ids its spawns give (a moment's goal names them)
   party.forEach((c, i) => { const id = p.company[i].id; const u = setup.battle.units.find((o) => o.roster === c.unit); if (id && u) u.sid = id; });
   return { state, party, setup };
