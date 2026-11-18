@@ -22,15 +22,16 @@ import { fullscreenLabel, gameMode, promptGameMode, toggleFullscreen } from '../
 import { setContextMenu, setGameMenuVisible } from '../ui/gameMenu';
 import { loading } from '../ui/loading';
 import { tapTracker } from '../ui/taps';
+import { fmtNum, t, upper } from '../i18n';
 
-export const MONTHS = ZODIAC_ORDER.map((z) => ZODIAC_NAMES[z]);
-export function dateText(day: number) { const d = day - 1; return `${MONTHS[Math.floor(d / 30) % 12]} ${(d % 30) + 1}`; }
+export const MONTHS = ZODIAC_ORDER.map((z) => t(`flow.month.${z}`));
+export function dateText(day: number) { const d = day - 1; return t('flow.date', { month: MONTHS[Math.floor(d / 30) % 12], day: (d % 30) + 1 }); }
 
 // ============================================================================
 //  Title
 // ============================================================================
 export async function runTitle(game: Game) {
-  await loading.begin('Opening the chronicle…');
+  await loading.begin(t('common.loading.chronicle'));
   setGameMenuVisible(false);
   const world = new WorldView();
   await world.init();
@@ -41,21 +42,21 @@ export async function runTitle(game: Game) {
   audio.playMusic('title', { fade: 2 });
   const logo = h('div', { style: { position: 'absolute', left: '50%', top: '14%', transform: 'translateX(-50%)', textAlign: 'center', pointerEvents: 'none', textShadow: '0 3px 12px #000, 0 0 30px rgba(0,0,0,.6)' } },
     // sizes also capped by height so the logo stays clear of the menu on landscape phones
-    h('div', { style: { fontFamily: 'Cinzel, serif', fontWeight: '700', fontSize: 'min(8vw, 64px, 12vh)', letterSpacing: '0.12em', color: '#f4dc98', whiteSpace: 'nowrap' } }, 'FINAL FEALTY'),
-    h('div', { style: { fontFamily: 'Cinzel, serif', fontWeight: '500', fontSize: 'min(4vw, 28px, 6vh)', letterSpacing: '0.6em', color: '#efe3c6', marginTop: '-4px', whiteSpace: 'nowrap' } }, 'TACTICS'),
+    h('div', { style: { fontFamily: 'Cinzel, serif', fontWeight: '700', fontSize: 'min(8vw, 64px, 12vh)', letterSpacing: '0.12em', color: '#f4dc98', whiteSpace: 'nowrap' } }, upper(t('flow.title.logo_main'))),
+    h('div', { style: { fontFamily: 'Cinzel, serif', fontWeight: '500', fontSize: 'min(4vw, 28px, 6vh)', letterSpacing: '0.6em', color: '#efe3c6', marginTop: '-4px', whiteSpace: 'nowrap' } }, upper(t('flow.title.logo_sub'))),
     h('div', { style: { width: '360px', maxWidth: '70vw', height: '2px', margin: 'min(14px, 2vh) auto', background: 'linear-gradient(90deg, transparent, #c9a24a, transparent)' } }),
-    h('div', { style: { fontFamily: 'EB Garamond, serif', fontStyle: 'italic', fontSize: 'min(4vw, 20px, 4.5vh)', color: '#e8d8b0', whiteSpace: 'nowrap' } }, 'The Chronicle of the Twelve Braves'),
+    h('div', { style: { fontFamily: 'EB Garamond, serif', fontStyle: 'italic', fontSize: 'min(4vw, 20px, 4.5vh)', color: '#e8d8b0', whiteSpace: 'nowrap' } }, t('flow.title.subtitle')),
   );
   uiRoot().appendChild(logo);
-  const footer = h('div', { style: { position: 'absolute', bottom: '10px', width: '100%', textAlign: 'center', color: 'rgba(240,225,190,.6)', fontSize: '12px', pointerEvents: 'none' } }, `A fan-made spiritual successor · three.js ${({ webgpu: 'WebGPU', webgl2: 'WebGL 2', webgl1: 'WebGL 1' } as Record<string, string>)[rinfo?.backend ?? ''] ?? ''} · internal test build · placeholder FFT audio`);
+  const footer = h('div', { style: { position: 'absolute', bottom: '10px', width: '100%', textAlign: 'center', color: 'rgba(240,225,190,.6)', fontSize: '12px', pointerEvents: 'none' } }, t('flow.title.footer', { renderer: ({ webgpu: 'WebGPU', webgl2: 'WebGL 2', webgl1: 'WebGL 1' } as Record<string, string>)[rinfo?.backend ?? ''] ?? '' }));
   uiRoot().appendChild(footer);
   for (;;) {
     const hasSave = latestSave() !== null;
     const choice = menu({ items: [
-      ...(hasSave ? [{ label: 'Continue', value: 'continue' }] : []),
-      { label: 'New Game', value: 'new' },
-      { label: 'Load Game', value: 'load', disabled: !hasSave },
-      { label: 'Options', value: 'options' },
+      ...(hasSave ? [{ label: t('common.continue'), value: 'continue' }] : []),
+      { label: t('flow.title.new_game'), value: 'new' },
+      { label: t('flow.title.load_game'), value: 'load', disabled: !hasSave },
+      { label: t('flow.menu.options'), value: 'options' },
     ], x: '50%', y: '58%', className: 'title-menu', cancelable: false });
     await game.present();
     const pick = await choice.promise;
@@ -69,7 +70,7 @@ export async function runTitle(game: Game) {
     }
     if (!state) continue;
     await promptGameMode();
-    await loading.begin('Continuing the tale…');
+    await loading.begin(t('flow.loading.continue'));
     logo.remove(); footer.remove();
     game.state = state;
     setGameMenuVisible(true);
@@ -81,25 +82,25 @@ export async function runTitle(game: Game) {
 
 async function newGameSetup(): Promise<GameState | null> {
   const panel = h('div.panel', { style: { left: '50%', top: '50%', transform: 'translate(-50%,-50%)', width: 'min(460px, 92vw)', textAlign: 'center' } },
-    h('div.title-plate', null, 'A New Chronicle'),
-    h('h2', null, 'Name your hero'));
+    h('div.title-plate', null, t('flow.setup.title')),
+    h('h2', null, t('flow.setup.name')));
   const inp = h('input', { value: 'Rhen', maxlength: '12', style: { fontFamily: 'EB Garamond, serif', fontSize: '1.4em', textAlign: 'center', width: '70%', padding: '4px 8px', background: '#fbf4e2', border: '1px solid #8a6a3a', borderRadius: '4px', color: '#2b1d12' } }) as HTMLInputElement;
   panel.appendChild(inp);
-  panel.appendChild(h('h2', { style: { marginTop: '14px' } }, 'Date of birth'));
-  const monthSel = h('select', { style: { fontSize: '1.1em', marginRight: '8px' } }, ...['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m, i) => h('option', { value: String(i + 1) }, m))) as HTMLSelectElement;
-  const daySel = h('select', { style: { fontSize: '1.1em' } }, ...Array.from({ length: 31 }, (_, i) => h('option', { value: String(i + 1) }, String(i + 1)))) as HTMLSelectElement;
+  panel.appendChild(h('h2', { style: { marginTop: '14px' } }, t('flow.setup.birthday')));
+  const monthSel = h('select', { style: { fontSize: '1.1em', marginRight: '8px' } }, ...['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'].map((m, i) => h('option', { value: String(i + 1) }, t(`flow.setup.month.${m}`)))) as HTMLSelectElement;
+  const daySel = h('select', { style: { fontSize: '1.1em' } }, ...Array.from({ length: 31 }, (_, i) => h('option', { value: String(i + 1) }, fmtNum(i + 1)))) as HTMLSelectElement;
   monthSel.value = '1'; daySel.value = '1';
   const zod = h('div', { style: { fontSize: '1.2em', margin: '8px 0' } });
   const upd = () => { const z = zodiacFromDate(+monthSel.value, +daySel.value); zod.textContent = `${ZODIAC_GLYPH[z]}︎ ${ZODIAC_NAMES[z]}`; };
   monthSel.onchange = upd; daySel.onchange = upd; upd();
   panel.appendChild(h('div', null, monthSel, daySel));
   panel.appendChild(zod);
-  panel.appendChild(h('div.muted', { style: { fontSize: '0.85em' } }, 'Your sign shapes your compatibility with friend and foe alike.'));
+  panel.appendChild(h('div.muted', { style: { fontSize: '0.85em' } }, t('flow.setup.sign_hint')));
   const gentle = h('input', { type: 'checkbox' }) as HTMLInputElement;
-  panel.appendChild(h('label', { style: { display: 'block', margin: '10px 0', fontSize: '0.95em' } }, gentle, ' Gentle mode — fallen allies retreat instead of turning to crystal'));
+  panel.appendChild(h('label', { style: { display: 'block', margin: '10px 0', fontSize: '0.95em' } }, gentle, ' ', t('flow.setup.gentle')));
   // real buttons, so Tab reaches them from the name field
-  const ok = h('button.btn', { type: 'button' }, 'Begin the Tale');
-  const back = h('button.btn.ghost', { type: 'button', style: { marginLeft: '10px' } }, 'Back');
+  const ok = h('button.btn', { type: 'button' }, t('flow.setup.begin'));
+  const back = h('button.btn.ghost', { type: 'button', style: { marginLeft: '10px' } }, t('common.back'));
   panel.appendChild(h('div', { style: { marginTop: '10px' } }, ok, back));
   uiRoot().appendChild(panel);
   inp.focus();
@@ -164,7 +165,7 @@ export async function mainLoop(game: Game) {
 
 async function returnToTitle(game: Game) {
   gameMode.exit();
-  await loading.begin('Returning to the title…');
+  await loading.begin(t('flow.loading.title'));
   game.disposeStage();
   uiRoot().innerHTML = '';
   await runTitle(game);
@@ -182,7 +183,7 @@ function nextIsImmediate(game: Game): boolean {
 async function keepsAutosave(): Promise<boolean> {
   const auto = listSaves()[AUTOSAVE_SLOT];
   if (!auto) return true;
-  return confirm(`Start a new game? It will replace the autosave of ${auto.heroName}'s tale (level ${auto.level}). Other save slots are kept.`, 'New Game', 'Back', true);
+  return confirm(t('flow.title.replace_autosave', { hero: auto.heroName, level: auto.level }), t('flow.title.new_game'), t('common.back'), true);
 }
 
 async function runImmediate(game: Game): Promise<boolean> {
@@ -234,8 +235,10 @@ function markerStates(game: Game) {
 }
 
 // ---------------------------------------------------------------- world loop
+/** The status bar's chapter, by chapter number (0 is the prologue). */
+const CHAPTER_LINES = ['flow.world.chapter.prologue', 'flow.world.chapter.1', 'flow.world.chapter.2', 'flow.world.chapter.3', 'flow.world.chapter.4'];
 async function worldLoop(game: Game): Promise<'title' | 'continue'> {
-  await loading.begin('Unfolding the world map…');
+  await loading.begin(t('flow.loading.world_map'));
   const s = game.state;
   const world = new WorldView();
   await world.init();
@@ -267,8 +270,9 @@ async function worldLoop(game: Game): Promise<'title' | 'continue'> {
   const refreshTop = () => {
     const step = STORY[s.storyIndex];
     top.innerHTML = '';
-    top.appendChild(h('div', null, h('b', null, dateText(s.day)), ` · ${s.gil.toLocaleString()} gil · Party Lv ${partyLevel(s)} · Chapter ${['Prologue', 'I', 'II', 'III', 'IV'][s.chapter] ?? s.chapter}`));
-    top.appendChild(h('div.muted', null, step ? `Objective: ${step.objective}` : 'The tale is complete.'));
+    const chapter = t(CHAPTER_LINES[s.chapter] ?? 'flow.world.chapter.other', { chapter: s.chapter });
+    top.appendChild(h('div', null, h('b', null, dateText(s.day)), ' · ', t('flow.world.status', { gil: s.gil, level: partyLevel(s), chapter })));
+    top.appendChild(h('div.muted', null, step ? t('flow.world.objective', { objective: step.objective }) : t('common.tale_told')));
   };
   refreshTop();
   const el = renderer.domElement;
@@ -294,7 +298,7 @@ async function worldLoop(game: Game): Promise<'title' | 'continue'> {
       const travelled = target !== s.location;
       if (travelled) {
         const r = route(s.location, target, unlocked);
-        if (!r) { toast('No known road leads there.'); return; }
+        if (!r) { toast(t('flow.world.no_road')); return; }
         sel = target; // keyboard selection follows mouse/tap travel
         await world.travel(r, async (nodeId) => {
           s.location = nodeId;
@@ -311,7 +315,7 @@ async function worldLoop(game: Game): Promise<'title' | 'continue'> {
       if (travelled && here?.kind === 'field' && here.random && STORY[s.storyIndex]?.at !== s.location && !(window as any).__autoPlay && loadOptions().encounters !== false && new Rng().pct((here.random.rate ?? 0.28) * 100)) {
         const def = randomBattleDef(game, here);
         if (def) {
-          toast('Ambush! Foes block the road.');
+          toast(t('flow.world.ambush'));
           audio.sfx('roar');
           BATTLES.set(def.id, def);
           const r = await hudHidden(() => game.runBattle(def.id));
@@ -388,16 +392,16 @@ async function worldLoop(game: Game): Promise<'title' | 'continue'> {
     hud.style.display = 'none'; // full-screen menus and their titles would draw over it
     try {
       const pick = await menu({ items: [
-        { label: 'Formation', value: 'formation' }, { label: 'Chronicle', value: 'chronicle' }, { label: 'Save', value: 'save' }, { label: 'Load', value: 'load' },
+        { label: t('flow.menu.formation'), value: 'formation' }, { label: t('flow.menu.chronicle'), value: 'chronicle' }, { label: t('flow.menu.save'), value: 'save' }, { label: t('flow.menu.load'), value: 'load' },
         { label: fullscreenLabel(), value: 'fullscreen', onChoose: toggleFullscreen },
-        { label: 'Options', value: 'options' }, { label: 'Return to Title', value: 'title' },
-      ], right: 24, y: 'calc(76px + env(safe-area-inset-top, 0px))', title: 'Menu' }).promise;
+        { label: t('flow.menu.options'), value: 'options' }, { label: t('flow.menu.return_title'), value: 'title' },
+      ], right: 24, y: 'calc(76px + env(safe-area-inset-top, 0px))', title: t('flow.menu.title') }).promise;
       if (pick === 'formation') await openFormation(game);
       if (pick === 'chronicle') await openChronicle(game);
       if (pick === 'save') await openSaveLoad(game, 'save');
       if (pick === 'load') { const st = await openSaveLoad(game, 'load'); if (st) { await promptGameMode(); game.state = st; result = 'continue'; } }
       if (pick === 'options') await openOptions(game);
-      if (pick === 'title' && await confirm('Return to the title screen? Unsaved progress will be lost.', 'Return to title', 'Stay', true)) result = 'title';
+      if (pick === 'title' && await confirm(t('flow.menu.return_title_confirm'), t('flow.menu.return_title_yes'), t('flow.menu.stay'), true)) result = 'title';
       refreshTop();
     } finally { busy = result !== null; hud.style.display = ''; }
   };
@@ -428,9 +432,9 @@ function advanceDay(game: Game, n: number) {
   for (const report of advanceStateDay(game.state, n)) {
     const e = ERRANDS.get(report.id)!;
     if (report.success) {
-      toast(`Errand complete: ${e.title} (+${e.reward.gil} gil)`, 3500);
+      toast(t('flow.errand.complete', { errand: e.title, gil: e.reward.gil }), 3500);
     } else {
-      toast(`Errand failed: ${e.title}. The party returns empty-handed.`, 3500);
+      toast(t('flow.errand.failed', { errand: e.title }), 3500);
     }
   }
 }
@@ -457,15 +461,15 @@ async function nodeMenu(game: Game, world: WorldView, nodeId: string): Promise<'
     const items: Array<{ label: string; value: string; right?: string; disabled?: boolean | string }> = [];
     const stepHere = STORY[s.storyIndex];
     if (stepHere?.at === nodeId) items.push({ label: `▶ ${stepHere.objective}`, value: 'story' });
-    for (const q of sides) items.push({ label: `✦ ${q.objective ?? 'A curious matter'}`, value: 'side:' + q.id });
-    if (node.shop) items.push({ label: 'Outfitter', value: 'shop' });
-    if (node.guild) items.push({ label: 'Soldier Office', value: 'recruit' });
-    if (node.tavern) items.push({ label: 'Tavern', value: 'tavern' });
-    if (node.furShop) items.push({ label: 'Fur Shop', value: 'fur' });
-    if (node.kind === 'field' && node.random) items.push({ label: 'Seek Battle', value: 'fight' });
-    items.push({ label: 'Formation', value: 'formation' });
-    items.push({ label: 'Save', value: 'save' });
-    items.push({ label: 'Depart', value: 'leave' });
+    for (const q of sides) items.push({ label: `✦ ${q.objective ?? t('flow.place.side_untitled')}`, value: 'side:' + q.id });
+    if (node.shop) items.push({ label: t('flow.place.outfitter'), value: 'shop' });
+    if (node.guild) items.push({ label: t('flow.place.soldier_office'), value: 'recruit' });
+    if (node.tavern) items.push({ label: t('flow.place.tavern'), value: 'tavern' });
+    if (node.furShop) items.push({ label: t('flow.place.fur_shop'), value: 'fur' });
+    if (node.kind === 'field' && node.random) items.push({ label: t('flow.place.seek_battle'), value: 'fight' });
+    items.push({ label: t('flow.menu.formation'), value: 'formation' });
+    items.push({ label: t('flow.menu.save'), value: 'save' });
+    items.push({ label: t('flow.place.depart'), value: 'leave' });
     const info = h('div.panel', { style: { left: '50%', top: '12px', transform: 'translateX(-50%)', maxWidth: 'min(640px, 90vw)', textAlign: 'center', padding: '6px 16px' } }, h('h2', null, node.name), h('div.muted', null, node.desc));
     uiRoot().appendChild(info);
     if (node.kind === 'town' || node.kind === 'castle') audio.playMusic('town', { fade: 1.2 });
@@ -548,10 +552,10 @@ export function randomBattleDef(game: Game, node: WorldNode): BattleDef | null {
 async function credits(game: Game) {
   audio.playMusic('credits', { fade: 2 });
   const lines = [
-    'FINAL FEALTY TACTICS', 'The Chronicle of the Twelve Braves', '',
-    'A tale of fealty and its price.', '', 'Story, systems, code and models', 'written for the browser', '', 'Original music and sound', 'composed and synthesized for this game', '',
-    'Rendered with three.js — WebGPU, WebGL 2, WebGL 1', '', 'Inspired by the war-drama tactics games of old,', 'with love and respect.', '',
-    `Played by ${game.state.heroName}'s company`, `Days on the road: ${game.state.day}`, `Battles won: ${game.state.battlesWon}`, '', 'Thank you for playing.',
+    upper(t('common.game_name')), t('flow.title.subtitle'), '',
+    t('flow.credits.tagline'), '', t('flow.credits.made'), '', t('flow.credits.music'), '',
+    t('flow.credits.rendered'), '', t('flow.credits.inspired'), '',
+    t('flow.credits.played_by', { hero: game.state.heroName }), t('flow.credits.days', { days: game.state.day }), t('flow.credits.battles', { battles: game.state.battlesWon }), '', t('flow.credits.thanks'),
   ];
   const el = h('div.narration', null, h('div', { style: { whiteSpace: 'pre-line', fontStyle: 'normal', fontFamily: 'Cinzel, serif', lineHeight: '2' } }, lines.join('\n')));
   uiRoot().appendChild(el);
@@ -564,5 +568,5 @@ async function credits(game: Game) {
   el.remove();
   game.state.flags.credits_seen = true;
   // the autosave slot, never one of the player's own slots
-  await titleCard('Fin', saveGame(game.state, 7) ? 'Your chronicle has been saved.' : 'The chronicle ends.');
+  await titleCard(t('flow.credits.fin'), saveGame(game.state, 7) ? t('flow.credits.saved') : t('flow.credits.ended'));
 }
