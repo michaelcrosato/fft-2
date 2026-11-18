@@ -43,7 +43,9 @@ async function boot() {
   let pref = (qRenderer && BACKENDS.includes(qRenderer) ? qRenderer : opts.renderer !== 'auto' ? opts.renderer : 'auto') as Backend | 'auto';
   // the GPU device was lost more than once this session: stay on WebGL 2
   if (pref === 'auto' && lostCount() >= 2) pref = 'webgl2';
-  await initRenderer(document.getElementById('app')!, pref, (qQuality && QUALITIES.includes(qQuality) ? qQuality : opts.quality) as never);
+  const info = await initRenderer(document.getElementById('app')!, pref, (qQuality && QUALITIES.includes(qQuality) ? qQuality : opts.quality) as never);
+  // phones and the lowest graphics preset get lighter music synthesis (one voice per note, no reverb)
+  audio.setQuality(info.quality === 'low' || info.mobile ? 'low' : 'high');
   onRendererLost(showRendererLost);
   await loadTSL();
   // downloads while the textures below are painted

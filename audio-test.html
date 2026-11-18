@@ -39,6 +39,7 @@
   .card .id { font: 12px ui-monospace, Menlo, Consolas, monospace; color: var(--gold); }
   .card .name { font-family: Cinzel, Georgia, serif; font-size: 14px; margin: 2px 0; }
   .card .d { color: var(--muted); font-size: 13px; }
+  .card button { margin-top: 6px; font-size: 12px; padding: 3px 8px; }
   .card .len { float: right; font: 12px ui-monospace, Menlo, Consolas, monospace; color: var(--muted); }
   .sfx { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 6px; }
   .sfx button { font: 13px ui-monospace, Menlo, Consolas, monospace; padding: 7px 6px; }
@@ -48,7 +49,7 @@
 </head>
 <body>
   <h1>Audio Workshop</h1>
-  <p class="sub">Internal testing: Final Fantasy Tactics audio placeholders. Every cue and file is listed in src/audio/manifest.json and the README.</p>
+  <p class="sub">The original score and sound effects, synthesized in the browser: src/audio/score/ and src/audio/sfx.ts. Nothing here is a recording.</p>
   <div class="banner" id="unlock">Click anywhere to wake the orchestra.</div>
 
   <div class="now">
@@ -70,6 +71,7 @@
     <label>music <input type="range" id="vMusic" min="0" max="1" step="0.01" /></label>
     <label>sfx <input type="range" id="vSfx" min="0" max="1" step="0.01" /></label>
     <button id="duck">Duck music 70% for 2 s</button>
+    <label><input type="checkbox" id="low" /> low quality (one voice, no reverb)</label>
   </div>
 
   <h2>Score</h2>
@@ -80,11 +82,10 @@
     <label>pitch <input type="range" id="pitch" min="0.5" max="2" step="0.01" value="1" /><span id="pitchV">1.00</span></label>
     <label>pan <input type="range" id="pan" min="-1" max="1" step="0.05" value="0" /><span id="panV">0.00</span></label>
     <label>volume <input type="range" id="svol" min="0" max="1.5" step="0.05" value="1" /></label>
-    <button id="blips">Text blips</button>
     <button id="storm">SFX storm (voice limit)</button>
   </div>
   <div class="sfx" id="sfx"></div>
-  <p class="note">Unknown ids fall back to a generic blip. <code>pitch</code> is a frequency multiplier.</p>
+  <p class="note">Unknown ids fall back to <code>confirm</code>. <code>pitch</code> is a frequency multiplier. <b>Measure</b> renders a cue offline and reports its peak and RMS.</p>
 
   <script type="module" src="./src/audio/audio-test.ts"></script>
 </body>

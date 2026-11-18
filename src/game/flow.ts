@@ -549,7 +549,7 @@ async function credits(game: Game) {
   audio.playMusic('credits', { fade: 2 });
   const lines = [
     'FINAL FEALTY TACTICS', 'The Chronicle of the Twelve Braves', '',
-    'A tale of fealty and its price.', '', 'Story, systems, code and models', 'written for the browser', '', 'Placeholder audio — Final Fantasy Tactics', 'Music: Hitoshi Sakimoto / Masaharu Iwata', 'Sources: Zophar’s Domain / The Sounds Resource', 'Internal, non-commercial testing', '',
+    'A tale of fealty and its price.', '', 'Story, systems, code and models', 'written for the browser', '', 'Original music and sound', 'composed and synthesized for this game', '',
     'Rendered with three.js — WebGPU, WebGL 2, WebGL 1', '', 'Inspired by the war-drama tactics games of old,', 'with love and respect.', '',
     `Played by ${game.state.heroName}'s company`, `Days on the road: ${game.state.day}`, `Battles won: ${game.state.battlesWon}`, '', 'Thank you for playing.',
   ];

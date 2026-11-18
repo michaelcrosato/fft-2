@@ -1,4 +1,5 @@
-import { validateAudioAssets } from './audio-assets';
+import { MUSIC } from '../src/audio/score';
+import { SFX, sfxFor } from '../src/audio/sfx';
 // Cross-reference validator for all content. Run: npm run validate
 import {
   ABILITIES, ITEMS, JOBS, CHARACTERS, MAPS, BATTLES, SCENES, STORY, SIDE, NODES, EDGES, SHOP_STOCK, ERRANDS, ARTEFACTS, CHRONICLE,
@@ -9,7 +10,7 @@ import { ZODIAC_STONES } from '../src/data/misc/zodiacStones';
 import { MapGrid } from '../src/battle/grid';
 import type { SceneCmd } from '../src/data/types';
 
-const errors: string[] = validateAudioAssets();
+const errors: string[] = [];
 const warns: string[] = [];
 const err = (m: string) => errors.push(m);
 const warn = (m: string) => warns.push(m);
@@ -88,6 +89,7 @@ for (const b of BATTLES.values()) {
   for (const id of b.protect ?? []) if (!b.units.some((u) => (u.id ?? u.char) === id) && !CHARACTERS.has(id)) err(`battle ${b.id}: protect id ${id} not in units or cast`);
   for (const t of b.treasure ?? []) { if (!ITEMS.has(t[2])) err(`battle ${b.id}: unknown treasure ${t[2]}`); if (!ITEMS.has(t[3])) err(`battle ${b.id}: unknown treasure ${t[3]}`); }
   for (const e of b.events ?? []) checkCmds(e.script, `battle ${b.id} event`);
+  if (b.music && !Object.hasOwn(MUSIC, b.music)) err(`battle ${b.id}: unknown music ${b.music}`);
   for (const id of b.rewards?.items ?? []) if (!ITEMS.has(id)) err(`battle ${b.id}: unknown reward item ${id}`);
   for (const id of b.forced ?? []) if (!CHARACTERS.has(id)) err(`battle ${b.id}: forced deploy of unknown character ${id}`);
   // event triggers name a spawn or a party character
@@ -114,11 +116,14 @@ function checkCmds(cmds: SceneCmd[], where: string) {
       case 'choice': for (const [, sub] of c[2]) checkCmds(sub, where); break;
       case 'if': checkCmds(c[2], where); if (c[3]) checkCmds(c[3], where); break;
       case 'say': if (c[2].length > 260) warn(`${where}: long line (${c[2].length}) "${c[2].slice(0, 40)}…"`); break;
+      case 'music': if (c[1] && !Object.hasOwn(MUSIC, c[1])) err(`${where}: unknown music ${c[1]}`); break;
+      case 'sfx': if (!Object.hasOwn(SFX, sfxFor(c[1]))) err(`${where}: unknown sound effect ${c[1]}`); break;
     }
   }
 }
 for (const s of SCENES.values()) {
   if (s.map && !MAPS.has(s.map)) err(`scene ${s.id}: unknown map ${s.map}`);
+  if (s.music && !Object.hasOwn(MUSIC, s.music)) err(`scene ${s.id}: unknown music ${s.music}`);
   checkCmds(s.cmds, `scene ${s.id}`);
 }
 // ---- story ----
