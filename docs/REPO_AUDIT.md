@@ -242,6 +242,7 @@ DC offset, loop seams and render cost; the audition page measures any single cue
 | Moments: five one-turn puzzles. | `tests/moments.test.ts`: each has 1–2 plays (of 37–438) that clear it on every seed, and none clears by standing still. |
 | Hot-seat versus on the title, with a hand-over screen between players. | `e2e/versus.spec.ts` |
 | The hand-off package (with its credit) passes all 119 checks against the wall with no warning; it is recognised as build 2 of `github-fft-2`. The draft CI builds is missing only the credit (`hub:model`, `hub:effort`, `hub:harness`), which `npm run hub:check` allows. | `npm run package`, `npm run hub:check` |
+| Console output: on the title, in a battle and in a scene the game itself logs no warning or error; the only lines are the browser's (a software GL driver's notes and, in headless Chrome, no WebGPU adapter). Every e2e spec fails on a console error, a page error or a request to another site. | `e2e/helpers.ts` (`watchErrors`) |
 | Start-up: in a session the game says hello at once and is ready about 4.4 s later at low quality in software rendering (a moment's fresh load: about 4 s), well inside the hub's 20 s; the hub's harness shows it. Outside a session the title is up in about 3 s on the same software renderer (`e2e/boot.spec.ts`). Nothing needed lazy-loading. | `npm run hub:harness` |
 
 ## Fixes and small improvements

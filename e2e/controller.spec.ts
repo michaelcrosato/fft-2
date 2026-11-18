@@ -41,7 +41,7 @@ async function firstTurn(page: Page, pad: Pad) {
 async function skipUntil(page: Page, pad: Pad, text: string) {
   await expect.poll(async () => {
     if (await page.locator('.skipbtn').isVisible().catch(() => false)) await pad.tap(OPTIONS);
-    return (await uiText(page)).includes(text);
+    return (await uiText(page)).toLowerCase().includes(text.toLowerCase());
   }, { timeout: 180_000, intervals: [1000] }).toBe(true);
 }
 

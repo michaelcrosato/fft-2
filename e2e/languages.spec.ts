@@ -22,13 +22,15 @@ async function englishLeft(page: Page): Promise<string[]> {
     const KEYS = ['Enter', 'Esc', 'Tab', 'Shift', 'Space', 'Home', 'WebGL', 'WebGPU', 'Rhen'];
     const outside = text.replace(/\[[^\]]*\]/g, ' ');
     const words = outside.match(/[A-Za-z][A-Za-z'’-]{2,}/g) ?? [];
-    return words.filter((w) => !KEYS.includes(w) && ![...names].some((n) => n.split(/\s+/).includes(w)));
+    // names may be drawn in capitals (CSS), so they are matched whatever their case
+    const named = new Set([...names].flatMap((n) => n.split(/\s+/).map((x) => x.toLowerCase())));
+    return words.filter((w) => !KEYS.some((k) => k.toLowerCase() === w.toLowerCase()) && !named.has(w.toLowerCase()));
   });
 }
 
-/** Menu rows and panels that are wider inside than the room they have. */
+/** Pieces of text wider than the room they are given: a row's label or value, a title plate, a line of dialogue, a name, a button. */
 async function overflowing(page: Page): Promise<string[]> {
-  return page.evaluate(() => [...document.querySelectorAll<HTMLElement>('#ui .menu .item, #ui .panel, #ui .dialogue .text, .title-plate')]
+  return page.evaluate(() => [...document.querySelectorAll<HTMLElement>('#ui .menu .item .l, #ui .menu .item .r, #ui .title-plate, #ui .dialogue .text, #ui .unitcard .name, #ui .unitcard .job, #ui .btn, .game-menu-shell .btn')]
     .filter((el) => el.offsetParent !== null && el.scrollWidth > el.clientWidth + 2)
     .map((el) => `${el.className}: ${el.innerText.slice(0, 40)}`));
 }
