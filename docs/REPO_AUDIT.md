@@ -43,6 +43,10 @@ knip --include files,dependencies,unlisted,unresolved
 
 ## Vercel delivery
 
+> **Retired on 18 November 2026.** The Vercel project no longer exists, and `vercel.json`,
+> `.vercelignore` and the `?v=` audio cache rule are gone. 52in1 is the game's public home
+> (`npm run package`, `tools/hub/README.md`). The notes below are kept as history.
+
 The production baseline already served hashed JavaScript with Brotli and one-year immutable
 caching. HTML correctly required revalidation. Audio supported byte ranges and CDN hits,
 but browser requests still required revalidation.
