@@ -145,6 +145,13 @@ dialog.game-mode-prompt {
 .menu .scroll { max-height: calc(55 * var(--vh)); overflow-y: auto; padding: 2px 4px 2px 32px; margin-left: -32px; scrollbar-width: thin; }
 .menu.title-menu { transform: translateX(-50%); min-width: 230px; text-align: left; }
 .menu.centered { transform: translate(-50%, -50%); }
+/* right-to-left languages: the glove points from the right, values sit on the left */
+[dir=rtl] .menu .item.sel { background: linear-gradient(270deg, rgba(255, 240, 190, 0.95), rgba(255, 240, 190, 0.25)); }
+[dir=rtl] .menu .item.sel::before { left: auto; right: -30px; animation-name: glove-rtl; }
+@keyframes glove-rtl { 0%, 100% { transform: translate(0, -50%) scaleX(-1); } 50% { transform: translate(-3px, -50%) scaleX(-1); } }
+[dir=rtl] .menu .item .r { margin-left: 0; margin-right: auto; padding-left: 0; padding-right: 14px; }
+[dir=rtl] .menu .scroll { padding: 2px 32px 2px 4px; margin-left: 0; margin-right: -32px; }
+[dir=rtl] .menu.title-menu { text-align: right; }
 /* never wider than the screen (the ✕ in the corner must stay reachable); long labels shorten */
 .menu { max-width: calc(100vw - 28px); }
 .menu .item .l { overflow: hidden; text-overflow: ellipsis; }
