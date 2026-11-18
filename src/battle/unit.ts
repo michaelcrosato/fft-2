@@ -56,8 +56,8 @@ export class BattleUnit {
   gone = false;
   boss = false;
   vip = false;
-  /** Permanent recruitment is forbidden for plot characters, wards and protected jobs. */
-  get recruitable(): boolean { return !this.boss && !this.vip && !this.roster.charId && !this.job.noInvite; }
+  /** Permanent recruitment is forbidden for plot characters, wards, protected jobs and wearers of a noInvite item. */
+  get recruitable(): boolean { return !this.boss && !this.vip && !this.roster.charId && !this.job.noInvite && !this.equipItems.some((it) => it.noInvite); }
   noLoot = false;
   /** boss HP multiplier (lifts the 999 cap) */
   hpMult = 1;

@@ -1202,7 +1202,7 @@ export class Battle {
           break;
         case 'steal': status.push(line('engine.preview.steal')); break;
         case 'breakEquip': status.push(line('engine.preview.break')); break;
-        case 'invite': status.push(line('engine.preview.invite')); break;
+        case 'invite': status.push(line(t.recruitable ? 'engine.preview.invite' : 'engine.invite.refused')); break;
         case 'ct': status.push(e.set !== undefined ? line('engine.ct', { n: e.set }) : ctText(e.add ?? 0)); break;
         default: break;
       }
@@ -1756,5 +1756,12 @@ export class Battle {
     if (!u) return;
     u.gone = true;
     u.charging = null;
+  }
+  /** a unit changes sides for good, Charm lifted; `controlled` is kept, so a foe joining team 0 fights as an AI guest */
+  scriptDefect(sid: string, team: number) {
+    const u = this.bySid(sid);
+    if (!u || (u.team === team && u.baseTeam === team)) return;
+    u.team = team; u.baseTeam = team; u.statuses.delete('charm');
+    this.emit({ t: 'teamChange', uid: u.uid, team });
   }
 }

@@ -151,7 +151,7 @@ export interface JobDef {
   mMovement?: string;
   /** zodiac enemy? egg-laying */
   noEgg?: boolean;
-  /** can be recruited by Invite */
+  /** cannot be recruited by Invite (or Tame) */
   noInvite?: boolean;
 }
 
@@ -339,6 +339,8 @@ export interface ItemDef {
   boost?: Element[];
   weak?: Element[];
   gender?: 'm' | 'f';
+  /** its wearer cannot be won over by Invite (or Tame), whichever side tries */
+  noInvite?: boolean;
   /** consumable: ability id used when consumed */
   use?: string;
   look?: ItemLook;
@@ -506,6 +508,8 @@ export interface BattleDef {
   music?: string;
   /** overrides map deploy cells */
   deploy?: Array<[number, number]>;
+  /** the hero's fixed starting cell (one of the deploy cells): placed there and not movable on the deploy screen */
+  heroAt?: [number, number];
   maxDeploy?: number;
   /** characters that must be deployed (hero always) */
   forced?: string[];
@@ -573,7 +577,8 @@ export type SceneCmd =
   | ['retreat', string]                                     // unit leaves the battlefield
   | ['battleEnd', 'victory' | 'defeat']
   | ['heal', string]                                        // fully restore a unit
-  | ['status', string, StatusId, boolean];                  // add/remove a status on a battle unit
+  | ['status', string, StatusId, boolean]                   // add/remove a status on a battle unit
+  | ['defect', string, number];                             // a unit changes sides for good (0 player's side, 1 enemy, 2 third)
 
 export interface SceneDef {
   id: string;

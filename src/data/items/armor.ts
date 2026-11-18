@@ -70,7 +70,7 @@ const hats: ItemDef[] = [
 // ---------------------------------------------------------------------------
 const ribbons: ItemDef[] = [
   { id: 'cachouBand', name: 'Cachou Band', desc: 'A hairband scented with cachou that wards off many a lingering curse.', kind: 'head', cat: 'ribbon', gender: 'f', price: 0, rare: true, hp: 20, immune: ['undead', 'blind', 'slow', 'disable', 'frog', 'doom', 'immobilize', 'poison', 'silence'], look: { color: '#e060a0' } },
-  { id: 'barrette', name: 'Barrette', desc: 'A jewelled hair-clasp that keeps the mind one\'s own against charm, fury and stone.', kind: 'head', cat: 'ribbon', gender: 'f', price: 0, rare: true, hp: 20, immune: ['ko', 'petrify', 'confuse', 'vampire', 'berserk', 'stop', 'sleep', 'charm'], look: { color: '#c0a0e0', color2: '#e0c060' } },
+  { id: 'barrette', name: 'Barrette', desc: 'A jewelled hair-clasp that keeps the mind one\'s own against charm, fury and stone, and deaf to any Invite to change sides.', kind: 'head', cat: 'ribbon', gender: 'f', price: 0, rare: true, hp: 20, immune: ['ko', 'petrify', 'confuse', 'vampire', 'berserk', 'stop', 'sleep', 'charm'], noInvite: true, look: { color: '#c0a0e0', color2: '#e0c060' } },
   { id: 'ribbon', name: 'Ribbon', desc: 'A simple silk ribbon, and yet no curse, hex nor venom in all the world can touch its wearer.', kind: 'head', cat: 'ribbon', gender: 'f', price: 0, rare: true, hp: 10, immune: ['ko', 'undead', 'petrify', 'blind', 'confuse', 'vampire', 'berserk', 'stop', 'sleep', 'charm', 'slow', 'disable', 'frog', 'doom', 'immobilize', 'poison', 'silence'], look: { color: '#ff4070', glow: '#ffc0d0' } },
 ];
 

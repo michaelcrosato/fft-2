@@ -40,6 +40,7 @@ export interface SceneHost {
     end(r: 'victory' | 'defeat'): void;
     heal(id: string): void;
     status(id: string, s: StatusId, on: boolean): void;
+    defect(id: string, team: number): Promise<void>;
   };
 }
 
@@ -223,6 +224,7 @@ async function runCmd(c: SceneCmd, host: SceneHost): Promise<void> {
     case 'battleEnd': host.battle?.end(c[1]); return;
     case 'heal': host.battle?.heal(c[1]); return;
     case 'status': host.battle?.status(c[1], c[2], c[3]); return;
+    case 'defect': await host.battle?.defect(c[1], c[2]); return;
   }
 }
 

@@ -99,6 +99,18 @@ export function autoAbilities(u: RosterUnit, rng: Rng, opts: { secondary?: boole
 
 export interface DeployChoice { unit: RosterUnit; x: number; z: number }
 
+/**
+ * The cells a battle's company may deploy on: its own (or its map's) deploy cells that are standable and free of
+ * spawns, with the hero's fixed cell (`heroAt`) first, so a party listed hero-first puts the hero there.
+ */
+export function deployCells(def: BattleDef, grid: MapGrid, taken = (x: number, z: number) => def.units.some((u) => u.at[0] === x && u.at[1] === z)): Array<[number, number]> {
+  const cells = (def.deploy ?? grid.def.deploy).filter(([x, z]) => grid.cell(x, z)?.standable && !taken(x, z));
+  const at = def.heroAt;
+  const i = at ? cells.findIndex(([x, z]) => x === at[0] && z === at[1]) : -1;
+  if (i > 0) cells.unshift(...cells.splice(i, 1));
+  return cells;
+}
+
 export interface BattleSetup {
   battle: Battle;
   grid: MapGrid;
