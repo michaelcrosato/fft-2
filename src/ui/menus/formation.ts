@@ -89,7 +89,7 @@ function askName(parent: HTMLElement, current: string): Promise<string | null> {
   const title = t('formation.unit.rename');
   const panel = h('div.panel.prompt', { role: 'dialog', 'aria-label': title, style: { left: '50%', top: '40%', transform: 'translate(-50%,-50%)', width: 'min(420px, 92vw)', textAlign: 'center' } },
     h('div.title-plate', null, title));
-  const inp = h('input', { type: 'text', value: current, maxlength: '16', autocomplete: 'off', spellcheck: 'false', enterkeyhint: 'done', style: { fontFamily: 'EB Garamond, serif', fontSize: '1.4em', textAlign: 'center', width: '80%', padding: '4px 8px', margin: '8px 0', background: '#fbf4e2', border: '1px solid #8a6a3a', borderRadius: '4px', color: '#2b1d12' } }) as HTMLInputElement;
+  const inp = h('input', { type: 'text', value: current, maxlength: '14', autocomplete: 'off', spellcheck: 'false', enterkeyhint: 'done', style: { fontFamily: 'EB Garamond, serif', fontSize: '1.4em', textAlign: 'center', width: '80%', padding: '4px 8px', margin: '8px 0', background: '#fbf4e2', border: '1px solid #8a6a3a', borderRadius: '4px', color: '#2b1d12' } }) as HTMLInputElement;
   // a form, so a phone keyboard's Done / Go key accepts the name too
   const form = h('form', null, h('label', { style: { display: 'block' } }, h('div.muted', null, t('formation.rename.label')), inp));
   panel.appendChild(form);
