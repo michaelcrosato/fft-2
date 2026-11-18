@@ -18,6 +18,7 @@ import { loading, paintLoading } from './ui/loading';
 import { dir, fillPage, setControlLabel, t } from './i18n';
 import { localizeContent } from './i18n/content';
 import { uiRoot } from './ui/dom';
+import { failSession, joinSession, runSession } from './game/session';
 
 const q = new URLSearchParams(location.search);
 // Debug URLs (README): throwaway test parties that autosave over the real save slots,
@@ -32,6 +33,8 @@ function setLoad(p: number, msg?: string) {
 const tick = paintLoading;
 
 async function boot() {
+  // in a 52in1 session the hub hears from the game at once, while everything below loads
+  const joined = joinSession();
   // the player's language goes into the content before anything is shown
   localizeContent();
   setControlLabel((action) => input.label(action));
@@ -69,6 +72,10 @@ async function boot() {
   const game = new Game();
   setLoad(0.9, t('common.loading.chronicle'));
   // The destination releases the loader after its real first frame is ready.
+
+  // a 52in1 session opens straight into its round: no title, menus or story
+  const round = await joined;
+  if (round) { await runSession(game, round); return; }
 
   if (DEBUG_HOOKS && (await runDebugHooks(game))) return;
   const { runTitle } = await import('./game/flow');
@@ -151,6 +158,7 @@ function lostCount(): number { try { return Number(sessionStorage.getItem(LOST_K
 
 /** the GPU device / GL context is gone: the canvas can't recover, so offer a reload (progress is in the autosave) */
 function showRendererLost() {
+  failSession('the graphics device was lost');
   try { sessionStorage.setItem(LOST_KEY, String(lostCount() + 1)); } catch { /* private mode */ }
   loading.fail(new Error(t('common.gpu_lost')));
 }
@@ -162,6 +170,8 @@ window.addEventListener('unhandledrejection', (event) => {
 
 boot().catch((e) => {
   console.error(e);
+  // no renderer (or another failure at start) in a session: the hub sits this player out
+  failSession(String(e?.message ?? e));
   (window as any).__error = String(e?.stack ?? e);
   loading.fail(e);
 });

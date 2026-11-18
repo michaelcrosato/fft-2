@@ -53,12 +53,16 @@ function preloadBootChunks(modules: string[], fonts: RegExp[]): Plugin {
  */
 function gameLines(): Plugin {
   let server: ViteDevServer | null = null;
-  let built: string | null = null;
+  let built: { json: string; moments: string } | null = null;
+  const attr = (s: string) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
   const load = async (ssr: (id: string) => Promise<Record<string, unknown>>) => {
     const mod = (await ssr('/src/i18n/extract.ts')) as { buildLines(): { block: unknown; conflicts: string[] } };
     const { block, conflicts } = mod.buildLines();
     if (conflicts.length) throw new Error(`game-lines: one id, two texts: ${conflicts.slice(0, 5).join(', ')}`);
-    return JSON.stringify(block).replace(/</g, '\\u003c');
+    // one hub:moment tag per moment (AI Hub Session Protocol v1), written from the moments' own data
+    const { MOMENTS } = (await ssr('/src/data/battles/moments.ts')) as { MOMENTS: Array<{ id: string; verb: string; seconds: number; goal: string }> };
+    const moments = MOMENTS.map((m) => `<meta name="hub:moment" content="${attr(`${m.id} ${m.verb} ${m.seconds} ${m.goal}`)}" />`).join('\n');
+    return { json: JSON.stringify(block).replace(/</g, '\\u003c'), moments };
   };
   return {
     name: 'game-lines',
@@ -72,9 +76,11 @@ function gameLines(): Plugin {
       order: 'pre',
       async handler(html) {
         if (!html.includes('<!-- game-lines -->')) return html;
-        const json = server ? await load((id) => server!.ssrLoadModule(id)) : built;
-        if (json == null) throw new Error('game-lines: the block was not built');
-        return html.replace('<!-- game-lines -->', () => `<script type="application/json" id="game-lines">${json}</script>`);
+        const got = server ? await load((id) => server!.ssrLoadModule(id)) : built;
+        if (got == null) throw new Error('game-lines: the block was not built');
+        return html
+          .replace('<!-- hub:moments -->', () => got.moments)
+          .replace('<!-- game-lines -->', () => `<script type="application/json" id="game-lines">${got.json}</script>`);
       },
     },
   };
