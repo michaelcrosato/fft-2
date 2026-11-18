@@ -25,10 +25,16 @@ const NOISE = [
   /Depth texture comparison requests/i, /was preloaded using link preload but not used/i, /WebGL warning/i, /Automatic fallback to software WebGL/i,
 ];
 
-/** collect page errors and console errors; call `assertClean()` at the end of a test */
+/** collect page errors, console errors and requests to other sites; call `assertClean()` at the end of a test */
 export function watchErrors(page: Page) {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
+  // 52in1 loads nothing from other sites: every request stays on the page's own server
+  page.on('request', (r) => {
+    let u: URL;
+    try { u = new URL(r.url()); } catch { return; }
+    if ((u.protocol === 'http:' || u.protocol === 'https:') && !['localhost', '127.0.0.1', '[::1]'].includes(u.hostname)) errors.push('external request: ' + r.url().slice(0, 200));
+  });
   page.on('console', (m) => {
     if (m.type() !== 'error') return;
     const t = m.text();

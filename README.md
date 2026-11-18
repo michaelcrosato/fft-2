@@ -48,7 +48,8 @@ access limitations and adaptation choices behind the expanded content.
 
 ## Controls
 
-Every **New Game**, **Continue**, and saved-game load asks whether to enable **Fullscreen Game Mode**.
+Every **New Game**, **Continue**, and saved-game load asks whether to enable **Fullscreen Game Mode**
+(not inside 52in1, which owns its window).
 Choose **Enable Game Mode** for fullscreen, edge-swipe/overscroll protection and a screen wake lock
 where supported, or **Play in Browser** to continue normally. The choice is never remembered or forced.
 Switch it on or off from the **Menu** (**Fullscreen** / **Exit Fullscreen**), or use **Esc** or **Options → Game Mode**;
@@ -66,44 +67,111 @@ app switching, or OS back swipes). If fullscreen is unsupported or denied, Game 
 gesture protections and explains the limitation. Gamepad-only activation may need a tap or keyboard
 press through Options to enter fullscreen. Screen wake lock is optional and released in the background.
 
-| | Keyboard | Mouse / Touch | Gamepad (Xbox layout) |
+| | Keyboard | Mouse / Touch | Gamepad (Xbox · PlayStation) |
 |---|---|---|---|
 | Move cursor | Arrows / WASD | hover / tap | D-pad / left stick |
-| Confirm | Enter / Space / Z | click / tap (info lists: tap to select, tap again to choose) | A |
-| Back | Esc / Backspace / X | right-click, the ✕ on menus, the **‹ Back** button | B |
-| Menu | M | ☰ Menu button | Start / Y |
+| Confirm | Enter / Space / Z | click / tap (info lists: tap to select, tap again to choose) | A · ✕ |
+| Back | Esc / Backspace / X | right-click, the ✕ on menus, the **‹ Back** button | B · ○ |
+| Menu | M | ☰ Menu button | Menu or Y · Options or △ |
 | Orbit camera | Q / E (90° steps) | drag (settles on a corner) · ⟲ ⟳ buttons | right stick (free) · LB / RB (90°) |
 | Tilt | R (high angle) | drag up/down · tilt button | right stick up/down · L3 |
 | Zoom | + / − | wheel · trackpad pinch · two-finger pinch · hold 🔍 buttons | LT / RT (analog) |
 | Pan | arrows when no menu is open (enemy turns) | right-drag · Shift+drag · two-finger drag | — (follows the cursor) |
 | Recenter | F / Home | ◎ button | R3 |
-| Turn order | Tab | | View / Back |
-| Fast-forward | hold Shift | | hold X |
-| Skip a cutscene | M | Skip ⏭ button | Start / Y |
+| Turn order | Tab | | View · Create, or a touchpad press |
+| Fast-forward | hold Shift | | hold X · □ |
+| Skip a cutscene | M | Skip ⏭ button | Menu or Y · Options or △ |
 
 The round camera buttons sit at the bottom of the battlefield (right edge on phones). On touch screens a tile is
 chosen with two taps (the first shows it, the second confirms), and so is a place on the world map; Back from the
 facing step returns to the command menu. The camera stays under your
-control for the whole battle, including enemy turns. Controllers are detected on connect (standard mapping; PlayStation
-and Switch pads work in the equivalent positions) and rumble on heavy hits where the browser supports it.
+control for the whole battle, including enemy turns. Controllers are detected on connect (standard mapping; Switch
+pads work in the equivalent positions). Help and menus show the buttons of the controller in your hands (or always
+one kind: **Options → Controller → Button prompts**).
+
+### Controllers and the DualSense
+
+**Options → Controller** holds the controller's settings:
+
+- **Vibration** (High, Low, Off): short, distinct pulses for hits, heavy blows, critical hits, knockouts, spells,
+  level-ups and landings, on any controller that rumbles.
+- **A DualSense's extras**, each adding to controls that work without it:
+  - the **light bar** glows in the colour of the side taking its turn, turning red and pulsing as that unit
+    weakens; gold for a victory, dark red for a defeat, lamplight on the world map and in towns;
+  - **adaptive triggers**: the zoom triggers push back, harder near the camera's limits;
+  - **motion camera**: tilt and turn the controller to look around the battlefield (with a sensitivity);
+  - **touchpad gestures**: swipe to rotate or tilt, pinch to zoom, tap to recenter.
+
+  Inside 52in1 the DualSense is 52in1's (`window.AIHubSettings.dualsense`, set up in 52in1's Settings), and
+  the game uses only what the player allows there. On a page of its own, Chrome and Edge on a computer can
+  connect one over WebHID from the same page (*Connect a DualSense…*); the 52in1 package leaves WebHID out.
+- **52in1's buttons**: the PS button, and Create and Options held together, open 52in1's own bar, so the
+  game leaves them alone (Options alone opens the Menu; Create alone shows the turn order when let go).
+
+## Languages
+
+The game follows [AI Hub Languages v1](https://52in1.com/lib/hub/languages.md). It ships in English; every
+line players see comes from one place, so a translation is a block of lines, not a code change:
+
+- **UI lines** live in `src/i18n/ui/*.ts` (one catalog per area, with notes for translators and length
+  limits) and are drawn with `t(id, values)`: blanks such as `{name}`, plurals, and `{key:confirm}` tags that
+  show the key or button of the device in use.
+- **Content** (names, descriptions, dialogue, the Chronicle) stays in `src/data/` and is swapped in place at
+  start-up by `localizeContent()` (`src/i18n/content.ts`).
+- The build writes every line into the page's `game-lines` block (`vite.config.ts`). A translation goes in a
+  `game-translations` block beside it; the game picks the language from `?lang=`, then the title's
+  **Language** menu (shown once there is more than one), then the browser.
+- Numbers, dates and lists follow the language (`fmtNum`, `fmtDate`, `fmtList`); right-to-left languages
+  mirror the layout; the typewriter reveals whole letters (whole words in Arabic script).
+- **Test languages**: `?lang=en-XA` (accented, longer), `?lang=zh-XC` (wide) and `?lang=ar-XB` (right to
+  left) show at once any text that does not come from the lines.
+
+## 52in1
+
+The game's public home is **52in1**. It follows the AI Hub catalogue, session and languages protocols, whose
+tools are kept in `tools/hub/` (their sources are listed in `tools/hub/README.md`).
+
+- **Together**: `hub:multiplayer` names *parallel 1–4*, *moments 1–4* and *hot-seat versus 2*.
+  - **Trials** (parallel rounds, `src/data/battles/trials.ts`): five short battles with a fixed company;
+    every player fights the same one, the quickest victory wins and foes defeated rank the rest.
+  - **Moments** (`src/data/battles/moments.ts`): five one-turn puzzles (knock out the archer, break the
+    spell, climb the tower, hold the gate, open the chest), dealt three to a round.
+  - **Versus (2 players)** on the title: two players share a device and take turns, with a hand-over screen
+    between them.
+- **Sessions** (`src/game/session.ts`): the session client is the page's first script; in a session the
+  game skips the title and menus, opens the round the hub deals, counts down on the hub's clock, reports
+  progress and the result, and freezes when the hub ends the round.
+
+```bash
+npm run package       # builds package/ and package.zip for 52in1 (HUB_PACKAGE=1: no WebHID); see tools/hub/README.md
+npm run hub:check     # the same, unzipped and offline, as CI runs it (the credit and covers come at hand-off)
+npm run hub:harness   # plays 52in1's session harness: parallel and moments at 1 and 2 players, host leaving, outside
+npm run covers        # the catalogue's three screenshots, into tools/out/covers/ (look at each one)
+npm run sim:trials    # plays each Trial AI against AI: win rate and turns to win
+```
 
 ## Project layout
 
 ```
 src/battle/     headless battle engine (CT loop, formulas, statuses, reactions, AI) — deterministic
 src/data/       all content as typed data (jobs, abilities, items, monsters, cast, maps, battles, scenes, story)
-src/game/       game state, saves, battle setup, story flow, world travel
+src/game/       game state, saves, battle setup, story flow, world travel; 52in1 sessions (session.ts),
+                Trials and Moments set-up (trial.ts) and hot-seat versus (versus.ts)
+src/i18n/       Languages v1: t(), the line catalogs (ui/), content localization, the game-lines extractor
 src/gfx/        renderer bootstrap, post-processing (TSL), terrain, props, models, animation, VFX, portraits
 src/scenes/     battle stage, unit views, battle controller, cutscene runner, world map
-src/ui/         DOM UI: widgets, battle HUD, menus (formation, town, chronicle, options)
+src/ui/         DOM UI: widgets, battle HUD, menus (formation, town, chronicle, options, controller),
+                input (keyboard, mouse, touch, gamepads) and the DualSense (dualsense/)
 src/audio/      the synthesizer: instruments, sequencer, the original score (score/) and sound effects
 docs/DESIGN.md  naming bible, story outline, content conventions
 tools/          content validator, campaign simulator, audio verification, 52in1 package and checks (hub/)
 ```
 
 Checks: `npm run typecheck`, `npm test`, `npm run validate` (content cross-references),
-`npm run sim` (AI-vs-AI simulation of every battle, including scripted events; fails on a stall or exception).
-GitHub Actions (`.github/workflows/ci.yml`) runs these and a Chromium boot smoke test on every push to
+`npm run sim` (AI-vs-AI simulation of every battle, including scripted events; fails on a stall or exception;
+`VETERAN=1` plays a careful player's party over three seeds), `npm run sim:trials`, `npm run hub:check`.
+GitHub Actions (`.github/workflows/ci.yml`) runs these, then in Chromium a boot smoke test, the test languages,
+the menus' screen-reader roles, a 52in1 session round and the offline audio check, on every push to
 `main` and every pull request. Use Node 22 (`.nvmrc`).
 Every commit ships immediately: `npm run ship` pushes and merges it into `main` (see `AGENTS.md`).
 

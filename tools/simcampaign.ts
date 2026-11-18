@@ -1,5 +1,7 @@
 // Simulate all story & side battles AI-vs-AI; prints one line per battle.
 // Run: npx vite-node tools/simcampaign.ts [filter]
+// VETERAN=1: a careful player's party instead (8 levels higher, a shop tier up), over three seeds,
+// printing how many of them it wins: a battle a veteran party never wins deserves a look.
 import { BATTLES, STORY, SIDE, JOBS, mapDef } from '../src/data/db';
 import { newGame } from '../src/game/state';
 import { setupBattle, autoEquip, autoAbilities } from '../src/game/setup';
@@ -16,6 +18,8 @@ const LEVEL_BY_CHAPTER = [3, 6, 15, 26, 38];
 // what a typical player fields by then
 const JOBS_BY_CHAPTER = [['squire', 'chemist'], ['knight', 'priest', 'archer', 'wizard'], ['knight', 'priest', 'monk', 'wizard', 'thief'], ['lancer', 'priest', 'monk', 'summoner', 'samurai'], ['ninja', 'priest', 'samurai', 'summoner', 'lancer']];
 const filter = process.argv[2];
+const VETERAN = !!process.env.VETERAN;
+const SEEDS = VETERAN ? [11, 22, 33] : [11];
 /** apply the rules-relevant parts of mid-battle scripts (reveals, retreats, forced endings) */
 function applyScript(b: Battle, cmds: SceneCmd[]) {
   for (const c of cmds) {
@@ -57,12 +61,12 @@ for (const st of steps) {
   const chapter = (st as any).chapter ?? (st as any).chapterMin ?? 4;
   // fixed seeds: the same code gives the same results, so balance changes can be compared run to run
   const s = newGame('Rhen', [4, 12], 20260925);
-  s.chapter = chapter; s.tier = Math.min(8, 1 + chapter * 2);
+  s.chapter = chapter; s.tier = Math.min(8, 1 + chapter * 2 + (VETERAN ? 1 : 0));
   const comp = chapter >= 2 ? ['adria', 'mattis'] : [];
   if (chapter >= 3) comp.push('rana', 'malik');
   if (chapter >= 4) comp.push('orland', 'melisande');
   for (const c of comp) joinCharacter(s, c, new Rng(c.length * 7919));
-  const lv = LEVEL_BY_CHAPTER[Math.min(4, chapter)];
+  const lv = LEVEL_BY_CHAPTER[Math.min(4, chapter)] + (VETERAN ? 8 : 0);
   const rng = new Rng(7);
   const jobsFor = JOBS_BY_CHAPTER[Math.min(4, chapter)];
   let gi = 0;
@@ -78,13 +82,22 @@ for (const st of steps) {
   const t0 = performance.now();
   writeSync(1, `… ${st.battle}\n`);
   try {
-    const { battle } = setupBattle(s, def, party, { seed: 11 });
-    battle.heroSid = 'rhen';
-    const r = run(battle);
+    const results: string[] = [];
+    let won = 0, foes: { level: number }[] = [], turns = 0;
+    for (const seed of SEEDS) {
+      // a fresh copy of the roster each run: a battle writes EXP and JP into it
+      const fresh = party.map((p) => ({ ...p, unit: JSON.parse(JSON.stringify(p.unit)) }));
+      const { battle } = setupBattle(s, def, fresh, { seed });
+      battle.heroSid = 'rhen';
+      const r = run(battle);
+      if (r.res === 'victory') { wins++; won++; } else if (r.res === 'defeat') losses++; else stalls++;
+      results.push(String(r.res));
+      foes = battle.units.filter((u) => u.baseTeam !== 0);
+      turns = r.turns;
+    }
     const ms = performance.now() - t0;
-    if (r.res === 'victory') wins++; else if (r.res === 'defeat') losses++; else stalls++;
-    const foes = battle.units.filter((u) => u.baseTeam !== 0);
-    console.log(`${st.battle!.padEnd(22)} ch${chapter} lv${lv} ${String(r.res).padEnd(8)} turns ${String(r.turns).padStart(3)} ${ms.toFixed(0)}ms foes ${foes.length} foeLv ${Math.round(foes.reduce((a, u) => a + u.level, 0) / Math.max(1, foes.length))}`);
+    const res = VETERAN ? `won ${won}/${SEEDS.length}` : results[0];
+    console.log(`${st.battle!.padEnd(22)} ch${chapter} lv${lv} ${res.padEnd(8)} turns ${String(turns).padStart(3)} ${ms.toFixed(0)}ms foes ${foes.length} foeLv ${Math.round(foes.reduce((a, u) => a + u.level, 0) / Math.max(1, foes.length))}`);
   } catch (e) {
     errs++;
     console.log(`${st.battle}: EXCEPTION ${(e as Error).message} ${(e as Error).stack?.split('\n').slice(1, 4).join(' | ')}`);

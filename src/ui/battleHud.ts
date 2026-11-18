@@ -5,7 +5,7 @@ import { bar } from './widgets';
 import type { BattleUnit } from '../battle/unit';
 import type { Battle, TargetPreview } from '../battle/battle';
 import { STATUS } from '../battle/status';
-import { ZODIAC_GLYPH, compatibility } from '../battle/zodiac';
+import { ZODIAC_GLYPH, compatibility, zodiacName } from '../battle/zodiac';
 import type { Cell } from '../battle/grid';
 import { MapGrid } from '../battle/grid';
 import { portrait, portraitCached } from '../gfx/portraits';
@@ -67,13 +67,13 @@ export class BattleHud {
   card(u: BattleUnit | null, which: 'a' | 'b', b?: Battle) {
     const old = which === 'a' ? this.cardA : this.cardB;
     old?.remove();
-    if (!u) { if (which === 'a') this.cardA = null; else this.cardB = null; return; }
+    if (!u) { if (which === 'a') this.cardA = null; else { this.cardB = null; this.placePreview(); } return; }
     const el = this.unitCard(u, b);
     el.style.position = 'absolute';
     el.style.bottom = '14px';
     if (which === 'a') el.style.left = '14px'; else el.style.right = '14px';
     this.root.appendChild(el);
-    if (which === 'a') this.cardA = el; else this.cardB = el;
+    if (which === 'a') this.cardA = el; else { this.cardB = el; this.placePreview(); }
   }
 
   unitCard(u: BattleUnit, b?: Battle): HTMLElement {
@@ -100,7 +100,7 @@ export class BattleHud {
           h('span.lbl', null, t('hud.ct')), bar('ct', Math.min(100, u.ct), 100), h('span.num', null, t('hud.bar_value', { value: Math.min(100, Math.floor(u.ct)), max: 100 })),
         ),
         h('div.meta', null,
-          h('span.zodiac', { title: t(`hud.zodiac.${u.zodiac}`) }, ZODIAC_GLYPH[u.zodiac] + '︎'),
+          h('span.zodiac', { title: zodiacName(u.zodiac) }, ZODIAC_GLYPH[u.zodiac] + '︎'),
           h('span', null, t('hud.card.brave') + ' ', h('b', null, fmtNum(u.brave))),
           h('span', null, t('hud.card.faith') + ' ', h('b', null, fmtNum(u.faith))),
           h('span', null, t('hud.card.move') + ' ', h('b', null, fmtNum(u.move)), ' ' + t('hud.card.jump') + ' ', h('b', null, fmtNum(u.jump))),
@@ -177,8 +177,20 @@ export class BattleHud {
       ...lines,
       prevs.length > 4 ? h('div.muted', null, t('hud.preview.more', { count: prevs.length - 4 })) : null);
     this.root.appendChild(this.prev);
+    this.placePreview();
   }
   clearPreview() { this.prev?.remove(); this.prev = null; }
+
+  /** The preview stands clear above the target's card, however tall the card grows (status rows, small windows). */
+  private placePreview() {
+    const prev = this.prev, card = this.cardB;
+    if (!prev) return;
+    prev.style.bottom = '';
+    if (!card?.isConnected) return;
+    const c = card.getBoundingClientRect(), p = prev.getBoundingClientRect(), root = this.root.getBoundingClientRect();
+    const sideBySide = p.right <= c.left || p.left >= c.right;
+    if (!sideBySide && p.bottom > c.top - 8) prev.style.bottom = `${Math.round(root.bottom - c.top + 10)}px`;
+  }
 
   dispose() { this.offDevice(); this.root.remove(); }
 }

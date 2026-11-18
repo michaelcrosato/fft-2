@@ -6,7 +6,7 @@ import { h } from '../dom';
 import { overlay } from './common';
 import { input } from '../input';
 import { ZODIAC_STONES } from '../../data/misc/zodiacStones';
-import { ZODIAC_NAMES, ZODIAC_GLYPH } from '../../battle/zodiac';
+import { ZODIAC_GLYPH, zodiacName } from '../../battle/zodiac';
 import { atlasEntries, bestiaryEntries, locationReference, monsterReference } from '../../game/reference';
 import { fmtNum, t } from '../../i18n';
 
@@ -73,9 +73,9 @@ export async function openChronicle(game: Game) {
       }
       if (sec === 'stones') {
         await browse({
-          items: ZODIAC_STONES.map((z) => ({ label: `${ZODIAC_GLYPH[z.sign]}  ${s.flags[z.flag] ? ZODIAC_NAMES[z.sign] : t('chronicle.stone_unknown')}`, value: z.sign, disabled: !s.flags[z.flag] })),
+          items: ZODIAC_STONES.map((z) => ({ label: `${ZODIAC_GLYPH[z.sign]}  ${s.flags[z.flag] ? zodiacName(z.sign) : t('chronicle.stone_unknown')}`, value: z.sign, disabled: !s.flags[z.flag] })),
           x: 16, y: 64, title: t('chronicle.section.stones'), parent: ov.root, maxHeight: 'calc(70 * var(--vh))',
-          onHover: (id) => { const z = ZODIAC_STONES.find((q) => q.sign === id); if (z && s.flags[z.flag]) show(t('chronicle.stone_heading', { glyph: ZODIAC_GLYPH[z.sign], sign: ZODIAC_NAMES[z.sign] }), `${z.lore}\n\n${t('chronicle.stone_found', { where: z.where })}`); },
+          onHover: (id) => { const z = ZODIAC_STONES.find((q) => q.sign === id); if (z && s.flags[z.flag]) show(t('chronicle.stone_heading', { glyph: ZODIAC_GLYPH[z.sign], sign: zodiacName(z.sign) }), `${z.lore}\n\n${t('chronicle.stone_found', { where: z.where })}`); },
         });
       }
       if (sec === 'errands') {

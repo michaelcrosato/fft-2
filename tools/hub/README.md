@@ -27,10 +27,14 @@ sha256sum tools/hub/*.js tools/hub/*.html tools/hub/*.mjs
 
 ## Scripts
 
+- `npm run covers` (`tools/covers.mjs`) takes the three cover frames from `dist/` into
+  `tools/out/covers/`: the title, a battle's move range and a story scene. Look at each one.
 - `npm run package` builds the 52in1 package (`tools/package.mjs`): `package/games/<folder>/`
-  and `package/covers/<slug>/0–2.jpg`, then runs the checker on it. For the hand-off build,
-  pass the credit: `npm run package -- --model "…" --effort … --harness "Claude Code"`.
-- `npm run hub:check` does the same with the checker offline and no credit, as CI does.
+  and `package/covers/<slug>/0–2.jpg`, then runs the checker on it and zips it as
+  `package.zip`. For the hand-off build, pass the credit:
+  `npm run package -- --model "…" --effort … --harness "Claude Code"`.
+- `npm run hub:check` does the same as a draft, as CI does: offline, unzipped, and passing when
+  the only errors are the credit and covers that come at hand-off.
 - `npm run hub:harness` (`run-harness.mjs`) serves the built game beside `harness.html` and
   plays the scenarios 52in1 plays when a game joins: parallel and moments at 1 and 2
   players on a poor network, a player leaving, then the game outside a session.

@@ -1,5 +1,6 @@
 # Checks every push to main and every pull request: unit tests, type check, content and
-# audio validation, the bundle and the campaign simulation, then a browser smoke test.
+# audio validation, the bundle, the campaign and Trials simulations and the 52in1 package; then
+# in a browser: a smoke test, the test languages, a 52in1 session round and the synthesized audio.
 name: CI
 
 on:
@@ -31,6 +32,11 @@ jobs:
       - run: npm run build
       # AI-vs-AI run of every battle; fails on a stall or exception
       - run: npm run sim
+      # the 52in1 Trials stay winnable in a session's few minutes
+      - run: npm run sim:trials
+      # the 52in1 package: its size and files, no WebHID, and every catalogue check but the
+      # credit and covers that come at hand-off
+      - run: npm run hub:check
 
   browser-smoke:
     needs: check
@@ -45,10 +51,14 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       # software rendering on the runner: low quality keeps frame times reasonable
-      - run: npx playwright test --project=chromium e2e/boot.spec.ts
+      - run: npx playwright test --project=chromium e2e/boot.spec.ts e2e/languages.spec.ts e2e/a11y.spec.ts
         env:
           E2E_QUALITY: low
           E2E_WORKERS: 2
+      # a 52in1 parallel round with one player in 52in1's own harness (dist/ is the e2e build)
+      - run: npm run hub:harness -- dist --only parallel --players 1
+      # every music cue and sound effect rendered offline: clipping, loudness, loop seams
+      - run: npm run audio:verify
       - uses: actions/upload-artifact@v7
         if: failure()
         with:

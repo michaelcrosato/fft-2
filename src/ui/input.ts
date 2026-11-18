@@ -42,6 +42,8 @@ const KB_LABEL: Partial<Record<Action, string>> = {
   confirm: 'Enter', cancel: 'Esc', menu: 'M', rotL: 'Q', rotR: 'E', zoomIn: '+', zoomOut: '−', tilt: 'R', recenter: 'F',
   turnList: 'Tab', fast: 'Shift', up: '↑', down: '↓', left: '←', right: '→',
 };
+/** The physical keys behind the letter labels above. */
+const LETTER_CODE: Partial<Record<string, string>> = { menu: 'KeyM', rotL: 'KeyQ', rotR: 'KeyE', tilt: 'KeyR', recenter: 'KeyF' };
 const PAD_LABEL: Partial<Record<string, string>> = {
   confirm: 'A', cancel: 'B', menu: 'Menu', rotL: 'LB', rotR: 'RB', zoomIn: 'RT', zoomOut: 'LT', tilt: 'LS', recenter: 'RS',
   turnList: 'View', fast: 'X', up: 'D-pad', down: 'D-pad', left: 'D-pad', right: 'D-pad',
@@ -105,6 +107,7 @@ class InputManager {
   get fast() { return this.kbFast || this.padFast; }
 
   init() {
+    this.readLayout();
     window.addEventListener('keydown', (e) => {
       // keys that pick or cancel an IME conversion (typing a name in Japanese, Chinese…) are not game input
       if (e.isComposing || e.keyCode === 229) return;
@@ -182,7 +185,17 @@ class InputManager {
   label(a: string): string {
     if (this.lastDevice === 'pad') return (this.padGlyphs() === 'playstation' ? PS_LABEL : PAD_LABEL)[a] ?? a;
     const table: Record<string, string | undefined> = { ...KB_LABEL, arrows: '←↑→↓', updown: '↑↓', orbit: 'drag', zoom: '+/−' };
-    return table[a] ?? a;
+    // letter keys are read by their place on the keyboard: name them as this keyboard's layout prints them
+    const code = LETTER_CODE[a];
+    const local = code ? this.layout?.get(code) : undefined;
+    return local ? local.toLocaleUpperCase() : table[a] ?? a;
+  }
+
+  /** The keyboard's layout (Chrome, Edge): KeyQ prints A on AZERTY. Null where the browser does not say. */
+  private layout: Map<string, string> | null = null;
+  private readLayout() {
+    const kb = (navigator as Navigator & { keyboard?: { getLayoutMap?: () => Promise<Map<string, string>> } }).keyboard;
+    kb?.getLayoutMap?.().then((m) => { this.layout = m; }).catch(() => { /* not allowed here (a frame without permission) */ });
   }
 
   /** Which glyphs to show for a controller: the Button prompts option, else the family in hand. */

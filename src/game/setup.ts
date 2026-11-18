@@ -146,7 +146,8 @@ export function spawnRoster(sp: UnitSpawn, pl: number, tier: number, rng: Rng): 
   return r;
 }
 
-export function setupBattle(state: GameState, def: BattleDef, party: DeployChoice[], opts: { seed?: number; difficulty?: 'easy' | 'normal' | 'hard' } = {}): BattleSetup {
+/** `gentle`: fallen members of the company withdraw instead of turning to crystal (the Gentle option). */
+export function setupBattle(state: GameState, def: BattleDef, party: DeployChoice[], opts: { seed?: number; difficulty?: 'easy' | 'normal' | 'hard'; gentle?: boolean } = {}): BattleSetup {
   const rng = new Rng(opts.seed ?? state.seed + state.battlesWon * 7919 + state.day);
   const grid = new MapGrid(mapDef(def.map));
   const diff = (opts as { difficulty?: string }).difficulty ?? loadOptions().difficulty ?? 'normal';
@@ -181,12 +182,11 @@ export function setupBattle(state: GameState, def: BattleDef, party: DeployChoic
   }
   const inv = new Map<string, number>(Object.entries(state.inventory));
   const gil = { value: state.gil };
-  const battle = new Battle({ def, grid, units, inventory: inv, seed: rng.int(1, 1e9), gentle: !!loadGentle(state), gil });
+  const battle = new Battle({ def, grid, units, inventory: inv, seed: rng.int(1, 1e9), gentle: !!opts.gentle, gil });
   battle.heroSid = 'rhen';
   return { battle, grid, temp };
 }
 
-function loadGentle(state: GameState) { return (state as any).__gentle ?? false; }
 
 function faceTowardEnemies(def: BattleDef, x: number, z: number) {
   const foes = def.units.filter((u) => (u.team ?? 1) !== 0);

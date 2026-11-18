@@ -91,8 +91,8 @@ test('stationary mouse hover preserves keyboard selection and moving the mouse s
   const options = page.locator('.title-menu .item:has-text("Options")');
   await options.hover();
   await expect(page.locator('.title-menu .item.sel')).toHaveText('Options');
-  await page.keyboard.press('ArrowUp');
-  await page.keyboard.press('ArrowUp');
+  // Options → Versus → Load Game → New Game
+  for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowUp');
   await expect(page.locator('.title-menu .item.sel')).toHaveText('New Game');
   // Browsers emit these when layout/scroll places a row under a stationary mouse.
   await options.dispatchEvent('pointerenter', { pointerType: 'mouse' });
@@ -100,8 +100,7 @@ test('stationary mouse hover preserves keyboard selection and moving the mouse s
   const box = (await options.boundingBox())!;
   await page.mouse.move(box.x + box.width / 2 + 5, box.y + box.height / 2);
   await expect(page.locator('.title-menu .item.sel')).toHaveText('Options');
-  await page.keyboard.press('ArrowUp');
-  await page.keyboard.press('ArrowUp');
+  for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowUp');
   await page.keyboard.press('Enter');
   await expect(page.getByText('Name your hero')).toBeVisible();
   w.assertClean();

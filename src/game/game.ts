@@ -1,20 +1,19 @@
 // Top-level game orchestration: render loop, stage lifecycle, story steps,
 // scenes, battles, deployment and results.
 import { renderer, rinfo, refreshPixelRatio, setQuality, type Quality } from '../gfx/renderer';
-import { THREE } from '../gfx/three';
 import { Stage } from '../scenes/stage';
 import { BattleController, preloadPortraits } from '../scenes/battleController';
 import { runScene, type SceneHost } from '../scenes/cutscene';
 import { UnitView, loadMonsterBuilder, getMonsterBuilder } from '../scenes/unitview';
-import { BATTLES, SCENES, STORY, SIDE, CHARACTERS, JOBS, ITEMS, NODES, ABILITIES, CHRONICLE } from '../data/db';
+import { BATTLES, SCENES, STORY, SIDE, CHARACTERS, JOBS, ITEMS, ABILITIES, CHRONICLE } from '../data/db';
 import type { BattleDef, CharacterDef, Facing, JobDef, SceneDef, StoryStep, SideQuestStep, EnvTime, Weather } from '../data/types';
 import { setupBattle, applyResults, type DeployChoice } from './setup';
 import type { GameState, Options } from './state';
-import { saveGame, joinCharacter, leaveCharacter, addItem, hero, loadOptions, partyLevel, AUTOSAVE_SLOT } from './state';
+import { saveGame, joinCharacter, leaveCharacter, addItem, hero, loadOptions, AUTOSAVE_SLOT } from './state';
 import type { RosterUnit } from './roster';
 import { portrait } from '../gfx/portraits';
 import { buildHumanoid } from '../gfx/models/humanoid';
-import { fade, setFadeImmediate, menu, toast, confirm, titleCard } from '../ui/widgets';
+import { fade, setFadeImmediate, menu, toast, titleCard } from '../ui/widgets';
 import { h, uiRoot, sleep } from '../ui/dom';
 import { input } from '../ui/input';
 import { audio } from '../audio/audio';
@@ -295,7 +294,7 @@ export class Game {
   // ============================================================ battles
   currentBattle: import('../battle/battle').Battle | null = null;
 
-  /** Run a battle including deployment. Returns 'victory' | 'defeat' | 'retreat'. */
+  /** Run a battle including deployment, offering a retry after each defeat. Returns 'victory', or 'defeat' when the player gives up. */
   async runBattle(battleId: string): Promise<'victory' | 'defeat'> {
     const def: BattleDef | undefined = BATTLES.get(battleId);
     if (!def) { console.warn('missing battle', battleId); return 'victory'; }
@@ -326,9 +325,8 @@ export class Game {
     await loading.begin(t('game.loading.company'));
     for (const k of [...stage.views.keys()]) stage.removeUnit(k);
     if (!party) { await this.present(); return 'defeat'; }
-    const setup = setupBattle(this.state, def, party);
+    const setup = setupBattle(this.state, def, party, { gentle: this.options.gentle });
     const b = setup.battle;
-    (b as any).gentle = this.options.gentle;
     this.currentBattle = b;
     for (const u of b.units) { const v = this.addBattleView(stage, u); if (u.hidden) v.root.visible = false; }
     audio.playMusic(def.music ?? 'battle1', { fade: 1.2 });
@@ -474,7 +472,7 @@ export class Game {
       for (;;) {
         if ((window as any).__autoBattle) break;
         const items = [
-          ...avail.map((r) => ({ label: `${placements.has(r) ? '◆' : '◇'} ${r.name}`, value: 'u:' + r.uid, right: t('game.deploy.job_level', { job: JOBS.get(r.job)?.name ?? r.job, level: r.level }), disabled: r === heroU ? false : false })),
+          ...avail.map((r) => ({ label: `${placements.has(r) ? '◆' : '◇'} ${r.name}`, value: 'u:' + r.uid, right: t('game.deploy.job_level', { job: JOBS.get(r.job)?.name ?? r.job, level: r.level }) })),
           { label: '', value: 'sep', sep: true },
           { label: t('game.deploy.begin'), value: 'go' },
         ];
@@ -706,4 +704,3 @@ async function titleCardQuick(text: string) {
 }
 
 export type { Facing };
-void THREE; void rinfo; void confirm; void setFadeImmediate; void NODES; void partyLevel;
