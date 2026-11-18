@@ -260,6 +260,27 @@ DC offset, loop seams and render cost; the audition page measures any single cue
 | `BattleDef.heroAt` fixes the hero's starting cell: `deployCells()` puts it first, the deploy screen keeps the hero on it and others off it, and the simulators follow it. The validator (`tools/battle-checks.ts`) rejects a hero cell that isn't a standable deploy cell, and a `defect` naming an unknown unit or team (docs/TODO.md). | `tests/recruit-defect-deploy.test.ts` › a fixed hero cell |
 | Preview stat changes read "PA +2" (not "pa +2"), weapon requirements "Needs Sword or Knight Sword" (not "Needs sword/knightSword"). | `tests/engine-lines.test.ts` |
 
+## Correctness review (Phase 7, item 8)
+
+`npm run sim:fuzz` (`tools/fuzzbattles.ts`) plays every story and side battle AI against AI over two
+seeds, and again with half the turns taking a random usable action (`CHAOS=1`), checking the engine's
+invariants after every move, action and turn: HP and MP in range, KO units at 0 HP with no stray
+statuses, Critical following HP, charges and performances paired, one unit per tile on standable
+ground, teams changed only by Charm, pickups only of crystals and chests. It found four faults, now
+fixed, and CI runs it both ways.
+
+| Change | Checked by |
+| --- | --- |
+| Silence cancelled a song's or dance's charge but left the performer "Performing": it never sang again and, as the AI saw nothing to do, stood idle for the rest of the battle. Songs and dances are not spells: Silence now leaves a performance going (Stop, Sleep and the rest still end it). In the campaign sim one battle changes (`b_barrowvale`, where a silenced enemy performer used to stand idle; now 29 wins, 43 losses). | `tests/engine-regressions.test.ts` › performances and Silence |
+| A level-up mid-battle raised max HP without re-checking Critical, so the status (the kneel, Critical-only reactions, the AI's healing order) could stay on a unit no longer in danger. | `tests/engine-regressions.test.ts` › level-ups mid-battle |
+| A unit knocked out by a counter during its own action still levelled up from it, and the level-up's HP growth left it KO'd with HP. It now stays at 0 HP until revived. | `tests/engine-regressions.test.ts` › retreats and levels while down |
+| A unit that retreated by script mid-charge kept its Charging status with no charge behind it. | `tests/engine-regressions.test.ts` › retreats and levels while down |
+
+Reviewed and left as they are: a performer's next repeat is held as a charge without the Charging
+status by design (Performing already makes it unable to dodge). Saves are validated field by field
+and migrated on load (`tests/state-regressions.test.ts`); input and the screens are covered by the
+controller, language and menu e2e above.
+
 ## Late-game winnability
 
 `VETERAN=1 npm run sim` plays every story and side battle with a careful player's party (8 levels

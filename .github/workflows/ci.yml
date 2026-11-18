@@ -32,6 +32,11 @@ jobs:
       - run: npm run build
       # AI-vs-AI run of every battle; fails on a stall or exception
       - run: npm run sim
+      # every battle's invariants, AI against AI and with random actions
+      - run: npm run sim:fuzz
+      - run: npm run sim:fuzz
+        env:
+          CHAOS: '1'
       # the 52in1 Trials stay winnable in a session's few minutes
       - run: npm run sim:trials
       # the 52in1 package: its size and files, no WebHID, and every catalogue check but the

@@ -1397,8 +1397,13 @@ export class Battle {
       u.roster.level++;
       u.levelUps++;
       u.recompute(false);
-      u.hp = Math.min(u.maxHp, u.hp + (u.maxHp - oldMax));
-      u.mp = Math.min(u.maxMp, u.mp + (u.maxMp - oldMp));
+      // a unit felled by a counter still levels up from its action, but stays down
+      if (u.alive) {
+        u.hp = Math.min(u.maxHp, u.hp + (u.maxHp - oldMax));
+        u.mp = Math.min(u.maxMp, u.mp + (u.maxMp - oldMp));
+      }
+      // a higher max HP moves the critical line: the status follows it
+      this.updateCritical(u);
       this.emit({ t: 'levelUp', uid: u.uid, level: u.roster.level });
     }
     // as addExp: EXP stops at 99 once the level cap is reached
@@ -1474,8 +1479,11 @@ export class Battle {
     if (!t.alive) return false;
     if (t.has(s) && s !== 'doom') return false;
     const info = STATUS[s];
-    for (const c of info.cancels ?? []) {
-      if (c === 'charging' && t.charging) { t.charging = null; t.statuses.delete('charging'); this.emit({ t: 'chargeBreak', uid: t.uid }); }
+    const cancels = info.cancels ?? [];
+    for (const c of cancels) {
+      // a song or dance is no spell: what only stops spells (Silence) leaves a performance going
+      const keepsPerforming = !!t.performing && !cancels.includes('performing');
+      if (c === 'charging' && t.charging && !keepsPerforming) { t.charging = null; t.statuses.delete('charging'); this.emit({ t: 'chargeBreak', uid: t.uid }); }
       if (c === 'performing' && t.performing) { t.performing = null; t.statuses.delete('performing'); }
       if (t.has(c) && !t.always.has(c)) t.statuses.delete(c);
     }
@@ -1755,7 +1763,9 @@ export class Battle {
     const u = this.bySid(sid);
     if (!u) return;
     u.gone = true;
-    u.charging = null;
+    // whatever it was gathering goes with it
+    u.charging = null; u.performing = null; u.jumping = null;
+    u.statuses.delete('charging'); u.statuses.delete('performing'); u.statuses.delete('jumping');
   }
   /** a unit changes sides for good, Charm lifted; `controlled` is kept, so a foe joining team 0 fights as an AI guest */
   scriptDefect(sid: string, team: number) {

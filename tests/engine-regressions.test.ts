@@ -353,3 +353,61 @@ describe('previews and AI plans match what actually happens', () => {
     expect(hitsAlly).toBeGreaterThan(0);
   });
 });
+
+describe('level-ups mid-battle (Pass 4)', () => {
+  it('re-check Critical when a level-up raises max HP above the critical line', () => {
+    const u = mk(0, 3, 8, 'squire', (r) => { r.level = 10; r.exp = 0; });
+    const foe = mk(1, 5, 1);
+    const b = battle([u, foe]);
+    // just inside the critical fifth, then a level-up's extra max HP lifts the unit out of it
+    u.hp = Math.floor(u.maxHp / 5);
+    b.updateCritical(u);
+    expect(u.has('critical')).toBe(true);
+    b.gainExp(u, 99); b.gainExp(u, 99);
+    expect(u.roster.level).toBeGreaterThan(10);
+    expect(u.has('critical')).toBe(u.critical);
+  });
+});
+
+describe('performances and Silence (Pass 4)', () => {
+  it('a song goes on under Silence (songs are no spells), and Stop still ends it', () => {
+    const bard = mk(0, 3, 8, 'bard', (r) => { r.learned.push('seraphSong'); });
+    const foe = mk(1, 5, 1);
+    const b = battle([bard, foe]);
+    b.doAction(bard, A('seraphSong'), bard.x, bard.z);
+    expect(bard.performing).toBeTruthy();
+    expect(bard.charging).toBeTruthy();
+    b.addStatus(bard, 'silence');
+    // before: Silence dropped the song's charge but left the bard "performing" and idle for good
+    expect(bard.performing).toBeTruthy();
+    expect(bard.charging).toBeTruthy();
+    b.addStatus(bard, 'stop');
+    expect(bard.performing).toBeNull();
+    expect(bard.charging).toBeNull();
+  });
+});
+
+describe('retreats and levels while down (Pass 4)', () => {
+  it('a unit that retreats mid-charge takes its Charging status with the charge', () => {
+    const wiz = mk(1, 5, 2, 'wizard', (r) => { r.learned.push('fire'); });
+    wiz.sid = 'wiz';
+    const knight = mk(0, 5, 4);
+    const b = battle([knight, wiz]);
+    b.doAction(wiz, A('fire'), knight.x, knight.z);
+    expect(wiz.charging && wiz.has('charging')).toBeTruthy();
+    b.scriptRetreat('wiz');
+    // before: the charge went but the status stayed, so the departed unit still read as Charging
+    expect(wiz.charging).toBeNull();
+    expect(wiz.has('charging')).toBe(false);
+  });
+
+  it('a unit knocked out during its own action levels up but stays down', () => {
+    const u = mk(0, 3, 8, 'squire', (r) => { r.level = 10; r.exp = 0; });
+    const b = battle([u, mk(1, 5, 1)]);
+    b.knockOut(u);
+    b.gainExp(u, 99); b.gainExp(u, 99);
+    expect(u.roster.level).toBeGreaterThan(10);
+    expect(u.hp).toBe(0);
+    expect(u.has('ko')).toBe(true);
+  });
+});
