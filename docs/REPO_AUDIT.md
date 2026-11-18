@@ -255,6 +255,9 @@ DC offset, loop seams and render cost; the audition page measures any single cue
 | Spell impacts rumble by element (fire swells, ice snaps, lightning crackles, earth rumbles low…), on any pad that rumbles. | `tests/dualsense.test.ts` |
 | Choosing *Connect a DualSense…* with a controller's button no longer tries to open the browser's device list (browsers allow it only for a click, tap or key): a note says to choose it by hand. | — |
 | Letter-key hints (M, Q, E, R, F) show the keyboard's own layout where the browser gives it (`navigator.keyboard.getLayoutMap`). | — |
+| Items can carry `noInvite`: a wearer refuses Invite and Tame from either side (`BattleUnit.recruitable`), so the AI skips them and the preview shows "Refused". The Nightshade Armlet (sold from tier 6) and the Barrette carry it, their descriptions say so, and the shop's item panel lists it under *Immune to* (docs/TODO.md). | `tests/recruit-defect-deploy.test.ts` › invite-proof gear |
+| New battle-script command `['defect', id, team]` (`Battle.scriptDefect`): moves a unit to another side for good, lifts Charm and emits `teamChange`; a foe who joins fights as an AI guest. It works in the game's battle hooks, the cutscene runner and the simulators (docs/TODO.md). | `tests/recruit-defect-deploy.test.ts` › the defect script command |
+| `BattleDef.heroAt` fixes the hero's starting cell: `deployCells()` puts it first, the deploy screen keeps the hero on it and others off it, and the simulators follow it. The validator (`tools/battle-checks.ts`) rejects a hero cell that isn't a standable deploy cell, and a `defect` naming an unknown unit or team (docs/TODO.md). | `tests/recruit-defect-deploy.test.ts` › a fixed hero cell |
 | Preview stat changes read "PA +2" (not "pa +2"), weapon requirements "Needs Sword or Knight Sword" (not "Needs sword/knightSword"). | `tests/engine-lines.test.ts` |
 
 ## Late-game winnability
@@ -271,6 +274,8 @@ outliers). A better bot for the player's side would make this a sharper tool.
 
 ## Known, not changed (Pass 4)
 
+- Terrain-changing script commands, decor offsets, held props and riding animations (docs/TODO.md's
+  optional list) stay open: no content needs them.
 - The third-party audio placeholders noted above are gone (Pass 4, *Original music and sound*).
 - Spell meshes and status badges are still rebuilt per use; portraits still encode synchronously.
   Neither shows in a session round (a few ms per effect), so they wait for a performance pass.

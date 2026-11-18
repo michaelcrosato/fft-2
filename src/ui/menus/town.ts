@@ -112,7 +112,7 @@ function itemPanel(game: Game, it: ItemDef): HTMLElement {
   const st = (l?: string[]) => fmtList((l ?? []).map((x) => STATUS[x as keyof typeof STATUS]?.name ?? x));
   if (it.always?.length) rows.push([t('town.item.always'), st(it.always)]);
   if (it.start?.length) rows.push([t('town.item.on_battle_start'), st(it.start)]);
-  if (it.immune?.length) rows.push([t('town.item.immune'), st(it.immune)]);
+  if (it.immune?.length || it.noInvite) rows.push([t('town.item.immune'), fmtList([...(it.immune ?? []).map((x) => STATUS[x as keyof typeof STATUS]?.name ?? x), ...(it.noInvite ? [t('town.item.invite')] : [])])]);
   const els = (l?: string[]) => fmtList((l ?? []).map(elementName));
   if (it.absorb?.length) rows.push([t('town.item.absorbs'), els(it.absorb)]);
   if (it.nullify?.length) rows.push([t('town.item.nullifies'), els(it.nullify)]);
