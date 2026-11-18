@@ -1,6 +1,8 @@
 // Unified input: keyboard, gamepad, mouse/touch. UI layers push handlers on a
 // stack; only the top handler receives semantic actions. Analog gamepad state
 // (sticks, triggers) is exposed in `input.pad` for continuous camera control.
+import { loadOptions } from '../game/state';
+
 export type Action =
   | 'up' | 'down' | 'left' | 'right' | 'confirm' | 'cancel' | 'menu' | 'info'
   | 'rotL' | 'rotR' | 'zoomIn' | 'zoomOut' | 'tilt' | 'recenter' | 'prev' | 'next' | 'turnList' | 'fast';
@@ -22,12 +24,15 @@ const REPEATS = new Set<Action>(['up', 'down', 'left', 'right', 'zoomIn', 'zoomO
 /** keys the browser would otherwise act on (scrolling, focus change, history back) */
 const PREVENT = new Set(['Tab', 'Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Backspace', 'PageUp', 'PageDown', 'Home']);
 
-// Standard-mapping gamepad buttons (Xbox names; PlayStation: A=✕ B=○ X=□ Y=△).
+// Standard-mapping gamepad buttons (Xbox names; PlayStation: A=✕ B=○ X=□ Y=△). Create (8) and
+// Options (9) are handled apart: 52in1 opens its bar when both are held, and keeps PS (16) for itself.
 const PAD_BUTTONS: Array<[number, Action]> = [
-  [0, 'confirm'], [1, 'cancel'], [3, 'menu'], [9, 'menu'], [8, 'turnList'],
+  [0, 'confirm'], [1, 'cancel'], [3, 'menu'],
   [4, 'rotL'], [5, 'rotR'], [10, 'tilt'], [11, 'recenter'],
   [12, 'up'], [13, 'down'], [14, 'left'], [15, 'right'],
+  [17, 'turnList'], // a DualSense's touchpad press (Chrome, Edge)
 ];
+const PAD_CREATE = 8, PAD_OPTIONS = 9;
 const PAD_FAST = 2;             // hold X / □ to fast-forward
 const PAD_LT = 6, PAD_RT = 7;   // analog zoom
 const STICK_DEAD = 0.22;
@@ -37,9 +42,35 @@ const KB_LABEL: Partial<Record<Action, string>> = {
   confirm: 'Enter', cancel: 'Esc', menu: 'M', rotL: 'Q', rotR: 'E', zoomIn: '+', zoomOut: '−', tilt: 'R', recenter: 'F',
   turnList: 'Tab', fast: 'Shift', up: '↑', down: '↓', left: '←', right: '→',
 };
-const PAD_LABEL: Partial<Record<Action, string>> = {
-  confirm: 'A', cancel: 'B', menu: 'Start', rotL: 'LB', rotR: 'RB', zoomIn: 'RT', zoomOut: 'LT', tilt: 'L3', recenter: 'R3',
+const PAD_LABEL: Partial<Record<string, string>> = {
+  confirm: 'A', cancel: 'B', menu: 'Menu', rotL: 'LB', rotR: 'RB', zoomIn: 'RT', zoomOut: 'LT', tilt: 'LS', recenter: 'RS',
   turnList: 'View', fast: 'X', up: 'D-pad', down: 'D-pad', left: 'D-pad', right: 'D-pad',
+  arrows: 'D-pad', updown: 'D-pad', orbit: 'RS', zoom: 'LT/RT',
+};
+/** PlayStation's own glyphs and names. */
+const PS_LABEL: Partial<Record<string, string>> = {
+  confirm: '✕', cancel: '○', menu: 'Options', rotL: 'L1', rotR: 'R1', zoomIn: 'R2', zoomOut: 'L2', tilt: 'L3', recenter: 'R3',
+  turnList: 'Create', fast: '□', up: 'D-pad', down: 'D-pad', left: 'D-pad', right: 'D-pad',
+  arrows: 'D-pad', updown: 'D-pad', orbit: 'R3 stick', zoom: 'L2/R2',
+};
+export type PadKind = 'playstation' | 'xbox' | 'generic';
+/** Which family a controller belongs to, from its id. */
+export function padKindOf(id: string): PadKind {
+  // Xbox first: its id says "Xbox Wireless Controller"; PlayStation pads always carry Sony's 054c or their name
+  if (/045e|xbox|xinput/i.test(id)) return 'xbox';
+  if (/054c|dualsense|dualshock|playstation/i.test(id)) return 'playstation';
+  return 'generic';
+}
+type Haptic = 'hit' | 'heavy' | 'crit' | 'ko' | 'spell' | 'level' | 'land';
+/** Short, distinct pulses: [strong motor, weak motor, ms, delay ms]. */
+const HAPTICS: Record<Haptic, Array<[number, number, number, number]>> = {
+  hit: [[0.3, 0.5, 60, 0]],
+  heavy: [[0.85, 0.5, 120, 0]],
+  crit: [[1, 0.9, 90, 0], [0.4, 0.8, 60, 120]],
+  ko: [[0.7, 0.3, 90, 0], [0.7, 0.3, 110, 170]],
+  spell: [[0.15, 0.75, 140, 0]],
+  level: [[0, 0.35, 60, 0], [0, 0.55, 60, 100], [0, 0.8, 90, 200]],
+  land: [[0.55, 0.15, 55, 0]],
 };
 
 function editable(t: EventTarget | null): boolean {
@@ -149,17 +180,33 @@ class InputManager {
    * tag in a line shows. Besides the actions, `arrows`, `updown` and `orbit` name groups of controls.
    */
   label(a: string): string {
-    const pad = this.lastDevice === 'pad';
-    const table: Record<string, string | undefined> = pad ? { ...PAD_LABEL, arrows: 'D-pad', updown: 'D-pad', orbit: 'RS', zoom: 'LT/RT' } : { ...KB_LABEL, arrows: '←↑→↓', updown: '↑↓', orbit: 'drag', zoom: '+/−' };
+    if (this.lastDevice === 'pad') return (this.padGlyphs() === 'playstation' ? PS_LABEL : PAD_LABEL)[a] ?? a;
+    const table: Record<string, string | undefined> = { ...KB_LABEL, arrows: '←↑→↓', updown: '↑↓', orbit: 'drag', zoom: '+/−' };
     return table[a] ?? a;
   }
 
-  /** short controller rumble (only while the player is using a gamepad) */
-  rumble(strength = 0.4, ms = 140) {
+  /** Which glyphs to show for a controller: the Button prompts option, else the family in hand. */
+  padGlyphs(): 'playstation' | 'xbox' {
+    const o = loadOptions().buttonPrompts;
+    if (o === 'playstation' || o === 'xbox') return o;
+    return this.padKind === 'playstation' ? 'playstation' : 'xbox';
+  }
+
+  /** short controller rumble (only while the player is using a gamepad), scaled by the Vibration option */
+  rumble(strength = 0.4, ms = 140, weak = strength * 0.6) {
     if (this.lastDevice !== 'pad') return;
+    const k = loadOptions().vibration;
+    if (!(k > 0)) return;
     for (const p of this.pads()) {
       const act = (p as Gamepad & { vibrationActuator?: { playEffect?: (t: string, o: object) => Promise<unknown> } }).vibrationActuator;
-      try { act?.playEffect?.('dual-rumble', { duration: ms, strongMagnitude: Math.min(1, strength), weakMagnitude: Math.min(1, strength * 0.6) })?.catch(() => {}); } catch { /* unsupported */ }
+      try { act?.playEffect?.('dual-rumble', { duration: ms, strongMagnitude: Math.min(1, strength * k), weakMagnitude: Math.min(1, weak * k) })?.catch(() => {}); } catch { /* unsupported */ }
+    }
+  }
+
+  /** A short, distinct haptic pattern for a moment of play (any controller that rumbles). */
+  haptic(kind: Haptic) {
+    for (const [strong, weak, ms, delay] of HAPTICS[kind]) {
+      if (delay) setTimeout(() => this.rumble(strong, ms, weak), delay); else this.rumble(strong, ms, weak);
     }
   }
 
@@ -168,6 +215,10 @@ class InputManager {
   }
 
   private padResync = false;
+  /** the controller family last used, for its button glyphs */
+  padKind: PadKind = 'xbox';
+  /** Create was pressed with Options during this hold: the pair belongs to 52in1, so Create does nothing */
+  private createSpoiled = false;
   private pollPad() {
     if (typeof document !== 'undefined' && document.hidden) return; // a background tab takes no input
     const pads = this.pads();
@@ -180,6 +231,7 @@ class InputManager {
     let lx = 0, ly = 0, rx = 0, ry = 0;
     const big = (a: number, b: number) => (Math.abs(b) > Math.abs(a) ? b : a);
     for (const p of pads) {
+      if (p.buttons.some((b) => b.pressed) || p.axes.some((a) => Math.abs(a) > 0.5)) this.padKind = padKindOf(p.id);
       p.buttons.forEach((b, i) => { pressed[i] = pressed[i] || b.pressed; value[i] = Math.max(value[i] ?? 0, b.value ?? (b.pressed ? 1 : 0)); });
       lx = big(lx, dz(p.axes[0] ?? 0)); ly = big(ly, dz(p.axes[1] ?? 0));
       rx = big(rx, dz(p.axes[2] ?? 0)); ry = big(ry, dz(p.axes[3] ?? 0));
@@ -194,6 +246,14 @@ class InputManager {
       this.padPrev[key] = down;
     };
     for (const [b, a] of PAD_BUTTONS) edge(b, !!pressed[b], a);
+    // Options opens the menu, unless Create is held: 52in1 opens its own bar with the pair.
+    const create = !!pressed[PAD_CREATE], options = !!pressed[PAD_OPTIONS];
+    edge(PAD_OPTIONS, options && !create, 'menu');
+    // Create shows the turn order when it is let go, unless Options was pressed while it was held.
+    if (this.padResync) { this.createSpoiled = create; }
+    else if (create) { if (options) this.createSpoiled = true; }
+    else if (this.padPrev[PAD_CREATE]) { if (!this.createSpoiled) { this.setDevice('pad'); this.dispatch('turnList'); } this.createSpoiled = false; }
+    this.padPrev[PAD_CREATE] = create;
     this.padFast = !!pressed[PAD_FAST];
     if (this.padFast) this.setDevice('pad');
     // left stick doubles as the d-pad

@@ -1,5 +1,6 @@
 // A 3D stage built from a map: terrain, environment, camera, VFX, unit views,
 // tile highlights and picking. Used by battles and cutscenes.
+import { dualsense } from '../ui/dualsense';
 import { THREE } from '../gfx/three';
 import { renderer } from '../gfx/renderer';
 import { TerrainView, HS } from '../gfx/terrain';
@@ -157,18 +158,70 @@ export class Stage {
       el.removeEventListener('pointerdown', down); el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up);
       el.removeEventListener('wheel', wheel); el.removeEventListener('gesturestart', gStart); el.removeEventListener('gesturechange', gChange);
       input.analogCamera = false;
+      // leaving the battle view lets the zoom triggers go
+      dualsense.trigger('both', null);
     });
   }
 
-  /** gamepad: right stick orbits/tilts, triggers zoom (read every frame) */
+  /** gamepad: right stick orbits/tilts, triggers zoom (read every frame); a DualSense adds its extras */
   private analogCamera(dt: number) {
     const p = input.pad;
-    if (!this.userCamera || !p.connected || this.cam.animating) return;
+    if (!this.userCamera || this.cam.animating) { this.releaseTriggers(); return; }
+    this.dualSenseCamera(dt);
+    if (!p.connected) return;
     if (p.rx || p.ry) { this.cam.orbitFree(p.rx * dt * 2.4, p.ry * dt * 1.3); this.stickOrbit = this.stickOrbit || Math.abs(p.rx) > 0.05; }
-    else if (this.stickOrbit) { this.stickOrbit = false; this.cam.settleYaw(); }
+    else if (this.stickOrbit && !this.motionOrbit) { this.stickOrbit = false; this.cam.settleYaw(); }
     const z = p.rt - p.lt;
     if (z) this.cam.zoom(Math.exp(-z * dt * 1.8));
+    this.zoomTriggers(p.lt, p.rt);
   }
+
+  private motionOrbit = false;
+  private pad: { id: number; x0: number; y0: number; x: number; y: number; t0: number } | null = null;
+  private pinch = 0;
+  /**
+   * DualSense extras, each added to controls that work without them: turning the controller orbits
+   * and tipping it tilts (the motion camera), and the touchpad swipes, pinches and taps.
+   */
+  private dualSenseCamera(dt: number) {
+    const g = dualsense.gyro();
+    if (g && (Math.abs(g.x) > 2 || Math.abs(g.y) > 2)) {
+      // degrees a second → radians this frame; turning left orbits left, as a stick pushed left does
+      const k = (Math.PI / 180) * dt * loadOptions().motionSense;
+      this.cam.orbitFree(-g.y * k, -g.x * k * 0.6);
+      this.motionOrbit = this.stickOrbit = true;
+    } else if (this.motionOrbit) { this.motionOrbit = false; }
+    const ts = dualsense.touches();
+    if (ts.length >= 2) {
+      const d = Math.hypot(ts[0].x - ts[1].x, ts[0].y - ts[1].y);
+      if (this.pinch > 0 && d > 0.02) this.cam.zoom(this.pinch / d);
+      this.pinch = d;
+      this.pad = null;
+      return;
+    }
+    this.pinch = 0;
+    const f = ts[0];
+    if (f && (!this.pad || this.pad.id !== f.id)) this.pad = { id: f.id, x0: f.x, y0: f.y, x: f.x, y: f.y, t0: performance.now() };
+    else if (f && this.pad) { this.pad.x = f.x; this.pad.y = f.y; }
+    else if (!f && this.pad) {
+      const { x0, y0, x, y, t0 } = this.pad;
+      this.pad = null;
+      const dx = x - x0, dy = y - y0;
+      if (Math.abs(dx) > 0.25 && Math.abs(dx) > Math.abs(dy)) { this.cam.rotate(dx > 0 ? 1 : -1); input.haptic('land'); }
+      else if (Math.abs(dy) > 0.3) this.cam.togglePitch();
+      else if (Math.hypot(dx, dy) < 0.05 && performance.now() - t0 < 300) this.cam.recenter();
+    }
+  }
+
+  /** The zoom triggers push back lightly, and harder near the camera's zoom limits. */
+  private zoomTriggers(lt: number, rt: number) {
+    const range = Math.max(1, this.cam.maxDist - this.cam.minDist);
+    const near = (gap: number) => Math.max(0, 1 - gap / (range * 0.25));
+    const step = (v: number) => Math.round(v * 10) / 10;
+    dualsense.trigger('right', rt > 0.02 ? { kind: 'resist', from: 0.1, strength: step(0.15 + 0.85 * near(this.cam.dist - this.cam.minDist)) } : null);
+    dualsense.trigger('left', lt > 0.02 ? { kind: 'resist', from: 0.1, strength: step(0.15 + 0.85 * near(this.cam.maxDist - this.cam.dist)) } : null);
+  }
+  private releaseTriggers() { dualsense.trigger('both', null); }
 
   /** shared camera keys/buttons: rotate, tilt, zoom, recenter. True if handled. */
   cameraAction(a: Action): boolean {

@@ -40,7 +40,7 @@ export type { Part, Values } from './core';
 /** A content field's text in the player's language (content.ts uses it). */
 export const contentText = (id: string, original: string) => T.content(id, original);
 
-if (hasDom) document.documentElement.lang = lang;
+if (hasDom && document.documentElement) document.documentElement.lang = lang;
 
 /** The languages the game has, for the Language menu. */
 export const languages = () => AVAILABLE.slice();

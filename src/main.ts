@@ -3,7 +3,8 @@ import './ui/style.css';
 import { initRenderer, onRendererLost } from './gfx/renderer';
 import { loadTSL } from './gfx/materials';
 import { preloadPostEffects } from './gfx/post';
-import { input } from './ui/input';
+import { input, padKindOf } from './ui/input';
+import { dualsense } from './ui/dualsense';
 import { audio } from './audio/audio';
 import { Game } from './game/game';
 import { loadOptions, newGame, joinCharacter } from './game/state';
@@ -39,11 +40,13 @@ async function boot() {
   await loading.begin(t('common.loading.renderer'));
   const opts = loadOptions();
   input.init();
-  window.addEventListener('gamepadconnected', (e) => toast(`🎮 ${t(/xbox|xinput/i.test(e.gamepad.id) ? 'common.pad.connected_xbox' : /dualsense|dualshock|playstation|054c/i.test(e.gamepad.id) ? 'common.pad.connected_playstation' : 'common.pad.connected')}`));
+  window.addEventListener('gamepadconnected', (e) => { const kind = padKindOf(e.gamepad.id); toast(`🎮 ${t(kind === 'xbox' ? 'common.pad.connected_xbox' : kind === 'playstation' ? 'common.pad.connected_playstation' : 'common.pad.connected')}`); });
   window.addEventListener('gamepaddisconnected', () => toast(t('common.pad.disconnected')));
   audio.setVolumes?.({ music: opts.music, sfx: opts.sfx });
   // pointerdown alone doesn't count as a user activation for iOS Safari audio; attachUnlock also listens to touchend/click
   audio.attachUnlock();
+  // a DualSense: 52in1's, or one the player allowed on this page before (no prompt)
+  void dualsense.init();
   setLoad(0.1, t('common.loading.renderer'));
   const BACKENDS = ['webgpu', 'webgl2', 'webgl1'];
   const QUALITIES = ['ultra', 'high', 'medium', 'low', 'auto'];

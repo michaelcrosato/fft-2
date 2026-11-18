@@ -82,6 +82,8 @@ function gameLines(): Plugin {
 
 export default defineConfig({
   base: './',
+  // the 52in1 package (npm run package) leaves out what 52in1 forbids: opening a controller over WebHID
+  define: { __HUB_PACKAGE__: JSON.stringify(process.env.HUB_PACKAGE === '1') },
   resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
   plugins: [
     gameLines(),
