@@ -1,5 +1,6 @@
 import { gameClock } from '../core/gameClock';
 import type { Game } from '../game/game';
+import { dir, t } from '../i18n';
 import { h } from './dom';
 import { fullscreenLabel, gameMode, toggleFullscreen } from './gameMode';
 import { addGameControl, gameToolbar, syncGameToolbar } from './gameToolbar';
@@ -29,7 +30,7 @@ export function installGameMenu(game: Game) {
     'button.btn.game-menu-button',
     {
       type: 'button',
-      'aria-label': 'Game Menu',
+      'aria-label': t('gamemenu.heading'),
       onclick: () => {
         if (dialog) {
           back?.();
@@ -38,7 +39,7 @@ export function installGameMenu(game: Game) {
         if (!contextMenu?.()) open();
       },
     },
-    '☰ Menu',
+    t('gamemenu.button'),
   ) as HTMLButtonElement;
   const button = menuButton;
   addGameControl(button);
@@ -50,7 +51,8 @@ export function installGameMenu(game: Game) {
   };
 
   function open() {
-    const shell = h('dialog.game-menu-shell', { 'aria-label': 'Game Menu', tabindex: '-1' }) as HTMLDialogElement;
+    const shell = h('dialog.game-menu-shell', { 'aria-label': t('gamemenu.heading'), tabindex: '-1' }) as HTMLDialogElement;
+    shell.dir = dir;
     dialog = shell;
     const resume = gameClock.pause();
     document.documentElement.classList.add('game-paused');
@@ -73,8 +75,8 @@ export function installGameMenu(game: Game) {
       shell.remove();
       dialog = null;
       back = null;
-      button.textContent = '☰ Menu';
-      button.setAttribute('aria-label', 'Game Menu');
+      button.textContent = t('gamemenu.button');
+      button.setAttribute('aria-label', t('gamemenu.heading'));
       // Do not leave a focused toolbar button capturing Enter from gameplay.
       button.blur();
       document.documentElement.classList.remove('game-paused');
@@ -91,28 +93,28 @@ export function installGameMenu(game: Game) {
       if (childOpen) return;
       childOpen = true;
       view.hidden = true;
-      button.textContent = '‹ Back';
-      button.setAttribute('aria-label', 'Back');
+      button.textContent = t('gamemenu.button_back');
+      button.setAttribute('aria-label', t('common.back'));
       shell.focus();
       try {
         await show(shell);
       } finally {
         childOpen = false;
         view.hidden = false;
-        button.textContent = '▶ Resume';
-        button.setAttribute('aria-label', 'Resume Game');
+        button.textContent = t('gamemenu.button_resume');
+        button.setAttribute('aria-label', t('gamemenu.resume'));
         focusFirst();
       }
     };
     const quit = () => {
       confirming = true;
-      button.textContent = '‹ Back';
-      button.setAttribute('aria-label', 'Back');
+      button.textContent = t('gamemenu.button_back');
+      button.setAttribute('aria-label', t('common.back'));
       view.replaceChildren(
-        h('h2', null, 'Return to title?'),
-        h('p', null, 'Progress since your last save will be lost.'),
-        action('Keep Playing', home),
-        action('Return to Title', () => {
+        h('h2', null, t('gamemenu.quit_question')),
+        h('p', null, t('gamemenu.quit_warning')),
+        action(t('gamemenu.keep_playing'), home),
+        action(t('gamemenu.return_to_title'), () => {
           gameMode.exit();
           // A fresh title cleanly cancels every pending battle/cutscene task without saving a partial turn.
           const destination = new URL(location.href);
@@ -125,23 +127,23 @@ export function installGameMenu(game: Game) {
     function home() {
       confirming = false;
       fullscreen = action(fullscreenLabel(), toggleFullscreen) as HTMLButtonElement;
-      button.textContent = '▶ Resume';
-      button.setAttribute('aria-label', 'Resume Game');
+      button.textContent = t('gamemenu.button_resume');
+      button.setAttribute('aria-label', t('gamemenu.resume'));
       view.replaceChildren(
-        h('h2', null, 'Game Menu'),
-        h('p.muted', null, 'Game paused'),
-        action('Resume Game', close),
+        h('h2', null, t('gamemenu.heading')),
+        h('p.muted', null, t('gamemenu.paused')),
+        action(t('gamemenu.resume'), close),
         fullscreen,
-        action('Options', () => {
+        action(t('gamemenu.options'), () => {
           void submenu((parent) => openOptions(game, parent));
         }),
-        action('How to Play', () => {
+        action(t('gamemenu.how_to_play'), () => {
           void submenu(async (parent) => {
             const { openHelp } = await import('./menus/help');
             await openHelp(parent);
           });
         }),
-        action('Return to Title', quit),
+        action(t('gamemenu.return_to_title'), quit),
       );
       focusFirst();
     }

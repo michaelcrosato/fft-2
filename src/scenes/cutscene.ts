@@ -6,6 +6,8 @@ import type { UnitView } from './unitview';
 import type { ClipName } from '../gfx/models/anim';
 import { THREE } from '../gfx/three';
 import { sfxFor } from '../audio/sfx';
+import { t } from '../i18n';
+import { SOURCE_OF } from '../i18n/content';
 import { audio } from '../audio/audio';
 import { h, uiRoot } from '../ui/dom';
 import { input } from '../ui/input';
@@ -51,10 +53,10 @@ let skipAll = false;
 export async function runScene(cmds: SceneCmd[], host: SceneHost): Promise<void> {
   skipAll = !!(window as any).__autoPlay;
   // skip button
-  const skip = h('button.btn.skipbtn', { type: 'button', 'aria-label': 'Skip cutscene', onclick: () => {
+  const skip = h('button.btn.skipbtn', { type: 'button', 'aria-label': t('common.skip_label'), onclick: () => {
     if (gameClock.paused) return;
     skipAll = true; input.dispatch('menu');
-  } }, 'Skip ⏭');
+  } }, `${t('common.skip')} ⏭`);
   const removeSkip = addGameControl(skip);
   setSkipHook(() => { skipAll = true; });
   try {
@@ -88,7 +90,7 @@ function sleep(ms: number) { return gameClock.sleep(skipAll ? 0 : ms / (input.fa
 async function runCmd(c: SceneCmd, host: SceneHost): Promise<void> {
   const st = () => host.stage();
   switch (c[0]) {
-    case 'narrate': if (!skipAll) await narrate(fillText(c[1], host)); return;
+    case 'narrate': if (!skipAll) await narrate(fillText(c[1], host), fillText(SOURCE_OF.get(c[1]) ?? c[1], host).length); return;
     case 'title': if (!skipAll) await titleCard(fillText(c[1], host), c[2] ? fillText(c[2], host) : undefined); return;
     case 'map': await host.changeMap(c[1], c[2] ?? {}); return;
     case 'actor': {
@@ -129,7 +131,7 @@ async function runCmd(c: SceneCmd, host: SceneHost): Promise<void> {
       const portrait = await Promise.race([host.portraitOf(id), new Promise<null>((r) => setTimeout(() => r(null), 1200))]);
       await gameClock.whenRunning();
       // Skip may have been pressed while the portrait was rendering.
-      if (!skipAll) await say(host.nameOf(id), fillText(text, host), { mood: opts?.mood, pos: opts?.pos, portrait, speed: loadOptions().textSpeed });
+      if (!skipAll) await say(host.nameOf(id), fillText(text, host), { mood: opts?.mood, pos: opts?.pos, portrait, speed: loadOptions().textSpeed, timing: fillText(SOURCE_OF.get(text) ?? text, host).length });
       if (v && v.anim.baseClip === 'talk') v.anim.setBase('idle');
       return;
     }

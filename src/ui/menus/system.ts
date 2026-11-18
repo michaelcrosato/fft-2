@@ -2,30 +2,40 @@
 import type { Game } from '../../game/game';
 import { menu, toast, confirm } from '../widgets';
 import { overlay } from './common';
-import { listSaves, saveGame, loadGame, saveOptions, type GameState, type Options } from '../../game/state';
+import { listSaves, saveGame, loadGame, loadOptions, saveOptions, type GameState, type Options } from '../../game/state';
+import { inHub } from '../hub';
 import { audio } from '../../audio/audio';
 import { setQuality, rinfo, type Quality } from '../../gfx/renderer';
 import { NODES } from '../../data/db';
 import { gameMode, promptGameMode } from '../gameMode';
+import { fmtDate, fmtNum, t } from '../../i18n';
+
+/** The save list's short chapter labels, by chapter. */
+const CHAPTERS = ['system.save.chapter.prologue', 'system.save.chapter.1', 'system.save.chapter.2', 'system.save.chapter.3', 'system.save.chapter.4'];
+/** Minutes of play time, always two digits, in the player's digits. */
+const twoDigits = (n: number) => (n < 10 ? fmtNum(0) : '') + fmtNum(n);
 
 export async function openSaveLoad(game: Game, mode: 'save' | 'load'): Promise<GameState | null> {
-  const ov = overlay(mode === 'save' ? 'Save the Chronicle' : 'Load a Chronicle');
+  const ov = overlay(t(mode === 'save' ? 'system.save.screen_save' : 'system.save.screen_load'));
   try {
     for (;;) {
       const saves = listSaves();
       const items = saves.map((s, i) => ({
-        label: s ? `${i === 7 ? 'Autosave · ' : ''}${s.heroName} — ${['Prologue', 'Ch. I', 'Ch. II', 'Ch. III', 'Ch. IV'][s.chapter] ?? ''} · ${NODES.get(s.location)?.name ?? s.location}` : `${i === 7 ? 'Autosave' : 'Slot ' + (i + 1)} — empty`,
+        label: s
+          ? t(i === 7 ? 'system.save.slot_autosave' : 'system.save.slot', { hero: s.heroName, chapter: CHAPTERS[s.chapter] ? t(CHAPTERS[s.chapter]) : '', place: NODES.get(s.location)?.name ?? s.location })
+          : i === 7 ? t('system.save.empty_autosave') : t('system.save.empty', { slot: i + 1 }),
         value: String(i),
-        right: s ? `Lv${s.level} · ${Math.floor(s.playtime / 3600)}h${String(Math.floor((s.playtime % 3600) / 60)).padStart(2, '0')}` : '',
-        disabled: mode === 'load' ? !s : i === 7 ? 'Autosave slot' : false,
-        desc: s ? `${new Date(s.savedAt).toLocaleString()} — ${s.objective}` : '',
+        // all three in the player's digits, like the two-digit minutes
+        right: s ? t('system.save.level_time', { level: fmtNum(s.level), hours: fmtNum(Math.floor(s.playtime / 3600)), minutes: twoDigits(Math.floor((s.playtime % 3600) / 60)) }) : '',
+        disabled: mode === 'load' ? !s : i === 7 ? t('system.save.autosave_reserved') : false,
+        desc: s ? t('system.save.details', { date: fmtDate(s.savedAt), objective: s.objective }) : '',
       }));
-      const pick = await menu({ items, x: 16, y: 64, title: mode === 'save' ? 'Save' : 'Load', parent: ov.root, showDesc: true }).promise;
+      const pick = await menu({ items, x: 16, y: 64, title: t(mode === 'save' ? 'system.save.menu_save' : 'system.save.menu_load'), parent: ov.root, showDesc: true }).promise;
       if (pick === null) return null;
       const slot = +pick;
       if (mode === 'save') {
-        if (saves[slot] && !(await confirm('Overwrite this chronicle?'))) continue;
-        if (saveGame(game.state, slot)) { audio.sfx('confirm'); toast('Chronicle saved.'); } else toast('Saving failed (storage unavailable).');
+        if (saves[slot] && !(await confirm(t('system.save.overwrite')))) continue;
+        if (saveGame(game.state, slot)) { audio.sfx('confirm'); toast(t('system.save.saved')); } else toast(t('system.save.failed'));
         return null;
       }
       const st = loadGame(slot);
@@ -35,28 +45,33 @@ export async function openSaveLoad(game: Game, mode: 'save' | 'load'): Promise<G
 }
 
 export async function openOptions(game: Game, parent?: HTMLElement) {
-  const ov = overlay('Options', parent);
+  const ov = overlay(t('system.options.title'), parent);
   const o: Options = game.options;
   let last: string | undefined;
   try {
     for (;;) {
-      const pct = (v: number) => `${Math.round(v * 100)}%`;
+      const pct = (v: number) => t('system.options.percent', { pct: Math.round(v * 100) });
+      const onOff = (on: boolean) => t(on ? 'system.options.on' : 'system.options.off');
+      const difficulty = { easy: 'system.options.difficulty_easy', normal: 'system.options.difficulty_normal', hard: 'system.options.difficulty_hard' };
+      // auto, ultra, webgpu… are the settings' technical names, shown as they are
+      const inUse = (chosen: string, actual?: string) => t('system.options.setting_in_use', { chosen, in_use: actual ?? '' });
       const items = () => [
-        { label: 'Game Mode', value: 'gameMode', right: gameMode.active ? gameMode.fullscreen ? 'Fullscreen' : 'On · browser view' : 'Off', desc: 'Fullscreen and protection against accidental browser gestures. Select to enable or exit.' },
-        { label: 'Music volume', value: 'music', right: pct(o.music) },
-        { label: 'Effects volume', value: 'sfx', right: pct(o.sfx) },
-        { label: 'Battle speed', value: 'speed', right: `${o.battleSpeed}×` },
-        { label: 'Text speed', value: 'text', right: `${o.textSpeed}×` },
-        { label: 'Difficulty', value: 'difficulty', right: { easy: 'Squire (easy)', normal: 'Knight (normal)', hard: 'Lord (hard)' }[o.difficulty ?? 'normal'], desc: 'Enemy level and vigour relative to your company. Applies to the next battle.' },
-        { label: 'Gentle mode', value: 'gentle', right: o.gentle ? 'On' : 'Off', desc: 'Fallen allies retreat instead of crystallizing. Applies to the next battle.' },
-        { label: 'Random encounters', value: 'encounters', right: o.encounters === false ? 'Off' : 'On', desc: 'Wandering foes may ambush the company in open country.' },
-        { label: 'Camera shake', value: 'shake', right: o.camShake ? 'On' : 'Off' },
-        { label: 'Graphics quality', value: 'quality', right: `${o.quality} (${rinfo?.quality ?? ''})` },
-        { label: 'Renderer', value: 'renderer', right: `${o.renderer} (${rinfo?.backend ?? ''})`, desc: 'Takes effect after reloading the page.' },
-        { label: 'How to Play', value: 'help' },
-        { label: 'Back', value: 'back' },
+        ...(inHub() ? [] : [{ label: t('system.options.game_mode'), value: 'gameMode', right: gameMode.active ? gameMode.fullscreen ? t('system.options.game_mode_fullscreen') : t('system.options.game_mode_browser') : onOff(false), desc: t('system.options.game_mode_desc') }]),
+        { label: t('system.options.music'), value: 'music', right: pct(o.music) },
+        { label: t('system.options.sfx'), value: 'sfx', right: pct(o.sfx) },
+        { label: t('system.options.battle_speed'), value: 'speed', right: t('system.options.speed', { speed: o.battleSpeed }) },
+        { label: t('system.options.text_speed'), value: 'text', right: t('system.options.speed', { speed: o.textSpeed }) },
+        { label: t('system.options.difficulty'), value: 'difficulty', right: t(difficulty[o.difficulty ?? 'normal']), desc: t('system.options.difficulty_desc') },
+        { label: t('system.options.gentle'), value: 'gentle', right: onOff(!!o.gentle), desc: t('system.options.gentle_desc') },
+        { label: t('system.options.encounters'), value: 'encounters', right: onOff(o.encounters !== false), desc: t('system.options.encounters_desc') },
+        { label: t('system.options.camera_shake'), value: 'shake', right: onOff(!!o.camShake) },
+        { label: t('system.options.quality'), value: 'quality', right: inUse(o.quality, rinfo?.quality) },
+        { label: t('system.options.renderer'), value: 'renderer', right: inUse(o.renderer, rinfo?.backend), desc: t('system.options.renderer_desc') },
+        { label: t('controller.title'), value: 'controller', desc: t('system.options.controller_desc') },
+        { label: t('system.options.how_to_play'), value: 'help' },
+        { label: t('common.back'), value: 'back' },
       ];
-      const optionsMenu = menu({ items: items(), x: 16, y: 64, title: 'Options', parent: ov.root, showDesc: true, tapSelects: false, initial: last });
+      const optionsMenu = menu({ items: items(), x: 16, y: 64, title: t('system.options.title'), parent: ov.root, showDesc: true, tapSelects: false, initial: last });
       const unsubscribe = gameMode.onChange(() => optionsMenu.refresh(items()));
       const pick = await optionsMenu.promise;
       unsubscribe();
@@ -65,6 +80,14 @@ export async function openOptions(game: Game, parent?: HTMLElement) {
       if (pick === 'gameMode') {
         if (gameMode.active) gameMode.exit();
         else await promptGameMode();
+        continue;
+      }
+      if (pick === 'controller') {
+        const { openController } = await import('./controller');
+        ov.root.style.visibility = 'hidden';
+        try { await openController(parent); } finally { ov.root.style.visibility = ''; }
+        // the Controller page saves its own settings: take them up so the next save here keeps them
+        Object.assign(o, loadOptions());
         continue;
       }
       if (pick === 'help') {
@@ -82,7 +105,7 @@ export async function openOptions(game: Game, parent?: HTMLElement) {
       if (pick === 'difficulty') o.difficulty = cycle(['easy', 'normal', 'hard'] as Options['difficulty'][], o.difficulty ?? 'normal');
       if (pick === 'shake') o.camShake = !o.camShake;
       if (pick === 'encounters') o.encounters = o.encounters === false;
-      if (pick === 'quality') { o.quality = cycle(['auto', 'ultra', 'high', 'medium', 'low'] as Array<Quality | 'auto'>, o.quality); if (o.quality !== 'auto') setQuality(o.quality); toast('Some quality changes apply on the next map.'); }
+      if (pick === 'quality') { o.quality = cycle(['auto', 'ultra', 'high', 'medium', 'low'] as Array<Quality | 'auto'>, o.quality); if (o.quality !== 'auto') setQuality(o.quality); toast(t('system.options.quality_changed')); }
       if (pick === 'renderer') o.renderer = cycle(['auto', 'webgpu', 'webgl2', 'webgl1'] as Options['renderer'][], o.renderer);
       saveOptions(o);
     }

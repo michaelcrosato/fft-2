@@ -28,6 +28,7 @@ import { gameClock } from '../core/gameClock';
 import { installGameMenu } from '../ui/gameMenu';
 import { loading, paintLoading } from '../ui/loading';
 import { tapTracker } from '../ui/taps';
+import { fmtList, isTestLanguage, lang, t } from '../i18n';
 
 export interface Screen {
   update(dt: number): void;
@@ -125,7 +126,7 @@ export class Game {
   /** The actual post-processing output (including actors/shadows) must exist before reveal. */
   async present(reveal = true, seconds = 0.25, color?: string): Promise<boolean> {
     if (!loading.preparing) return false;
-    loading.message('Preparing the view…');
+    loading.message(t('game.loading.view'));
     await paintLoading();
     this.screen?.render();
     await paintLoading();
@@ -140,7 +141,7 @@ export class Game {
 
   // ============================================================ stages
   async makeStage(mapId: string, opts: { time?: EnvTime; weather?: Weather } = {}): Promise<Stage> {
-    await loading.begin('Preparing the next scene…');
+    await loading.begin(t('game.loading.next_scene'));
     const st = new Stage(mapId, opts);
     await st.init();
     // Warming a bare scene compiles different shaders from the post-processing passes,
@@ -222,7 +223,7 @@ export class Game {
         // then warm the actors before the script's first fade-in.
         if (!setupAfterCard) return;
         setupAfterCard = false;
-        await loading.begin('Preparing the scene…');
+        await loading.begin(t('game.loading.scene'));
       },
       actor: (aid) => actors.get(aid)?.view ?? game.stage?.views.get(aid),
       spawn: (aid, who, x, z, facing, opts) => {
@@ -266,10 +267,10 @@ export class Game {
       },
       setFlag: (f, v) => { game.state.flags[f] = v; },
       getFlag: (f) => !!game.state.flags[f],
-      join: (c) => { joinCharacter(game.state, c); toast(`${CHARACTERS.get(c)?.name ?? c} joins the party!`); audio.sfx('levelUp'); },
+      join: (c) => { joinCharacter(game.state, c); toast(t('game.toast.joins', { name: CHARACTERS.get(c)?.name ?? c })); audio.sfx('levelUp'); },
       leave: (c) => leaveCharacter(game.state, c),
-      item: (i, n) => { addItem(game.state, i, n); toast(`Obtained ${ITEMS.get(i)?.name ?? i}${n > 1 ? ' ×' + n : ''}`); },
-      gil: (n) => { game.state.gil = Math.max(0, game.state.gil + n); if (n > 0) toast(`Received ${n} gil`); },
+      item: (i, n) => { addItem(game.state, i, n); const item = ITEMS.get(i)?.name ?? i; toast(n > 1 ? t('game.toast.obtained_many', { item, count: n }) : t('game.toast.obtained', { item })); },
+      gil: (n) => { game.state.gil = Math.max(0, game.state.gil + n); if (n > 0) toast(t('game.toast.gil', { count: n })); },
       chronicle: (cid) => { if (!game.state.chronicle.includes(cid)) game.state.chronicle.push(cid); },
       heroName: () => game.state.heroName,
       battle: battleHooks,
@@ -313,7 +314,7 @@ export class Game {
   }
 
   private async battleOnce(def: BattleDef): Promise<'victory' | 'defeat'> {
-    await loading.begin('Preparing the battlefield…');
+    await loading.begin(t('game.loading.battlefield'));
     audio.playMusic('formation', { fade: 1 });
     const stage = this.stage && this.stage.def.id === def.map ? this.stage : await this.makeStage(def.map, { time: def.time, weather: def.weather });
     // remove scene actors
@@ -322,7 +323,7 @@ export class Game {
     const pre = setupBattle(this.state, def, []);
     for (const u of pre.battle.units) if (!u.hidden) this.addBattleView(stage, u);
     const party = await this.deploy(stage, def, pre.battle);
-    await loading.begin('Preparing your company…');
+    await loading.begin(t('game.loading.company'));
     for (const k of [...stage.views.keys()]) stage.removeUnit(k);
     if (!party) { await this.present(); return 'defeat'; }
     const setup = setupBattle(this.state, def, party);
@@ -431,7 +432,7 @@ export class Game {
       const v = stage.views.get(u.uid);
       if (v && u.team === 0 && u.alive) v.anim.setBase('victory');
     }
-    await titleCardQuick('Victory!');
+    await titleCardQuick(t('game.victory_banner'));
     await sleep(900);
   }
 
@@ -473,14 +474,14 @@ export class Game {
       for (;;) {
         if ((window as any).__autoBattle) break;
         const items = [
-          ...avail.map((r) => ({ label: `${placements.has(r) ? '◆' : '◇'} ${r.name}`, value: 'u:' + r.uid, right: `${JOBS.get(r.job)?.name ?? r.job} Lv${r.level}`, disabled: r === heroU ? false : false })),
+          ...avail.map((r) => ({ label: `${placements.has(r) ? '◆' : '◇'} ${r.name}`, value: 'u:' + r.uid, right: t('game.deploy.job_level', { job: JOBS.get(r.job)?.name ?? r.job, level: r.level }), disabled: r === heroU ? false : false })),
           { label: '', value: 'sep', sep: true },
-          { label: 'Begin Battle', value: 'go' },
+          { label: t('game.deploy.begin'), value: 'go' },
         ];
-        const pick = await menu({ items, x: 14, y: '12%', className: 'deploy', title: `Deploy ${placements.size}/${max}`, maxHeight: 'calc(60 * var(--vh))', cancelable: false, initial: lastPick ?? 'go', onAction: (a) => stageKeys(stage, a) }).promise;
+        const pick = await menu({ items, x: 14, y: '12%', className: 'deploy', title: t('game.deploy.title', { placed: placements.size, max }), maxHeight: 'calc(60 * var(--vh))', cancelable: false, initial: lastPick ?? 'go', onAction: (a) => stageKeys(stage, a) }).promise;
         lastPick = pick ?? undefined;
         if (pick === 'go') {
-          if (!placements.has(heroU)) { toast(`${heroU.name} must lead the battle.`); continue; }
+          if (!placements.has(heroU)) { toast(t('game.deploy.hero_must_lead', { name: heroU.name })); continue; }
           break;
         }
         if (!pick || !pick.startsWith('u:')) continue;
@@ -491,12 +492,12 @@ export class Game {
             const cell = await this.pickDeployCell(stage, cells);
             if (cell) { const other = [...placements.entries()].find(([, c]) => c[0] === cell[0] && c[1] === cell[1]); if (other) placements.set(other[0], placements.get(r)!); placements.set(r, cell); }
           } else {
-            const act = await menu({ items: [{ label: 'Reposition', value: 'pos' }, { label: 'Withdraw', value: 'out', disabled: forced.includes(r) ? 'Must fight in this battle' : false }], x: '50%', y: '50%', className: 'centered', title: r.name }).promise;
+            const act = await menu({ items: [{ label: t('game.deploy.reposition'), value: 'pos' }, { label: t('game.deploy.withdraw'), value: 'out', disabled: forced.includes(r) ? t('game.deploy.must_fight') : false }], x: '50%', y: '50%', className: 'centered', title: r.name }).promise;
             if (act === 'out') placements.delete(r);
             if (act === 'pos') { const cell = await this.pickDeployCell(stage, cells); if (cell) { const other = [...placements.entries()].find(([, c]) => c[0] === cell[0] && c[1] === cell[1]); if (other) placements.set(other[0], placements.get(r)!); placements.set(r, cell); } }
           }
         } else {
-          if (placements.size >= max) { toast(`Only ${max} may deploy.`); continue; }
+          if (placements.size >= max) { toast(t('game.deploy.full', { count: max })); continue; }
           const free = cells.find((c) => ![...placements.values()].some((p) => p[0] === c[0] && p[1] === c[1]));
           if (free) placements.set(r, free);
         }
@@ -547,23 +548,23 @@ export class Game {
   // ============================================================ results & game over
   private async resultsScreen(b: import('../battle/battle').Battle, def: BattleDef, { lost, defected, recruited, hatched }: ReturnType<typeof applyResults>) {
     const party = b.units.filter((u) => u.baseTeam === 0 && u.controlled);
-    const rows = party.map((u) => h('div.kv', null, h('span', null, `${u.name}${u.levelUps ? ` — Lv ${u.level} ▲` : ''}`), h('span', null, `EXP +${u.expGained} · JP +${u.jpGained}`)));
+    const rows = party.map((u) => h('div.kv', null, h('span', null, u.levelUps ? t('game.results.level_up', { name: u.name, level: u.level }) : u.name), h('span', null, t('game.results.exp_jp', { exp: u.expGained, jp: u.jpGained }))));
     const loot = [...b.loot, ...(def.rewards?.items ?? [])].map((i) => ITEMS.get(i)?.name ?? i);
-    const learned = party.flatMap((u) => u.crystalLearned.map((a) => `${u.name}: ${ABILITIES.get(a)?.name ?? a}`));
+    const learned = party.flatMap((u) => u.crystalLearned.map((a) => t('game.results.crystal_entry', { name: u.name, ability: ABILITIES.get(a)?.name ?? a })));
     const panel = h('div.panel', { style: { left: '50%', top: '50%', transform: 'translate(-50%,-50%)', minWidth: 'min(420px, 92vw)', maxWidth: '92vw' } },
-      h('div.title-plate', null, 'Spoils of Battle'),
+      h('div.title-plate', null, t('game.results.title')),
       h('h2', null, def.name),
       ...rows,
       h('div', { style: { height: '8px' } }),
-      h('div.kv', null, h('span', null, 'Gil'), h('span.gold-text', null, `+${(def.rewards?.gil ?? 0) + b.lootGil}`)),
-      loot.length ? h('div.kv', null, h('span', null, 'Items'), h('span', null, loot.join(', '))) : null,
-      learned.length ? h('div.muted', null, 'Crystals: ' + learned.join('; ')) : null,
-      recruited.length ? h('div.good', null, `Joined: ${recruited.map((u) => u.name).join(', ')}`) : null,
-      b.poached.length ? h('div.muted', null, `Poached: ${b.poached.map((i) => ITEMS.get(i)?.name ?? i).join(', ')}`) : null,
-      lost ? h('div.bad', null, `${lost} ${lost === 1 ? 'soul was' : 'souls were'} lost to the crystals.`) : null,
-      defected ? h('div.bad', null, `${defected} ${defected === 1 ? 'soldier left' : 'soldiers left'} the company for the enemy.`) : null,
-      hatched.length ? h('div.good', null, `An egg hatched: a young ${hatched.join(', ')} joins the company!`) : null,
-      h('div', { style: { textAlign: 'center', marginTop: '10px' } }, h('span.btn', null, 'Continue')),
+      h('div.kv', null, h('span', null, t('game.results.gil')), h('span.gold-text', null, t('game.results.gil_gained', { gil: (def.rewards?.gil ?? 0) + b.lootGil }))),
+      loot.length ? h('div.kv', null, h('span', null, t('game.results.items')), h('span', null, fmtList(loot))) : null,
+      learned.length ? h('div.muted', null, t('game.results.crystals', { list: fmtList(learned) })) : null,
+      recruited.length ? h('div.good', null, t('game.results.joined', { names: fmtList(recruited.map((u) => u.name)) })) : null,
+      b.poached.length ? h('div.muted', null, t('game.results.poached', { items: fmtList(b.poached.map((i) => ITEMS.get(i)?.name ?? i)) })) : null,
+      lost ? h('div.bad', null, t('game.results.lost', { count: lost })) : null,
+      defected ? h('div.bad', null, t('game.results.defected', { count: defected })) : null,
+      hatched.length ? h('div.good', null, t('game.results.hatched', { count: hatched.length, monsters: fmtList(hatched) })) : null,
+      h('div', { style: { textAlign: 'center', marginTop: '10px' } }, h('span.btn', null, t('common.continue'))),
     );
     uiRoot().appendChild(panel);
     if ((window as any).__autoPlay) { await sleep(600); panel.remove(); return; }
@@ -579,8 +580,8 @@ export class Game {
       if (w.__defeats % 3 === 0) { w.__forceWin = true; }
       return true;
     }
-    await titleCard('Your Tale Ends Here', 'The chronicle falls silent…', 1600);
-    const pick = await menu({ items: [{ label: 'Retry the battle', value: 'retry' }, { label: 'Return to title', value: 'title' }], x: '42%', y: '45%', title: 'Game Over', cancelable: false }).promise;
+    await titleCard(t('game.over.title'), t('game.over.subtitle'), 1600);
+    const pick = await menu({ items: [{ label: t('game.over.retry'), value: 'retry' }, { label: t('game.over.return_title'), value: 'title' }], x: '42%', y: '45%', title: t('game.over.menu_title'), cancelable: false }).promise;
     return pick === 'retry';
   }
 
@@ -666,19 +667,30 @@ export class Game {
     if (saveGame(this.state, AUTOSAVE_SLOT) || this.autosaveWarned) return;
     // blocked or full storage: say so once instead of letting the player assume progress is kept
     this.autosaveWarned = true;
-    toast('Autosave failed: this browser is not keeping saved games.', 5000);
+    toast(t('game.toast.autosave_failed'), 5000);
   }
 }
 
 function victoryText(def: BattleDef): string {
   const v = def.victory;
   switch (v.type) {
-    case 'defeatAll': return 'Victory: defeat all enemies';
-    case 'defeat': return `Victory: defeat ${v.ids.join(', ')}`;
-    case 'defeatAny': return `Victory: defeat ${v.ids.join(' or ')}`;
-    case 'survive': return `Victory: survive ${v.turns} turns`;
-    case 'reach': return 'Victory: reach the objective';
+    case 'defeatAll': return t('game.victory.defeat_all');
+    case 'defeat': return t('game.victory.defeat', { names: fmtList(v.ids.map((id) => foeName(def, id))) });
+    case 'defeatAny': return t('game.victory.defeat_any', { names: orList(v.ids.map((id) => foeName(def, id))) });
+    case 'survive': return t('game.victory.survive', { count: v.turns });
+    case 'reach': return t('game.victory.reach');
   }
+}
+
+/** The name a victory condition's foe goes by in this battle (its spawn's name, character or job), not its id. */
+function foeName(def: BattleDef, id: string): string {
+  const sp = def.units.find((u) => (u.id ?? u.char) === id);
+  return sp?.name ?? CHARACTERS.get(sp?.char ?? id)?.name ?? (sp?.job ? JOBS.get(sp.job)?.name : undefined) ?? id;
+}
+
+/** Names joined by "or" in the player's language (the test languages format as their base language). */
+function orList(names: string[]): string {
+  try { return new Intl.ListFormat(isTestLanguage ? lang.slice(0, 2) : lang, { style: 'long', type: 'disjunction' }).format(names); } catch { return names.join(', '); }
 }
 
 function stageKeys(stage: Stage, a: import('../ui/input').Action): boolean {

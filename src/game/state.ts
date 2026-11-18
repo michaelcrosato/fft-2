@@ -1,4 +1,5 @@
 // Persistent game state + save slots.
+import { t } from '../i18n';
 import type { RosterUnit } from './roster';
 import { addExp, addJp, createCharacter, createGeneric, newUid, randomName, setLevel } from './roster';
 import { autoEquip } from './setup';
@@ -24,12 +25,27 @@ export interface Options {
   camShake: boolean;
   /** random ambushes when stopping at open-field locations */
   encounters: boolean;
+  /** button glyphs: follow the controller in use, or always PlayStation's or Xbox's */
+  buttonPrompts: 'auto' | 'playstation' | 'xbox';
+  /** controller vibration: 0 off, 0.5 low, 1 high (52in1 scales it again by the player's setting) */
+  vibration: number;
+  /** DualSense: the light bar shows the active unit's side and health */
+  dsLight: boolean;
+  /** DualSense: the zoom triggers push back near the camera's limits */
+  dsTriggers: boolean;
+  /** DualSense: tilting the controller turns the camera ('auto': on while 52in1's Motion aim is) */
+  motion: 'auto' | 'on' | 'off';
+  /** motion camera sensitivity, 0.25–2 */
+  motionSense: number;
+  /** DualSense: touchpad swipes rotate and tilt the camera, a pinch zooms, a tap recenters */
+  touchpad: boolean;
 }
 
 export const DEFAULT_OPTIONS: Options = {
   difficulty: 'normal',
   gentle: false, battleSpeed: 1, textSpeed: 1, music: 0.7, sfx: 0.8, quality: 'auto', renderer: 'auto',
   confirmMoves: true, showGrid: true, camShake: true, encounters: true,
+  buttonPrompts: 'auto', vibration: 1, dsLight: true, dsTriggers: true, motion: 'auto', motionSense: 1, touchpad: true,
 };
 
 export interface ErrandRun { id: string; units: string[]; start: number; due: number }
@@ -242,7 +258,7 @@ export function listSaves(): Array<SlotInfo | null> {
   for (let i = 0; i < SLOTS; i++) {
     const s = loadGame(i);
     if (!s) { out.push(null); continue; }
-    out.push({ slot: i, heroName: s.heroName, chapter: s.chapter, location: s.location, playtime: s.playtime, savedAt: s.savedAt ?? 0, level: partyLevel(s), objective: STORY[s.storyIndex]?.objective ?? 'The tale is told.' });
+    out.push({ slot: i, heroName: s.heroName, chapter: s.chapter, location: s.location, playtime: s.playtime, savedAt: s.savedAt ?? 0, level: partyLevel(s), objective: STORY[s.storyIndex]?.objective ?? t('common.tale_told') });
   }
   return out;
 }
@@ -317,10 +333,12 @@ function normalizeOptions(value: unknown): Options {
   out.difficulty = choice('difficulty', ['easy', 'normal', 'hard'], out.difficulty);
   out.quality = choice('quality', ['auto', 'ultra', 'high', 'medium', 'low'], out.quality);
   out.renderer = choice('renderer', ['auto', 'webgpu', 'webgl2', 'webgl1'], out.renderer);
-  for (const key of ['gentle', 'confirmMoves', 'showGrid', 'camShake', 'encounters'] as const) {
+  out.buttonPrompts = choice('buttonPrompts', ['auto', 'playstation', 'xbox'], out.buttonPrompts);
+  out.motion = choice('motion', ['auto', 'on', 'off'], out.motion);
+  for (const key of ['gentle', 'confirmMoves', 'showGrid', 'camShake', 'encounters', 'dsLight', 'dsTriggers', 'touchpad'] as const) {
     if (typeof raw[key] === 'boolean') out[key] = raw[key];
   }
-  for (const [key, min, max] of [['music', 0, 1], ['sfx', 0, 1], ['battleSpeed', 0.5, 2], ['textSpeed', 0.01, 2.5]] as const) {
+  for (const [key, min, max] of [['music', 0, 1], ['sfx', 0, 1], ['battleSpeed', 0.5, 2], ['textSpeed', 0.01, 2.5], ['vibration', 0, 1], ['motionSense', 0.25, 2]] as const) {
     const v = raw[key];
     if (typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max) out[key] = v;
   }

@@ -3,17 +3,26 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta name="theme-color" content="#07060a" />
-<meta name="description" content="Final Fealty Tactics — a low-poly tactical RPG of crowns, betrayal and the Twelve Braves." />
-<title>Final Fealty Tactics</title>
-<!-- Visible before the JavaScript bundle, fonts or renderer have downloaded. -->
-<style>html,body{margin:0;background:#07060a;color:#f0d68a}#loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;background:#100e13;text-align:center;z-index:65}#loading .loading-spinner{width:30px;height:30px;border:2px solid #c9a24a40;border-top-color:#f0d68a;border-radius:50%;animation:loading-spin 1s linear infinite}@keyframes loading-spin{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){#loading .loading-spinner{animation:none}}</style>
+<title>Final Fealty Tactics — The Chronicle of the Twelve Braves</title>
+<meta name="description" content="A low-poly tactical RPG of crowns, betrayal and the Twelve Braves. Lead a company through a war of succession in turn-based battles across the kingdom of Ivaldis." />
+<meta name="theme-color" content="#c9a24a" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><path d='M32 4 L40 24 L60 24 L44 36 L50 58 L32 45 L14 58 L20 36 L4 24 L24 24 Z' fill='%23c9a24a' stroke='%232b1d12' stroke-width='3'/></svg>" />
+<meta name="hub:catalogue" content="1" />
+<meta name="hub:type" content="Game" />
+<meta name="hub:genre" content="RPG" />
+<meta name="hub:tags" content="3d, isometric, turn-based, story, gamepad" />
+<meta name="hub:controls" content="arrows/WASD to move the cursor; Enter/Space to confirm; Esc to go back; Q/E to rotate the camera; M for the menu; click/tap to choose; gamepad to play" />
+<meta name="hub:source" content="Final Fantasy Tactics" />
+<meta name="hub:series" content="Final Fantasy" />
+<meta name="hub:dualsense" content="light bar, adaptive triggers, haptics, motion, touchpad" />
+<!-- game-lines -->
+<!-- Visible before the JavaScript bundle, fonts or renderer have downloaded. -->
+<style>html,body{margin:0;background:#07060a;color:#f0d68a}#loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;background:#100e13;text-align:center;z-index:65}#loading .loading-title{text-transform:uppercase}#loading .loading-spinner{width:30px;height:30px;border:2px solid #c9a24a40;border-top-color:#f0d68a;border-radius:50%;animation:loading-spin 1s linear infinite}@keyframes loading-spin{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){#loading .loading-spinner{animation:none}}</style>
 </head>
 <body>
 <div id="app"></div>
 <div id="ui"></div>
-<div class="loading" id="loading"><div class="loading-spinner" aria-hidden="true"></div><div class="loading-title">FINAL FEALTY TACTICS</div><div class="bar"><i id="loadbar" style="display:block;height:100%;width:5%"></i></div><div id="loadmsg" role="status" aria-live="polite">Preparing the chronicle…</div></div>
+<div class="loading" id="loading"><div class="loading-spinner" aria-hidden="true"></div><div class="loading-title" data-line="common.game_name">Final Fealty Tactics</div><div class="bar"><i id="loadbar" style="display:block;height:100%;width:5%"></i></div><div id="loadmsg" role="status" aria-live="polite" data-line="common.loading.start">Preparing the chronicle…</div></div>
 <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

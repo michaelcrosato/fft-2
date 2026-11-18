@@ -1,5 +1,6 @@
 // Reusable UI widgets: menus, confirm, toast, dialogue boxes, narration,
 // title cards, fades, banners, floating numbers, unit cards.
+import { dir, pieces, t } from '../i18n';
 import { h, uiRoot, sleep } from './dom';
 import { input, type Action } from './input';
 import { audio } from '../audio/audio';
@@ -51,7 +52,7 @@ export function menu<T = string>(o: MenuOpts<T>): MenuHandle<T> {
   if (o.title) el.appendChild(h('div.title-plate', null, o.title));
   if (o.cancelable !== false) {
     // mouse and touch players need a visible way back (keyboard/gamepad use Esc / B)
-    const close = h('button.mclose', { type: 'button', title: o.closeTitle ?? 'Back', 'aria-label': o.closeTitle ?? 'Back' }, '✕');
+    const close = h('button.mclose', { type: 'button', title: o.closeTitle ?? t('common.back'), 'aria-label': o.closeTitle ?? t('common.back') }, '✕');
     close.addEventListener('click', (e) => { e.stopPropagation(); audio.sfx('cancel'); finish(null); });
     el.appendChild(close);
     el.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); audio.sfx('cancel'); finish(null); });
@@ -148,7 +149,7 @@ export function menu<T = string>(o: MenuOpts<T>): MenuHandle<T> {
 }
 
 /** yes/no prompt; `defaultNo` preselects No (for destructive choices) */
-export async function confirm(text: string, yes = 'Yes', no = 'No', defaultNo = false): Promise<boolean> {
+export async function confirm(text: string, yes = t('common.yes'), no = t('common.no'), defaultNo = false): Promise<boolean> {
   // (.prompt stacks above full-screen menus like Formation or Save, which open prompts of their own)
   const wrap = h('div.panel.prompt', { role: 'alertdialog', 'aria-label': text, style: { left: '50%', top: '40%', transform: 'translate(-50%,-50%)', maxWidth: 'min(520px, 92vw)', textAlign: 'center', padding: '16px 22px 8px' } }, h('div', { style: { marginBottom: '10px', fontSize: '1.1em' } }, text));
   uiRoot().appendChild(wrap);
@@ -169,7 +170,11 @@ export function toast(text: string, ms = 2200) {
 // ---------------------------------------------------------------------------
 //  Dialogue
 // ---------------------------------------------------------------------------
-export interface SayOpts { mood?: 'normal' | 'shout' | 'whisper' | 'think'; pos?: 'top' | 'bottom'; portrait?: string | null; speed?: number; auto?: number }
+export interface SayOpts {
+  mood?: 'normal' | 'shout' | 'whisper' | 'think'; pos?: 'top' | 'bottom'; portrait?: string | null; speed?: number; auto?: number;
+  /** letters in the original line: a translation reveals over the time the original would take */
+  timing?: number;
+}
 
 let dlgEl: HTMLElement | null = null;
 
@@ -187,7 +192,11 @@ export function say(speaker: string, text: string, o: SayOpts = {}): Promise<voi
     portrait, h('div', null, speaker ? h('div.speaker', null, speaker) : null, txt), next);
   uiRoot().appendChild(box);
   dlgEl = box;
+  box.dir = dir;
   return new Promise((resolve) => {
+    // reveal whole letters (whole words in Arabic script), over the time the original line takes
+    const steps = pieces(text);
+    const letters = Math.max(1, o.timing ?? text.length);
     let shown = 0;
     let done = false;
     const cps = 55 * (o.speed ?? 1);
@@ -199,17 +208,17 @@ export function say(speaker: string, text: string, o: SayOpts = {}): Promise<voi
       if (gameClock.paused) { last = now; raf = requestAnimationFrame(tick); return; }
       acc += ((now - last) / 1000) * cps * (input.fast ? 4 : 1);
       last = now;
-      const n = Math.min(text.length, Math.floor(acc));
+      const n = Math.min(steps.length, Math.floor((steps.length * acc) / letters));
       if (n > shown) {
-        shown = n; txt.textContent = text.slice(0, shown);
+        shown = n; txt.textContent = steps.slice(0, shown).join('');
       }
-      if (shown >= text.length) { done = true; next.style.visibility = 'visible'; if (o.auto) gameClock.schedule(finish, o.auto); return; }
+      if (shown >= steps.length) { done = true; next.style.visibility = 'visible'; if (o.auto) gameClock.schedule(finish, o.auto); return; }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     const finish = () => { pop(); box.removeEventListener('click', onClick); gl?.removeEventListener('pointerdown', onDown); gl?.removeEventListener('pointerup', onUp); cancelAnimationFrame(raf); resolve(); };
     const advance = () => {
-      if (!done) { shown = text.length; txt.textContent = text; done = true; next.style.visibility = 'visible'; cancelAnimationFrame(raf); return; }
+      if (!done) { shown = steps.length; txt.textContent = text; done = true; next.style.visibility = 'visible'; cancelAnimationFrame(raf); return; }
       audio.sfx('cursor', { volume: 0.5 });
       finish();
     };
@@ -233,29 +242,32 @@ export function say(speaker: string, text: string, o: SayOpts = {}): Promise<voi
 
 export function closeDialogue() { dlgEl?.remove(); dlgEl = null; }
 
-export async function narrate(text: string): Promise<void> {
+export async function narrate(text: string, timing = text.length): Promise<void> {
   closeDialogue();
   const p = h('p');
   const el = h('div.narration', null, p);
+  el.dir = dir;
   el.style.opacity = '0';
   el.style.transition = 'opacity 0.6s';
   uiRoot().appendChild(el);
   await sleep(30);
   el.style.opacity = '1';
-  // reveal text word by word
-  const words = text.split(/(\s+)/);
+  // reveal whole letters, about 110 of the original's a second, drawn as one string
+  const steps = pieces(text);
+  const perTick = Math.max(1, Math.round(steps.length / Math.max(1, timing / 5)));
   let i = 0;
   await new Promise<void>((resolve) => {
     let done = false;
     const t = setInterval(() => {
       if (gameClock.paused) return;
-      if (i >= words.length) { clearInterval(t); done = true; return; }
-      p.textContent += words[i++];
+      if (i >= steps.length) { clearInterval(t); done = true; return; }
+      i = Math.min(steps.length, i + perTick);
+      p.textContent = steps.slice(0, i).join('');
     }, input.fast ? 5 : 45);
     const pop = input.push((a) => {
       if (a === 'menu' && skipHook) { skipHook(); clearInterval(t); done = true; pop(); el.removeEventListener('click', click); resolve(); return true; }
       if (a !== 'confirm' && a !== 'cancel') return true;
-      if (!done) { clearInterval(t); p.textContent = text; done = true; i = words.length; return true; }
+      if (!done) { clearInterval(t); p.textContent = text; done = true; i = steps.length; return true; }
       pop(); el.removeEventListener('click', click); resolve(); return true;
     });
     const click = () => input.dispatch('confirm');
@@ -268,6 +280,7 @@ export async function narrate(text: string): Promise<void> {
 
 export async function titleCard(t1: string, t2?: string, hold = 2600): Promise<void> {
   const el = h('div.titlecard', null, h('div.t1', null, t1), h('div.rule'), t2 ? h('div.t2', null, t2) : null);
+  el.dir = dir;
   el.style.opacity = '0'; el.style.transition = 'opacity 0.9s';
   uiRoot().appendChild(el);
   await sleep(30);

@@ -3,19 +3,22 @@
 
 import { STATUS } from '../battle/status';
 import { ABILITIES, EDGES, ITEMS, JOBS, NODES } from '../data/db';
-import type { JobDef, WorldNode } from '../data/types';
+import type { Element, JobDef, WorldNode } from '../data/types';
+import { compare, fmtList, t } from '../i18n';
 import type { GameState } from './state';
 
 type Progress = Pick<GameState, 'chapter' | 'unlocked'>;
 const words = (values: readonly string[] | undefined) =>
-  values?.length ? values.join(', ') : 'None';
+  values?.length ? fmtList([...values]) : t('reference.none');
 const namedAbility = (id: string) => ABILITIES.get(id)?.name ?? id;
+const elements = (ids: readonly Element[] | undefined) =>
+  words(ids?.map((id) => t(`reference.element.${id}`)));
 
 /** Ordinary families only: unique allies and story bosses belong in Persons. */
 export function bestiaryEntries(): JobDef[] {
   return [...JOBS.values()]
     .filter((j) => j.monster && j.family && j.poach)
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .sort((a, b) => compare(a.name, b.name));
 }
 
 export function atlasEntries(progress: Progress): WorldNode[] {
@@ -23,7 +26,7 @@ export function atlasEntries(progress: Progress): WorldNode[] {
     .filter((n) => progress.unlocked.includes(n.id))
     .sort(
       (a, b) =>
-        a.region.localeCompare(b.region) || a.name.localeCompare(b.name),
+        compare(a.region, b.region) || compare(a.name, b.name),
     );
 }
 
@@ -45,8 +48,14 @@ export function monsterReference(monster: JobDef, progress: Progress): string {
   const skills = monster.monsterSkills ?? [];
   const arts = skills.map(([id, level], index) => {
     const ability = ABILITIES.get(id);
+    const name = ability?.name ?? id;
     const secret = index === skills.length - 1 && level > 1;
-    return `${ability?.name ?? id}${secret ? ` — secret art, Lv ${level}` : level > 1 ? ` — Lv ${level}` : ''}\n${ability?.desc ?? ''}`;
+    const title = secret
+      ? t('reference.monster.art_secret', { ability: name, level })
+      : level > 1
+        ? t('reference.monster.art_level', { ability: name, level })
+        : name;
+    return `${title}\n${ability?.desc ?? ''}`;
   });
   const habitats = atlasEntries(progress)
     .filter((n) =>
@@ -69,22 +78,44 @@ export function monsterReference(monster: JobDef, progress: Progress): string {
   return [
     monster.desc,
     `${monster.skillset.name}\n${monster.skillset.desc}`,
-    `Move ${monster.move} · Jump ${monster.jump} · Class evasion ${monster.cev}%\nInnate abilities: ${words(passives)}`,
-    `Weak to: ${words(monster.weak)}\nAbsorbs: ${words(monster.absorb)}\nHalves: ${words(monster.halve)}\nNullifies: ${words(monster.nullify)}\nPermanent statuses: ${statuses(monster.always)}\nStatus immunity: ${statuses(monster.immune)}`,
-    `Arts\n${arts.join('\n\n')}`,
-    'Allied secret arts require the listed level and a living ally with Beast Lore within three tiles. Enemy monsters can use them at the listed level without that ally.',
-    `Poaching\nCommon: ${loot?.[0] ?? 'None'}\nRare: ${loot?.[1] ?? 'None'}\nA killing blow from a unit with Poach sends eligible spoils to the Fur Shop. Poaching removes the monster.`,
-    `Recruitment\n${monster.noInvite ? 'This species refuses recruitment.' : 'Unnamed foes can be Invited through Speechcraft with Beast Speech, or Tamed at critical HP. Bosses, protected units and named characters refuse.'}`,
-    `Habitats on known roads — Chapter ${progress.chapter}\n${habitats.length ? habitats.join(', ') : 'No current random encounters recorded on the roads you have unlocked.'}\nThese are possible encounters, not guaranteed spawns; story battles have their own formations.`,
+    [
+      t('reference.monster.stats', { move: monster.move, jump: monster.jump, evasion: monster.cev }),
+      t('reference.monster.innate', { abilities: words(passives) }),
+    ].join('\n'),
+    [
+      t('reference.monster.weak', { elements: elements(monster.weak) }),
+      t('reference.monster.absorbs', { elements: elements(monster.absorb) }),
+      t('reference.monster.halves', { elements: elements(monster.halve) }),
+      t('reference.monster.nullifies', { elements: elements(monster.nullify) }),
+      t('reference.monster.permanent', { statuses: statuses(monster.always) }),
+      t('reference.monster.immune', { statuses: statuses(monster.immune) }),
+    ].join('\n'),
+    `${t('reference.monster.arts')}\n${arts.join('\n\n')}`,
+    t('reference.monster.secret_rule', { beast_lore: namedAbility('monsterSkill') }),
+    [
+      t('reference.monster.poaching'),
+      t('reference.monster.poach_common', { item: loot?.[0] ?? t('reference.none') }),
+      t('reference.monster.poach_rare', { item: loot?.[1] ?? t('reference.none') }),
+      t('reference.monster.poach_rule', { poach: namedAbility('poach'), fur_shop: t('flow.place.fur_shop') }),
+    ].join('\n'),
+    `${t('reference.monster.recruitment')}\n${monster.noInvite
+      ? t('reference.monster.no_recruit')
+      : t('reference.monster.recruit_rule', { speechcraft: JOBS.get('orator')?.skillset.name ?? 'orator', beast_speech: namedAbility('monsterTalk') })}`,
+    [
+      t('reference.monster.habitats', { chapter: progress.chapter }),
+      habitats.length ? fmtList(habitats) : t('reference.monster.no_habitats'),
+      t('reference.monster.habitats_note'),
+    ].join('\n'),
   ].join('\n\n');
 }
 
 export function locationReference(node: WorldNode, progress: Progress): string {
+  // the same names as the place's own menu (flow.ts)
   const services = [
-    node.shop && 'Outfitter',
-    node.tavern && 'Tavern',
-    node.guild && 'Soldier Office',
-    node.furShop && 'Fur Shop',
+    node.shop && t('flow.place.outfitter'),
+    node.tavern && t('flow.place.tavern'),
+    node.guild && t('flow.place.soldier_office'),
+    node.furShop && t('flow.place.fur_shop'),
   ].filter(Boolean);
   const roads = EDGES.flatMap((e) =>
     e.a === node.id ? [e.b] : e.b === node.id ? [e.a] : [],
@@ -99,9 +130,9 @@ export function locationReference(node: WorldNode, progress: Progress): string {
     ),
   ];
   return [
-    `${node.region} · ${node.kind}\n\n${node.desc}`,
-    `Services\n${services.length ? services.join(' · ') : 'No town services.'}`,
-    `Connected roads\n${roads.length ? roads.join('\n') : 'No connected roads unlocked yet.'}`,
-    `Wild encounters — Chapter ${progress.chapter}\n${encounters.length ? `${encounters.join(', ')}\nThese are possible opponents while travelling, not a fixed battle formation.` : 'No random encounter table here for this chapter. Story or optional battles may still take place.'}`,
+    `${t('reference.place.heading', { region: node.region, kind: t(`reference.kind.${node.kind}`) })}\n\n${node.desc}`,
+    `${t('reference.place.services')}\n${services.length ? services.join(' · ') : t('reference.place.no_services')}`,
+    `${t('reference.place.roads')}\n${roads.length ? roads.join('\n') : t('reference.place.no_roads')}`,
+    `${t('reference.place.encounters', { chapter: progress.chapter })}\n${encounters.length ? `${fmtList(encounters)}\n${t('reference.place.encounters_note')}` : t('reference.place.no_encounters')}`,
   ].join('\n\n');
 }
