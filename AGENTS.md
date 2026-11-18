@@ -19,3 +19,5 @@ Repo rules for every coding agent (Claude Code reads this through `CLAUDE.md`).
 
 - Node 22 (`.nvmrc`, Vercel's version). Scripts and test commands: `README.md`.
 - Audit history and known follow-ups: `docs/REPO_AUDIT.md`; browser matrix: `docs/COMPATIBILITY.md`.
+- Work in progress: `docs/PLAN-52IN1.md` (Vercel retired, original audio, 52in1 catalogue,
+  sessions and languages, DualSense).
