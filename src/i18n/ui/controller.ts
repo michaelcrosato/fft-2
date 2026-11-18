@@ -25,6 +25,7 @@ export const lines: Lines = {
   'controller.connect': 'Connect a DualSense…',
   'controller.connected': 'DualSense connected.',
   'controller.connect_failed': 'No DualSense was connected.',
+  'controller.connect_by_hand': 'Choose Connect with the mouse, a tap or the keyboard: the browser opens its list of controllers only for those.',
   'controller.light': 'Light bar',
   'controller.light_desc': 'The light bar glows in the colour of the unit taking its turn, turning red as it weakens.',
   'controller.triggers': 'Trigger effects',

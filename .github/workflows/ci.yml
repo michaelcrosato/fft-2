@@ -67,3 +67,30 @@ jobs:
             e2e-report
             e2e-results
           retention-days: 7
+
+  # Firefox and WebKit (Safari's engine), where the runner can run them: the boot, the title, a new
+  # game, the gamepad and the menus' screen-reader roles
+  other-browsers:
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps firefox webkit
+      - run: npx playwright test --project=firefox --project=webkit e2e/boot.spec.ts e2e/a11y.spec.ts
+        env:
+          E2E_QUALITY: low
+          E2E_WORKERS: 2
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-report-other-browsers
+          path: |
+            e2e-report
+            e2e-results
+          retention-days: 7

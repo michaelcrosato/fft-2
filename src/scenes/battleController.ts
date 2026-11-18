@@ -40,6 +40,14 @@ const SFX_FOR_VFX: Record<string, string> = {
   song: 'song', dance: 'dance', talk: 'magic', summon: 'summon', glyph: 'magic', sparkleGreen: 'heal', jumpImpact: 'hitHeavy',
 };
 
+/** How a spell's impact feels in the hands: its element's pattern, or a plain spell pulse. */
+function spellFeel(abilityId: string) {
+  const a = ABILITIES.get(abilityId);
+  if (!a?.magic) return null;
+  const el = a.element ?? (a.effects ?? []).map((f) => ('element' in f ? f.element : undefined)).find(Boolean);
+  return el ?? 'spell';
+}
+
 /** The help-bar line `${base}.touch`, `.pad` or `.keys` (mouse and keyboard share one) for the device in use. */
 function deviceHelp(base: string, values?: Values) {
   return () => tParts(`${base}.${input.lastDevice === 'touch' ? 'touch' : input.lastDevice === 'pad' ? 'pad' : 'keys'}`, values);
@@ -699,8 +707,8 @@ export class BattleController {
     const heavy = e.hits.some((x) => { const u = this.b.unit(x.uid); return !!x.dmg && x.dmg > (u?.maxHp ?? 100) * 0.3; });
     if (e.hits.some((x) => x.crit)) input.haptic('crit');
     else if (heavy) input.haptic('heavy');
-    else if (e.hits.some((x) => x.dmg)) input.haptic(ABILITIES.get(e.ability)?.magic ? 'spell' : 'hit');
-    else if (e.hits.some((x) => x.heal) && ABILITIES.get(e.ability)?.magic) input.haptic('spell');
+    else if (e.hits.some((x) => x.dmg)) input.haptic(spellFeel(e.ability) ?? 'hit');
+    else if (e.hits.some((x) => x.heal)) { const feel = spellFeel(e.ability); if (feel) input.haptic(feel); }
     await Promise.all(tasks);
     await this.wait(250);
   }

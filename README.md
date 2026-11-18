@@ -39,6 +39,11 @@ WebGL 2 for the rest of the session if it happens twice.
 * **World map** of Ivaldis with towns (outfitter, soldier office, tavern, fur shop), random encounters,
   a calendar and errands.
 * **Save slots** (8, incl. autosave), options, "How to Play".
+* **Playing together** — 52in1 sessions for 1–4 players (Trials raced in parallel, and one-turn Moments),
+  and **Versus (2 players)** on one device, taking turns.
+* **Languages** — every line ready for translation (AI Hub Languages v1), with three test languages.
+* **Controllers** — PlayStation and Xbox button prompts, vibration, and the DualSense's light bar, adaptive
+  triggers, motion camera and touchpad (**Options → Controller**).
 
 The Chronicle also includes a **48-species bestiary** with arts, resistances, recruitment,
 poach rewards and known habitats, plus an **atlas** of unlocked places and their services.
@@ -107,6 +112,11 @@ one kind: **Options → Controller → Button prompts**).
   connect one over WebHID from the same page (*Connect a DualSense…*); the 52in1 package leaves WebHID out.
 - **52in1's buttons**: the PS button, and Create and Options held together, open 52in1's own bar, so the
   game leaves them alone (Options alone opens the Menu; Create alone shows the turn order when let go).
+
+## Hosting
+
+The game's public home is **52in1**, which imports the package `npm run package` builds (see *52in1*
+below). `npm run preview` serves the standalone build locally; nothing else hosts it.
 
 ## Languages
 
