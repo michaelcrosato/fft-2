@@ -1,6 +1,7 @@
 // On-screen battle camera buttons: rotate, zoom (hold to keep zooming), tilt, recenter.
 // Mouse, keyboard and gamepad users have the same controls on keys/sticks; these make
 // them discoverable and give touch players a way to do everything without gestures.
+import { t } from '../i18n';
 import { h, uiRoot } from './dom';
 import type { Stage } from '../scenes/stage';
 import { gameClock } from '../core/gameClock';
@@ -23,8 +24,9 @@ export class CameraControls {
   private onVisibilityChange = () => { if (document.hidden) this.stopHold?.(); };
 
   constructor(private stage: Stage) {
-    const btn = (id: keyof typeof ICONS, label: string, kb: string, act: () => void, hold = false) => {
-      const b = h('button.cb', { type: 'button', title: `${label} (${kb})`, 'aria-label': label, html: ICONS[id] });
+    // key: the keyboard key, named in the tooltip; zoom buttons also mention the mouse wheel
+    const btn = (id: keyof typeof ICONS, label: string, key: string, act: () => void, hold = false) => {
+      const b = h('button.cb', { type: 'button', title: t(hold ? 'camera.tip_wheel' : 'camera.tip', { label, key }), 'aria-label': label, html: ICONS[id] });
       if (hold) {
         // hold to zoom smoothly; a tap still zooms one step
         b.addEventListener('pointerdown', (e) => { e.preventDefault(); this.hold(id === 'zoomIn' ? -1 : 1); });
@@ -35,13 +37,13 @@ export class CameraControls {
       return b;
     };
     const cam = () => this.stage.cam;
-    this.el = h('div.camctl', { role: 'toolbar', 'aria-label': 'Camera' },
-      btn('rotL', 'Rotate left', 'Q', () => cam().rotate(-1)),
-      btn('rotR', 'Rotate right', 'E', () => cam().rotate(1)),
-      btn('zoomIn', 'Zoom in', '+ / wheel', () => {}, true),
-      btn('zoomOut', 'Zoom out', '− / wheel', () => {}, true),
-      btn('tilt', 'Tilt view', 'R', () => cam().togglePitch()),
-      btn('recenter', 'Recenter', 'F', () => cam().recenter()),
+    this.el = h('div.camctl', { role: 'toolbar', 'aria-label': t('camera.toolbar') },
+      btn('rotL', t('camera.rotate_left'), 'Q', () => cam().rotate(-1)),
+      btn('rotR', t('camera.rotate_right'), 'E', () => cam().rotate(1)),
+      btn('zoomIn', t('camera.zoom_in'), '+', () => {}, true),
+      btn('zoomOut', t('camera.zoom_out'), '−', () => {}, true),
+      btn('tilt', t('camera.tilt'), 'R', () => cam().togglePitch()),
+      btn('recenter', t('camera.recenter'), 'F', () => cam().recenter()),
     );
     uiRoot().appendChild(this.el);
     // A release in another app/tab may never reach the original button.
