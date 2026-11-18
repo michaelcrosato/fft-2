@@ -3,6 +3,8 @@ import { dir, t } from '../i18n';
 import { h } from './dom';
 import { input } from './input';
 import { toast } from './widgets';
+import { inHub } from './hub';
+
 
 type FullscreenDocument = Document & {
   webkitFullscreenElement?: Element;
@@ -187,6 +189,8 @@ export function toggleFullscreen() {
 
 /** Always ask, including when the last campaign used Game Mode. */
 export function promptGameMode(): Promise<void> {
+  // 52in1 owns the window: its own frame decides fullscreen
+  if (inHub()) return Promise.resolve();
   return new Promise((resolve) => {
     const dialog = h('dialog.panel.game-mode-prompt', {
       'aria-labelledby': 'game-mode-title',

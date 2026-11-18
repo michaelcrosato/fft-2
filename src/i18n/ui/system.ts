@@ -28,6 +28,7 @@ export const lines: Lines = {
   'system.options.game_mode': 'Game Mode',
   'system.options.game_mode_fullscreen': 'Fullscreen',
   'system.options.game_mode_browser': 'On · browser view',
+  'system.options.controller_desc': 'Button prompts, vibration, and a DualSense\'s light bar, adaptive triggers, motion and touchpad.',
   'system.options.game_mode_desc': 'Fullscreen and protection against accidental browser gestures. Select to enable or exit.',
   'system.options.music': 'Music volume',
   'system.options.sfx': 'Effects volume',

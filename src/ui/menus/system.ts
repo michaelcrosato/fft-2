@@ -2,7 +2,8 @@
 import type { Game } from '../../game/game';
 import { menu, toast, confirm } from '../widgets';
 import { overlay } from './common';
-import { listSaves, saveGame, loadGame, saveOptions, type GameState, type Options } from '../../game/state';
+import { listSaves, saveGame, loadGame, loadOptions, saveOptions, type GameState, type Options } from '../../game/state';
+import { inHub } from '../hub';
 import { audio } from '../../audio/audio';
 import { setQuality, rinfo, type Quality } from '../../gfx/renderer';
 import { NODES } from '../../data/db';
@@ -55,7 +56,7 @@ export async function openOptions(game: Game, parent?: HTMLElement) {
       // auto, ultra, webgpu… are the settings' technical names, shown as they are
       const inUse = (chosen: string, actual?: string) => t('system.options.setting_in_use', { chosen, in_use: actual ?? '' });
       const items = () => [
-        { label: t('system.options.game_mode'), value: 'gameMode', right: gameMode.active ? gameMode.fullscreen ? t('system.options.game_mode_fullscreen') : t('system.options.game_mode_browser') : onOff(false), desc: t('system.options.game_mode_desc') },
+        ...(inHub() ? [] : [{ label: t('system.options.game_mode'), value: 'gameMode', right: gameMode.active ? gameMode.fullscreen ? t('system.options.game_mode_fullscreen') : t('system.options.game_mode_browser') : onOff(false), desc: t('system.options.game_mode_desc') }]),
         { label: t('system.options.music'), value: 'music', right: pct(o.music) },
         { label: t('system.options.sfx'), value: 'sfx', right: pct(o.sfx) },
         { label: t('system.options.battle_speed'), value: 'speed', right: t('system.options.speed', { speed: o.battleSpeed }) },
@@ -66,6 +67,7 @@ export async function openOptions(game: Game, parent?: HTMLElement) {
         { label: t('system.options.camera_shake'), value: 'shake', right: onOff(!!o.camShake) },
         { label: t('system.options.quality'), value: 'quality', right: inUse(o.quality, rinfo?.quality) },
         { label: t('system.options.renderer'), value: 'renderer', right: inUse(o.renderer, rinfo?.backend), desc: t('system.options.renderer_desc') },
+        { label: t('controller.title'), value: 'controller', desc: t('system.options.controller_desc') },
         { label: t('system.options.how_to_play'), value: 'help' },
         { label: t('common.back'), value: 'back' },
       ];
@@ -78,6 +80,14 @@ export async function openOptions(game: Game, parent?: HTMLElement) {
       if (pick === 'gameMode') {
         if (gameMode.active) gameMode.exit();
         else await promptGameMode();
+        continue;
+      }
+      if (pick === 'controller') {
+        const { openController } = await import('./controller');
+        ov.root.style.visibility = 'hidden';
+        try { await openController(parent); } finally { ov.root.style.visibility = ''; }
+        // the Controller page saves its own settings: take them up so the next save here keeps them
+        Object.assign(o, loadOptions());
         continue;
       }
       if (pick === 'help') {
