@@ -5,6 +5,7 @@ import { h } from './dom';
 import { fullscreenLabel, gameMode, toggleFullscreen } from './gameMode';
 import { addGameControl, gameToolbar, syncGameToolbar } from './gameToolbar';
 import { input } from './input';
+import { inSession } from './hub';
 import { openOptions } from './menus/system';
 
 let menuButton: HTMLButtonElement | null = null;
@@ -143,7 +144,8 @@ export function installGameMenu(game: Game) {
             await openHelp(parent);
           });
         }),
-        action(t('gamemenu.return_to_title'), quit),
+        // in a 52in1 session the hub starts and ends rounds: nothing to quit to
+        ...(inSession() ? [] : [action(t('gamemenu.return_to_title'), quit)]),
       );
       focusFirst();
     }

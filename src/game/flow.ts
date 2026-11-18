@@ -23,7 +23,7 @@ import { setContextMenu, setGameMenuVisible } from '../ui/gameMenu';
 import { loading } from '../ui/loading';
 import { lightFor, lightOff } from '../ui/dualsense/lightbar';
 import { tapTracker } from '../ui/taps';
-import { fmtNum, t, upper } from '../i18n';
+import { chooseLanguage, fmtNum, lang, langFromAddress, languageName, languages, t, upper } from '../i18n';
 
 export const MONTHS = ZODIAC_ORDER.map((z) => t(`flow.month.${z}`));
 export function dateText(day: number) { const d = day - 1; return t('flow.date', { month: MONTHS[Math.floor(d / 30) % 12], day: (d % 30) + 1 }); }
@@ -58,11 +58,28 @@ export async function runTitle(game: Game) {
       ...(hasSave ? [{ label: t('common.continue'), value: 'continue' }] : []),
       { label: t('flow.title.new_game'), value: 'new' },
       { label: t('flow.title.load_game'), value: 'load', disabled: !hasSave },
+      { label: t('versus.title_entry'), value: 'versus' },
       { label: t('flow.menu.options'), value: 'options' },
+      // the Language menu, unless the address chose the language (52in1 does) or there is only one
+      ...(!langFromAddress && languages().length > 1 ? [{ label: t('flow.title.language'), value: 'language', right: languageName(lang) }] : []),
     ], x: '50%', y: '58%', className: 'title-menu', cancelable: false });
     await game.present();
     const pick = await choice.promise;
     if (pick === 'options') { await openOptions(game); continue; }
+    if (pick === 'language') {
+      const code = await menu({ items: [...languages().map((c) => ({ label: languageName(c), value: c, right: c === lang ? '✓' : '' })), { label: t('common.back'), value: 'back' }], x: '50%', y: '40%', title: t('flow.title.language'), className: 'title-menu' }).promise;
+      if (code && code !== 'back' && code !== lang) chooseLanguage(code);
+      continue;
+    }
+    if (pick === 'versus') {
+      logo.remove(); footer.remove();
+      const { runVersus } = await import('./versus');
+      await runVersus(game);
+      // back to a fresh title screen
+      await loading.begin(t('common.loading.chronicle'));
+      game.disposeStage();
+      return runTitle(game);
+    }
     let state: GameState | null = null;
     if (pick === 'continue') state = loadGame(latestSave()!);
     if (pick === 'load') { const s = await openSaveLoad(game, 'load'); if (!s) continue; state = s; }

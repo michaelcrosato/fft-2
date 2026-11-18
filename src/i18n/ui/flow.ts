@@ -3,6 +3,7 @@
 import type { Lines } from '../core';
 
 export const lines: Lines = {
+  'flow.title.language': 'Language',
   // title screen
   'flow.title.logo_main': 'Final Fealty',
   'flow.title.logo_sub': 'Tactics',

@@ -3,7 +3,6 @@ dist
 *.log
 .vite
 tools/out
-.vercel
 .env
 .env.*
 !.env.example

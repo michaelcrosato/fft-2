@@ -49,6 +49,10 @@ export interface ControllerHooks {
   runScript(index: number): Promise<void>;
   /** A unit is about to take its turn (52in1 sessions watch for the moment a puzzle turn passes). */
   onTurn?(unit: BattleUnit): void;
+  /** Whether a person plays this unit (by default the player's own: team 0, controlled). Hot-seat versus has two sides. */
+  human?(unit: BattleUnit): boolean;
+  /** Before a person's turn: hot-seat versus hands the controller over when the side changes. */
+  beforeHumanTurn?(unit: BattleUnit): Promise<void>;
 }
 
 export class BattleController {
@@ -118,8 +122,11 @@ export class BattleController {
         toast(t('battle.toast.way_onward'), 3000);
       }
       const forcedAi = unit.has('confuse') || unit.has('berserk') || unit.has('charm') || unit.has('chicken') || unit.has('vampire');
-      if (unit.controlled && unit.team === 0 && !unit.autoAi && !forcedAi && !this.autoAll && !(window as any).__autoBattle) await this.playerTurn(unit);
-      else await this.aiTurn(unit);
+      const human = this.hooks.human ? this.hooks.human(unit) : unit.controlled && unit.team === 0;
+      if (human && !unit.autoAi && !forcedAi && !this.autoAll && !(window as any).__autoBattle) {
+        await this.hooks.beforeHumanTurn?.(unit);
+        await this.playerTurn(unit);
+      } else await this.aiTurn(unit);
       this.syncAll();
     }
     this.hud.card(null, 'a'); this.hud.card(null, 'b'); this.hud.helpText(''); this.hud.clearPreview();
