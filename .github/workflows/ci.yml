@@ -46,7 +46,7 @@ jobs:
   browser-smoke:
     needs: check
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -55,11 +55,13 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      # software rendering on the runner: low quality keeps frame times reasonable
-      - run: npx playwright test --project=chromium e2e/boot.spec.ts e2e/languages.spec.ts e2e/a11y.spec.ts
+      # software rendering on the runner: low quality, and headed under Xvfb with software GL, which
+      # draws several times faster than headless Chromium's SwiftShader
+      - run: xvfb-run -a npx playwright test --headed --project=chromium e2e/boot.spec.ts e2e/languages.spec.ts e2e/a11y.spec.ts
         env:
           E2E_QUALITY: low
           E2E_WORKERS: 2
+          LIBGL_ALWAYS_SOFTWARE: '1'
       # a 52in1 parallel round with one player in 52in1's own harness (dist/ is the e2e build)
       - run: npm run hub:harness -- dist --only parallel --players 1
       # every music cue and sound effect rendered offline: clipping, loudness, loop seams
