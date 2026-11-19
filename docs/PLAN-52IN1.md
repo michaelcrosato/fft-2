@@ -17,7 +17,7 @@ ships on its own, as AGENTS.md says.
 | 6 — 52in1 sessions | done: Trials, Moments, hot-seat versus; `npm run hub:harness` passes |
 | 7 — Bugs and low-hanging fruit | done, or deferred with a reason in `docs/REPO_AUDIT.md` (*Pass 4*) |
 | 8 — Stretch: online versus | done: `shared-world versus 2`, named once the harness passed it (2 players, host leaving, server copy) |
-| 9 — Docs, CI, screenshots, hand-off | done; the package is built at hand-off with the credit |
+| 9 — Docs, CI, screenshots, hand-off | done; the package was built with the credit and sent with the import steps on 2026-11-19 |
 
 ## The goal
 
@@ -673,17 +673,32 @@ Name it in `hub:multiplayer` only when the harness passes `&mode=shared-world&ho
   4. Don't push to `michaelcrosato/52in1` from this goal.
 
 Import steps for the owner, in a clone of `michaelcrosato/52in1`. Its
-`docs/adding-a-game.md` is the authority.
+`docs/adding-a-game.md` is the authority. They were rehearsed on a copy of 52in1 on
+2026-11-18 (`docs/REPO_AUDIT.md`, *Hand-off*).
 
+0. Unzip the package next to the clone (`unzip fft-2-package.zip -d ../fft-2-package`) and
+   import that folder: given the zip itself, `ingest` names the game after the file
+   (`games/package/`).
 1. `git rm -r games/github-fft-2`, and delete its lines in `data/added.json` and
    `data/source-dates.json`.
-2. `node lib/hub/catalogue-check.mjs PACKAGE`, then `pnpm ingest PACKAGE --dry-run` and
-   `pnpm ingest PACKAGE`.
-3. Give the new build the old one's date in `data/added.json`.
-4. Trim the `github-fft-2` entry in `data/overrides.json` to what the tags don't say.
-5. Translate: `node scripts/translate.mjs --games games/github-fft-2-v2/index.html` and
+2. `node lib/hub/catalogue-check.mjs ../fft-2-package`, then
+   `pnpm ingest ../fft-2-package --dry-run` and `pnpm ingest ../fft-2-package`. The new
+   build lands in `games/github-fft-2-v2/` as build 2 of `github-fft-2`, and the
+   import's session gate deals it in game nights.
+3. Give the new build the old one's date in `data/added.json`
+   (`2026-10-13T23:57:38.000Z`).
+4. The `github-fft-2` entry in `data/overrides.json` overrides the new page's
+   description, controls and tags (it still says `3d` and not `versus`). The page's
+   tags now say everything the entry did, so delete the entry.
+5. The import keeps the strip already on the wall: replace it with the package's
+   (`rm covers/github-fft-2/*.jpg && cp ../fft-2-package/covers/github-fft-2/*.jpg covers/github-fft-2/`).
+6. Translate: `node scripts/translate.mjs --games games/github-fft-2-v2/index.html` and
    `node scripts/translate.mjs --catalogue github-fft-2`.
-6. Add a PATCH-NOTES line, run `pnpm test`, commit and push.
+7. `node scripts/check-pages.mjs games/github-fft-2-v2/index.html`,
+   `node scripts/hub-check.mjs games/github-fft-2-v2/index.html --draws-only` and
+   `node scripts/fill.mjs github-fft-2 --play`.
+8. Add a PATCH-NOTES line, run `pnpm test`, commit and push, and check that
+   `Workers Builds: crosato-arcade` is green.
 
 ## Definition of done
 
@@ -707,8 +722,8 @@ Ticked as each was checked; the evidence is in `docs/REPO_AUDIT.md` (*Pass 4 —
 - [x] Phase 7's items are each fixed or deferred with a reason, and REPO_AUDIT's
       *Pass 4 — 52in1* lists every fix.
 - [x] README.md, AGENTS.md and the docs describe the new state.
-- [ ] Everything is merged into `main`, with no open PR, branch or stash.
-- [ ] The final package has been sent to the owner with the import steps.
+- [x] Everything is merged into `main`, with no open PR, branch or stash.
+- [x] The final package has been sent to the owner with the import steps.
 
 ## Needs a person
 
