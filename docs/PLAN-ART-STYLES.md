@@ -17,7 +17,7 @@ Update the Status table as phases land, and record what the spike and later phas
 | 5 — Bright Toon | done: soft bands, warm light and cool shadows; matrix with Bold Cel mixes in `tools/out/styles/brighttoon/` |
 | 6 — Pixel Art | done: cells, palette and dither after anti-aliasing (`nodes/pixel.ts`); matrix, mixes and orbit in `tools/out/styles/pixel*/` |
 | 7 — Ink Wash | done: world-anchored hatching, paper, wobbling brush lines; matrix, mixes and orbit in `tools/out/styles/ink*/` |
-| 8 — Flat Paint | not started |
+| 8 — Flat Paint | done: layer-aware Kuwahara brush, canvas, haze, thin dark line art; matrix, mixes and orbit in `tools/out/styles/flat*/` |
 | 9 — Performance and automatic quality | not started |
 | 10 — Docs, CI and hand-off | not started |
 
@@ -368,7 +368,8 @@ canvas, haze). For each:
 
 ## Needs a person
 
-- Taste: whether each style reads as intended, above all Flat Paint.
+- Taste: whether each style reads as intended, above all Flat Paint against the owner's
+  reference (thin timber lines on plaster blot under its brush; a smaller radius keeps them).
 - Real hardware: WebGPU on a desktop GPU, a real iPhone in Safari and an Android phone, for the
   look and the cost.
 - Whether to shoot new 52in1 covers in a style and send a new package.
@@ -490,3 +491,17 @@ constant normal here, so the normal now comes from the world position's screen-s
 step has one). The first hatch reached only the darkest tones; it now starts below 70% luminance
 (cross-hatching below 42%). The brush lines' width wobbles with a slow noise over the world position,
 so the wobble stays with the surfaces too.
+
+**2026-11-19 — Phase 8, Flat Paint.** The brush (`nodes/paint.ts`) is a Kuwahara filter of four
+quadrants with six samples each, counting only samples of the pixel's own layer, so the painted
+scenery never smears into a crisp character; its radius follows the quality (2.5, 3.5 or 4.5 px) and
+shrinks when automatic quality asks the style to cost less. Light falls in two near-flat steps with
+lifted shadows (warm light, cool shadow), highlights clipped, under a canvas grain and a layered haze
+toward the fog's colour; the line art is thin and dark, a near-black shade of each surface's own
+colour. Thin dark details on bright surfaces (the timber framing on plaster) turn into soft
+blotches under the brush: a painterly effect, but a matter of taste (*Needs a person*). Two tooling fixes on the way: `?quality=` sets the renderer's preset while the stored option stays
+Auto, so on slow software frames automatic quality could lighten a style or lower the preset in the
+middle of a shot (the Phase 5–7 matrices may show the lighter, one-ring outlines); `style-shots.mjs`
+and `style-bench.mjs` now store the chosen quality before the page loads. And this machine's GPU (an
+RTX 3060 Ti through WSL's `/dev/dxg`) is reachable from headless Chromium: ANGLE over GL on Mesa's
+D3D12 driver (`GALLIUM_DRIVER=d3d12`, `style-bench.mjs --gpu`), so Phase 9 measures on real hardware.

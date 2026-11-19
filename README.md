@@ -120,8 +120,8 @@ each change at once on the scene beside the panel:
 
 - **Styles**: *None* (the usual look), **Bold Cel** (thick black outlines, two flat tones, strong colour),
   **Bright Toon** (soft two-tone shading, cool shadows, sunny colour), **Pixel Art** (square pixels, a
-  small palette, dithering) and **Ink Wash** (brush lines, hatching in the shadows, paper grain, muted ink
-  colours). Flat Paint follows (*docs/PLAN-ART-STYLES.md*).
+  small palette, dithering), **Ink Wash** (brush lines, hatching in the shadows, paper grain, muted ink
+  colours) and **Flat Paint** (flat fields of colour, thin dark lines, a brushed, painted finish).
 - **Layers**: *Same style everywhere*, or one style for the **Environment** (ground, buildings, water,
   sky) and another for **Characters & objects** (units, their weapons, crystals, chests). Each layer has
   its own **Strength** (0–100%, in steps of ten; left and right step it).
