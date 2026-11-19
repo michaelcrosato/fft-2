@@ -345,6 +345,29 @@ plus shade bands, outlines, light sources and lamps.
 - `src/gfx/lights.ts`: Light sources 1–3 dim or add a rim and a camera-side front fill, never
   removing a light (that would rebuild every shader).
 
+## Performance
+
+`node tools/style-bench.mjs`: `b_galwyn`'s deployment with the camera orbiting, each configuration's
+median over rotated rounds (`--repeat`), 19 November 2026. The GPU is an RTX 3060 Ti reached from
+headless Chromium through WSL (`--gpu`: ANGLE over GL on Mesa's D3D12 driver, vsync off); software
+is Chromium's SwiftShader, the stand-in for a weak GPU.
+
+| ms a frame | None | Bold Cel | Bright Toon | Pixel Art | Ink Wash | Flat Paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| GPU, High, 3840×2160 (3 rounds) | 16.8 | 14.5 | 15.9 | 15.7 | 13.9 | 14.3 |
+| Software, Medium, 1280×720 (2 rounds) | 136 | 268 (+97%) | 206 (+51%) | 197 (+45%) | 317 (+132%) | 338 (+148%) |
+| Software, Low, 1280×720 (2 rounds) | 84 | 164 (+96%) | 155 (+86%) | 134 (+60%) | 255 (+205%) | 262 (+214%) |
+
+On the GPU every style is within the frame's noise even at 4K: the frame is bound by the CPU, and the
+style's passes cost less than the drift between rounds (single passes at 1080p, High, Medium and Low,
+ranged from −18% to +39% around None, both ways). In software, where every sample of every full-screen
+pass costs CPU time, the tagged pass and banding alone cost about half again (Bright Toon), outlines
+about as much again, and Ink Wash's hatching and Flat Paint's brush the most. What keeps a slow device
+playable: styles are off unless chosen; with Auto quality, slow frames first make the style lighter
+(one ring of outline samples, a smaller brush), then lower the preset; Flat Paint's brush runs at half
+resolution on Medium and Low; outlines take one sample ring on Low. Real phones are under *Needs a
+person* in the plan.
+
 ## Fixes and small improvements
 
 - `tools/ship.sh` asks GitHub which merge methods the repository allows: it now allows only

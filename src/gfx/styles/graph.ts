@@ -170,7 +170,17 @@ export function buildStyleGraph(TSL: any, plan: StylePlan, inp: StyleInputs): St
       }
       if (paint) {
         const tex = convertToTexture(col);
-        col = paintNode(TSL, { colorTex: tex, data: styled.data, viewZ: styled.viewZ, ratio, hazeColor: paint.hazeColor, hazeNear: paint.hazeNear, hazeFar: paint.hazeFar, env: paint.env, actors: paint.actors, envStrength: strength.env, actorsStrength: strength.actors, cover });
+        const halfRes = rinfo?.quality === 'medium' || rinfo?.quality === 'low' || !!plan.economy;
+        // at half resolution a pixel of the brush covers two of the screen's: halve its radius to keep the look
+        const painted = paintNode(TSL, { colorTex: tex, data: styled.data, viewZ: styled.viewZ, ratio: halfRes ? ratio.mul(0.5) : ratio, hazeColor: paint.hazeColor, hazeNear: paint.hazeNear, hazeFar: paint.hazeFar, env: paint.env, actors: paint.actors, envStrength: strength.env, actorsStrength: strength.actors, cover });
+        if (halfRes) {
+          // the brush at half resolution (a quarter of the work), laid over the full-resolution frame
+          // only where a painted layer is, so crisp characters stay crisp; the line art comes after
+          const half = convertToTexture(painted);
+          half.setResolutionScale(0.5);
+          const painting = perLayer(TSL, layer, paint.env.radius, paint.actors.radius, float(0)).greaterThan(0);
+          col = select(painting, vec4(half.sample(screenUV).rgb, col.a), col);
+        } else col = painted;
       }
       if (hatch && world) col = hatchNode(TSL, { color: col, data, world: world.world, worldN: world.worldN, env: hatch.env, actors: hatch.actors, envStrength: strength.env, actorsStrength: strength.actors, cover });
       // brush wobble: a slow noise over the world, so a line's width swells and thins along it
