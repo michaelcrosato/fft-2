@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Ship committed work: push it and merge it into main on GitHub right away.
 # On main: push. On any other branch: push, open a PR (unless one exists), merge it
-# with a merge commit, delete the branch on both sides and return to an up-to-date main.
+# with a merge commit (a squash or a rebase where the repository allows no merge commits),
+# delete the branch on both sides and return to an up-to-date main.
 # Usage: npm run ship  (or ./tools/ship.sh "PR title")
 set -euo pipefail
 
@@ -34,7 +35,9 @@ if ! gh pr view "$branch" --json state --jq .state 2>/dev/null | grep -qx OPEN; 
 	title="${1:-$(git log -1 --format=%s)}"
 	gh pr create --base main --head "$branch" --title "$title" --fill-verbose
 fi
-gh pr merge "$branch" --merge --delete-branch
+# the repository's settings decide the method: a merge commit where allowed, else squash, else rebase
+method="$(gh repo view --json mergeCommitAllowed,squashMergeAllowed --jq 'if .mergeCommitAllowed then "merge" elif .squashMergeAllowed then "squash" else "rebase" end')"
+gh pr merge "$branch" "--$method" --delete-branch
 git switch main
 git pull --ff-only origin main
 git fetch --prune origin
