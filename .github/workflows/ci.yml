@@ -62,8 +62,9 @@ jobs:
           E2E_QUALITY: low
           E2E_WORKERS: 2
           LIBGL_ALWAYS_SOFTWARE: '1'
-      # a 52in1 parallel round with one player in 52in1's own harness (dist/ is the e2e build)
+      # 52in1's own harness (dist/ is the e2e build): a parallel round for one, and online versus
       - run: npm run hub:harness -- dist --only parallel --players 1
+      - run: npm run hub:harness -- dist --only shared-world
       # every music cue and sound effect rendered offline: clipping, loudness, loop seams
       - run: npm run audio:verify
       - uses: actions/upload-artifact@v7

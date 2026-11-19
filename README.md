@@ -40,7 +40,7 @@ WebGL 2 for the rest of the session if it happens twice.
   a calendar and errands.
 * **Save slots** (8, incl. autosave), options, "How to Play".
 * **Playing together** — 52in1 sessions for 1–4 players (Trials raced in parallel, and one-turn Moments),
-  and **Versus (2 players)** on one device, taking turns.
+  online versus for two in 52in1, and **Versus (2 players)** on one device, taking turns.
 * **Languages** — every line ready for translation (AI Hub Languages v1), with three test languages.
 * **Controllers** — PlayStation and Xbox button prompts, vibration, and the DualSense's light bar, adaptive
   triggers, motion camera and touchpad (**Options → Controller**).
@@ -141,11 +141,19 @@ line players see comes from one place, so a translation is a block of lines, not
 The game's public home is **52in1**. It follows the AI Hub catalogue, session and languages protocols, whose
 tools are kept in `tools/hub/` (their sources are listed in `tools/hub/README.md`).
 
-- **Together**: `hub:multiplayer` names *parallel 1–4*, *moments 1–4* and *hot-seat versus 2*.
+- **Together**: `hub:multiplayer` names *parallel 1–4*, *moments 1–4*, *shared-world versus 2* and
+  *hot-seat versus 2*.
   - **Trials** (parallel rounds, `src/data/battles/trials.ts`): five short battles with a fixed company;
     every player fights the same one, the quickest victory wins and foes defeated rank the rest.
   - **Moments** (`src/data/battles/moments.ts`): five one-turn puzzles (knock out the archer, break the
     spell, climb the tower, hold the gate, open the chest), dealt three to a round.
+  - **Online versus** (`src/game/online.ts`): two players, each on their own device, command the two
+    companies of one battle in lockstep. Every copy runs the same deterministic battle from the hub's
+    seed; on each turn only the copy that owns the unit acts, and sends what it did (move, action,
+    facing) for the others to play back. Each turn carries a hash of the field it began on, and the
+    host's turns also carry that field, so a copy that drifted takes the host's before it plays on. A
+    copy waiting for a turn says so in its beat, once a second, and the copy that played it sends it
+    again. The host reports the standings.
   - **Versus (2 players)** on the title: two players share a device and take turns, with a hand-over screen
     between them.
 - **Sessions** (`src/game/session.ts`): the session client is the page's first script; in a session the

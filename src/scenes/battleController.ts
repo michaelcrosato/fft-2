@@ -4,7 +4,7 @@ import type { Battle, BEvent, HitInfo, ActionOpts } from '../battle/battle';
 import type { BattleUnit } from '../battle/unit';
 import type { AbilityDef, Facing, AnimKind } from '../data/types';
 import { ABILITIES, ITEMS, JOBS } from '../data/db';
-import { planTurn } from '../battle/ai';
+import { planTurn, type AiPlan } from '../battle/ai';
 import { MapGrid, FACINGS } from '../battle/grid';
 import { STATUS } from '../battle/status';
 import type { Stage } from './stage';
@@ -61,6 +61,8 @@ export interface ControllerHooks {
   human?(unit: BattleUnit): boolean;
   /** Before a person's turn: hot-seat versus hands the controller over when the side changes. */
   beforeHumanTurn?(unit: BattleUnit): Promise<void>;
+  /** The plan for a turn played on another device (online versus), instead of the AI's; null: the AI's. A null plan ends the turn. */
+  planFor?(unit: BattleUnit): Promise<AiPlan | null> | null;
 }
 
 export class BattleController {
@@ -525,7 +527,11 @@ export class BattleController {
     this.stage.focusTile(u.x, u.z);
     this.hud.card(u, 'a', this.b);
     await this.wait(250);
-    let plan = planTurn(this.b, u);
+    // a turn another device played comes as it was played: no second thoughts on this copy
+    const remote = this.hooks.planFor?.(u) ?? null;
+    const given = remote ? await remote : null;
+    if (remote && !given) return;
+    let plan = given ?? planTurn(this.b, u);
     const doMove = async () => {
       if (!plan.move || u.moved) return;
       const [mx, mz] = plan.move;
@@ -535,7 +541,7 @@ export class BattleController {
       const ev = this.b.doMove(u, mx, mz);
       await this.playEvents(ev);
       // a failed Teleport leaves the unit where it stood: choose the action again from there
-      if (!plan.actFirst && plan.act && u.alive && (u.x !== mx || u.z !== mz)) plan = planTurn(this.b, u);
+      if (!given && !plan.actFirst && plan.act && u.alive && (u.x !== mx || u.z !== mz)) plan = planTurn(this.b, u);
     };
     const doAct = async () => {
       if (!plan.act || this.b.result || u.acted || !u.alive) return;

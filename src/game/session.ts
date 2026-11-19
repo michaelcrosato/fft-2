@@ -31,6 +31,12 @@ export interface HubInfo {
 
 interface AIHubApi {
   active: boolean;
+  me: number;
+  host: number;
+  isHost: boolean;
+  players: Array<{ id: number; name: string; color: string }>;
+  send(data: unknown, opts?: { to?: number; reliable?: boolean }): boolean;
+  finish(outcome: Record<string, unknown>): void;
   connect(opts: { mode: string[]; seats: [number, number] }): Promise<HubInfo | null>;
   ready(): void;
   time(): number;
@@ -51,7 +57,7 @@ let joining: Promise<HubInfo | null> | null = null;
 export function joinSession(): Promise<HubInfo | null> {
   const api = hub();
   if (!api?.active) return Promise.resolve(null);
-  return (joining ??= api.connect({ mode: ['parallel', 'moments'], seats: [1, 4] }).catch(() => null));
+  return (joining ??= api.connect({ mode: ['parallel', 'moments', 'shared-world'], seats: [1, 4] }).catch(() => null));
 }
 
 /** The game cannot run here (no renderer): the hub sits this player out. */
@@ -94,6 +100,19 @@ export async function runSession(game: Game, info: HubInfo) {
   saveOptions(o);
   game.options = o;
 
+  // online versus: both players command one battle, each their own side
+  if (info.mode === 'shared-world') {
+    const { onlineVersus } = await import('./online');
+    await onlineVersus(game, api, {
+      card: sessionCard,
+      ready: () => { setGameMenuVisible(true); api.ready(); },
+      countdown: async (card) => { const go = await countdownOn(api, card, () => frozen); setTimeout(() => card.close(), 900); return go; },
+      stop: standStill,
+      onEnd: (fn) => freezers.push(fn),
+    });
+    return;
+  }
+
   const moment: MomentDef | null = info.mode === 'moments' ? (MOMENTS.find((m) => m.id === info.moment) ?? MOMENTS[0]) : null;
   const preset: PresetBattle = moment ?? TRIALS[Math.floor(api.rng('deal')() * TRIALS.length) % TRIALS.length];
   const seed = Math.floor(api.rng(moment ? moment.id : 'battle')() * 2 ** 32);
@@ -117,16 +136,7 @@ export async function runSession(game: Game, info: HubInfo) {
   api.ready();
 
   // the countdown, on the hub's clock: play begins on every device at once
-  await new Promise<void>((resolve) => {
-    const step = () => {
-      if (frozen) return resolve();
-      const now = api.time();
-      card.count(now === -Infinity ? null : now < 0 ? Math.ceil(-now / 1000) : 0);
-      if (now >= 0) return resolve();
-      requestAnimationFrame(step);
-    };
-    step();
-  });
+  await countdownOn(api, card, () => frozen);
   setTimeout(() => card.close(), 900);
   if (frozen) return;
 
@@ -208,6 +218,20 @@ export async function runSession(game: Game, info: HubInfo) {
   else report({ score: trialScore().score, stats: trialStats() }, t('session.defeated'));
 }
 
+/** Count down on the hub's clock; resolves true when play begins, false when the round ended first. */
+function countdownOn(api: AIHubApi, card: ReturnType<typeof sessionCard>, ended: () => boolean): Promise<boolean> {
+  return new Promise<boolean>((resolve) => {
+    const step = () => {
+      if (ended()) return resolve(false);
+      const now = api.time();
+      card.count(now === -Infinity ? null : now < 0 ? Math.ceil(-now / 1000) : 0);
+      if (now >= 0) return resolve(true);
+      requestAnimationFrame(step);
+    };
+    step();
+  });
+}
+
 /** True once the moment's goal is met. */
 export function momentCleared(m: MomentDef, b: Battle): boolean {
   if (m.kind === 'defeat') { const t = b.bySid(m.target!); return !t || !t.active || t.gone; }
@@ -240,7 +264,8 @@ function sessionCard(name: string, goal: string) {
       count.textContent = n > 0 ? fmtNum(n) : t('session.go');
       if (n > 0) audio.sfx('cursor'); else audio.sfx('confirm');
     },
-    close() { root.style.transition = 'opacity .4s'; root.style.opacity = '0'; setTimeout(() => { if (!root.dataset.result) root.remove(); }, 450); },
+    // a card showing a result stays: the round ended before the countdown's card closed
+    close() { if (root.dataset.result) return; root.style.transition = 'opacity .4s'; root.style.opacity = '0'; setTimeout(() => { if (!root.dataset.result) root.remove(); }, 450); },
     result(text: string) {
       root.dataset.result = '1';
       root.style.transition = ''; root.style.opacity = '1';
