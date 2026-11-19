@@ -241,9 +241,16 @@ DC offset, loop seams and render cost; the audition page measures any single cue
 | Trials: five fixed battles for parallel rounds. | `npm run sim:trials`: the company wins 70–100% AI against AI, in a median 21–42 turns. |
 | Moments: five one-turn puzzles. | `tests/moments.test.ts`: each has 1–2 plays (of 37–438) that clear it on every seed, and none clears by standing still. |
 | Hot-seat versus on the title, with a hand-over screen between players. | `e2e/versus.spec.ts` |
-| The hand-off package (with its credit) passes all 119 checks against the wall with no warning; it is recognised as build 2 of `github-fft-2`. The draft CI builds is missing only the credit (`hub:model`, `hub:effort`, `hub:harness`), which `npm run hub:check` allows. | `npm run package`, `npm run hub:check` |
+| The hand-off package (with its credit) passes all 128 checks against the wall with no warning; it is recognised as build 2 of `github-fft-2`. The draft CI builds is missing only the credit (`hub:model`, `hub:effort`, `hub:harness`), which `npm run hub:check` allows. | `npm run package`, `npm run hub:check` |
 | Console output: on the title, in a battle and in a scene the game itself logs no warning or error; the only lines are the browser's (a software GL driver's notes and, in headless Chrome, no WebGPU adapter). Every e2e spec fails on a console error, a page error or a request to another site. | `e2e/helpers.ts` (`watchErrors`) |
 | Start-up: in a session the game says hello at once and is ready about 4.4 s later at low quality in software rendering (a moment's fresh load: about 4 s), well inside the hub's 20 s; the hub's harness shows it. Outside a session the title is up in about 3 s on the same software renderer (`e2e/boot.spec.ts`). Nothing needed lazy-loading. | `npm run hub:harness` |
+
+## Hand-off
+
+| Change | Checked by |
+| --- | --- |
+| The import into 52in1 rehearsed on a copy of its working tree (2026-11-18), with the real clone left untouched: the old build out, the catalogue check (128 checks, no warning), `ingest` of the unzipped package (the zip itself would land as `games/package/`), the old date, the `overrides.json` entry removed (it overrode the new description, controls and tags), the package's covers over the old strip, then `check-pages`, `hub-check --draws-only`, `fill.mjs --play` (fills wide, ultra-wide and square) and 52in1's 726 tests. The import's session gate played 11 rounds and passed them all: parallel 1 and 2 players and a host leaving, moments 1 and 2 players and a host leaving, shared-world versus with 2 players, a host leaving and a server copy, the game alone, and the static checks. Translation is the owner's step. Before the merge, the whole Chromium suite passed in one run on the final tree (75 of 75, two workers). CI's Chromium job passed on its one re-run: on the first, three scene-heavy tests timed out on a slow runner, and the same tests took the same time on `main` and on the branch locally. | the plan's import steps (`docs/PLAN-52IN1.md`, Phase 9) |
+| CI's Firefox and WebKit job runs in Playwright's own image (`mcr.microsoft.com/playwright:v1.63.0-noble`), which carries the browsers, their system libraries and Xvfb. Installing them with `--with-deps` went through the runner's Ubuntu mirror, which crawled (a few kB/s through WebKit's GStreamer packages) until the job hit its 30 minutes, twice on 18 and 19 November. The tag follows the installed `@playwright/test`. | CI on this change |
 
 ## Online versus (Phase 8)
 
