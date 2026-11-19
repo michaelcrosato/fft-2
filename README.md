@@ -202,7 +202,8 @@ src/data/       all content as typed data (jobs, abilities, items, monsters, cas
 src/game/       game state, saves, battle setup, story flow, world travel; 52in1 sessions (session.ts),
                 Trials and Moments set-up (trial.ts) and hot-seat versus (versus.ts)
 src/i18n/       Languages v1: t(), the line catalogs (ui/), content localization, the game-lines extractor
-src/gfx/        renderer bootstrap, post-processing (TSL), terrain, props, models, animation, VFX, portraits
+src/gfx/        renderer bootstrap, post-processing (TSL), terrain, props, models, animation, VFX, portraits;
+                the art styles (styles/: layers, the tagged scene pass, the plan, its post-graph steps)
 src/scenes/     battle stage, unit views, battle controller, cutscene runner, world map
 src/ui/         DOM UI: widgets, battle HUD, menus (formation, town, chronicle, options, controller),
                 input (keyboard, mouse, touch, gamepads) and the DualSense (dualsense/)

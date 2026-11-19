@@ -83,6 +83,8 @@ export async function openArtStyle(game: Game, parent?: HTMLElement) {
     const strengthRow = (label: string, row: Row, v: number, id: StyleId): MenuItem<string> =>
       ({ label, value: row, right: pct(v), desc: unavailable ?? t('artstyle.strength_desc'), disabled: unavailable ?? id === 'none' });
     return [
+      // on WebGL 1 a greyed line says why (focus skips disabled rows, so their descriptions never show)
+      ...(unavailable ? [{ label: t('artstyle.unavailable_label'), value: 'unavailable', disabled: unavailable, desc: unavailable }] : []),
       { label: t('artstyle.linked'), value: 'linked', right: t(s.styleLinked ? 'artstyle.on' : 'artstyle.off'), desc: unavailable ?? t('artstyle.linked_desc'), disabled: unavailable ?? false },
       ...(s.styleLinked
         ? [styleRow(t('artstyle.style'), 'style', s.styleEnv), strengthRow(t('artstyle.strength'), 'strength', s.styleEnvStrength, s.styleEnv)]

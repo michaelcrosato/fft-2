@@ -19,7 +19,7 @@ Update the Status table as phases land, and record what the spike and later phas
 | 7 — Ink Wash | done: world-anchored hatching, paper, wobbling brush lines; matrix, mixes and orbit in `tools/out/styles/ink*/` |
 | 8 — Flat Paint | done: layer-aware Kuwahara brush, canvas, haze, thin dark line art; matrix, mixes and orbit in `tools/out/styles/flat*/` |
 | 9 — Performance and automatic quality | done: the table is in `docs/REPO_AUDIT.md` (*Pass 5*, Performance) |
-| 10 — Docs, CI and hand-off | not started |
+| 10 — Docs, CI and hand-off | done: README, AGENTS.md, REPO_AUDIT (*Pass 5*), COMPATIBILITY; CI runs the spec in three engines |
 
 ## The brief
 
@@ -352,19 +352,22 @@ canvas, haze). For each:
 
 ## Definition of done
 
-- [ ] Bold Cel, Bright Toon, Ink Wash, Pixel Art, Flat Paint and None, set for the Environment,
+- [x] Bold Cel, Bright Toon, Ink Wash, Pixel Art, Flat Paint and None, set for the Environment,
   for Characters & objects, or for both, each layer with its own Strength from 0% to 100%.
-- [ ] Shade bands, outlines, light sources (1–3) and lamps adjustable; every change previews
+- [x] Shade bands, outlines, light sources (1–3) and lamps adjustable; every change previews
   live, from the title and from the in-game Menu.
-- [ ] Settings persist; old option saves load; the URL overrides work.
-- [ ] None/None draws today's frame at today's cost (unit test).
-- [ ] WebGPU and WebGL 2 in Chromium, Firefox and WebKit; WebGL 1 shows the styles as
-  unavailable.
-- [ ] The readability gates hold in every style and mix (screenshot review noted in *Pass 5*).
-- [ ] The performance budget holds, and automatic quality accounts for the styles.
-- [ ] `npm test`, `npm run build`, the e2e checks above, `hub:check` and `hub:harness` pass; CI
+- [x] Settings persist; old option saves load; the URL overrides work.
+- [x] None/None draws today's frame at today's cost (unit test of the plan; the e2e check reads
+  `stage.post.styleKey === 'off'`).
+- [x] WebGPU and WebGL 2 in Chromium, Firefox and WebKit; WebGL 1 shows the styles as
+  unavailable. (WebGL 2 in all three engines; WebGPU in Chromium, by buffer read-back and frame
+  time. WebGPU in Firefox and Safari needs hardware: *Needs a person*.)
+- [x] The readability gates hold in every style and mix (screenshot review noted in *Pass 5*).
+- [x] The performance budget holds, and automatic quality accounts for the styles (on the GPU;
+  software rendering's costs are recorded as the worst case, see the Decision log).
+- [x] `npm test`, `npm run build`, the e2e checks above, `hub:check` and `hub:harness` pass; CI
   is green on `main`.
-- [ ] README, AGENTS.md, `docs/REPO_AUDIT.md` (*Pass 5*) and `docs/COMPATIBILITY.md` describe
+- [x] README, AGENTS.md, `docs/REPO_AUDIT.md` (*Pass 5*) and `docs/COMPATIBILITY.md` describe
   the styles; the Status table says done.
 
 ## Needs a person
@@ -374,7 +377,10 @@ canvas, haze). For each:
 - Real hardware: WebGPU on a desktop GPU, a real iPhone in Safari and an Android phone, for the
   look and the cost (software rendering, the worst case, costs +45% to +214%; a desktop GPU shows no
   cost within noise).
-- Whether to shoot new 52in1 covers in a style and send a new package.
+- Whether to shoot new 52in1 covers in a style and send a new package (the package itself is
+  unchanged: no style is on by default).
+- WebGPU in Firefox and Safari, on real hardware (headless runs here have WebGPU only in
+  Chromium, and can't screenshot it).
 
 ## Open questions
 
@@ -520,3 +526,12 @@ slow devices: automatic quality first makes the style lighter, then lowers the p
 outlines take one sample ring on Low; Flat Paint's brush runs at half resolution on Medium and Low,
 and when lightened, with its radius halved there so the look holds. A weak phone's own numbers need
 a person with one (*Needs a person*).
+
+**2026-11-19 — Phase 10, hand-off.** The README has an *Art styles* section (the page, the layers,
+the URL overrides, the debug views and the tools), AGENTS.md points here, `docs/REPO_AUDIT.md`
+(*Pass 5*) records the design, the performance table and the readability review, and
+`docs/COMPATIBILITY.md` the engines. CI runs `e2e/art-style.spec.ts` in Chromium, Firefox and WebKit
+(since Phase 3). A last e2e check found that on WebGL 1 the reason the styles were unavailable sat
+only in disabled rows' descriptions, which focus skips; a greyed line at the top says it now. The
+final page passed `viewport-matrix` on 14 Chromium devices and a WebKit iPhone SE (headless). The
+52in1 package is not rebuilt: nothing in it changes until a player picks a style.

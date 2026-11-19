@@ -368,8 +368,24 @@ playable: styles are off unless chosen; with Auto quality, slow frames first mak
 resolution on Medium and Low; outlines take one sample ring on Low. Real phones are under *Needs a
 person* in the plan.
 
+## Readability review
+
+Every style was shot with `tools/style-shots.mjs` (both layers, the Environment only, Characters &
+objects only, and mixed with the styles before it) on the town by day, a night map, an interior, a
+storm, the void, the world map and a cutscene, plus a six-frame orbit for the styles that could crawl
+or swim (Pixel Art, Ink Wash, Flat Paint), and each image was looked at against the plan's gates. Units
+stand out in every style and mix; tile highlights, the cursor, team rings and charge markers stay clear
+(they are overlays, never styled; Pixel Art on the Environment only puts them on its cells); hatching
+and the brush stay on the surfaces as the camera turns. Fixed on the way: Pixel Art's first cells (too
+big) and dither (a checkered sky, speckled darks); Ink Wash's hatching (no normal from depth, an
+undefined falling `smoothstep`, too few tones hatched); Flat Paint's half-resolution brush (twice the
+radius). At night Bold Cel's and Ink Wash's dark lines sink into the dark ground, and units read by
+their rings, as without a style.
+
 ## Fixes and small improvements
 
+- On WebGL 1 the Art Style page said why the styles were unavailable only in the descriptions of
+  disabled rows, which focus skips: a greyed line at the top says it now (e2e check).
 - `tools/ship.sh` asks GitHub which merge methods the repository allows: it now allows only
   squash merges, which `gh pr merge --merge` refused.
 - Strength is stored in tenths, so its default is 80%.

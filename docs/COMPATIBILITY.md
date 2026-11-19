@@ -123,6 +123,7 @@ minimum WebGL 2 guarantees) and the material's own blending on each, so it needs
 | --- | --- |
 | Chromium, WebGL 2 | `e2e/art-style.spec.ts` (desktop and phone profiles), `tools/style-shots.mjs` |
 | Chromium, WebGPU | the data buffer read back and the frame-time bench (headless screenshots miss WebGPU canvases here) |
-| Firefox, WebGL 2 | the data buffer read back; `e2e/art-style.spec.ts` in CI |
-| WebKit | `e2e/art-style.spec.ts` in CI and through `./tools/browser-test.sh` |
+| Firefox, WebGL 2 | the data buffer read back; `e2e/art-style.spec.ts` in CI (passing on `main` since Phase 3) |
+| WebKit | `e2e/art-style.spec.ts` in CI and through `./tools/browser-test.sh`; headless `viewport-matrix` on an iPhone SE profile |
+| GPU (RTX 3060 Ti, WSL) | `tools/style-bench.mjs --gpu`: every style within the frame's noise at 4K (`docs/REPO_AUDIT.md`, *Pass 5*) |
 
