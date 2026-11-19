@@ -12,7 +12,7 @@ Update the Status table as phases land, and record what the spike and later phas
 | 0 — Baseline | done: `tools/style-shots.mjs`, reference set in `tools/out/styles/baseline/` |
 | 1 — Spike: the tagged scene pass | done: proven on WebGL 2 (Chromium, Firefox) and WebGPU; see the Decision log |
 | 2 — Framework, settings and the Art Style page | done: `src/gfx/styles/`, the settings, the page (reached by `?test=artstyle` until Phase 3) |
-| 3 — Light sources and lamps | not started |
+| 3 — Light sources and lamps | done: `src/gfx/lights.ts`; Options → Art Style is open to players |
 | 4 — Bold Cel | not started |
 | 5 — Bright Toon | not started |
 | 6 — Pixel Art | not started |
@@ -191,8 +191,7 @@ Art Style
   length limits. The page fits an iPhone SE in portrait and the test languages, right-to-left
   included.
 - Light sources switch at once. The rim light is dimmed, not removed. The front fill is added the
-  first time it is chosen (one shader rebuild, under the loading indicator) and only dimmed after
-  that. Lamps change on the next map, as some quality changes already do, because adding or
+  first time it is chosen (one shader rebuild, on the next frame) and only dimmed after that. Lamps change on the next map, as some quality changes already do, because adding or
   removing point lights recompiles every lit shader.
 
 ## The styles
@@ -330,13 +329,14 @@ canvas, haze). For each:
   - always `npm test` and `npm run build`;
   - for the page and the styles:
     `E2E_QUALITY=low E2E_WORKERS=2 npx playwright test --project=chromium e2e/art-style.spec.ts e2e/menus.spec.ts e2e/languages.spec.ts e2e/a11y.spec.ts`,
-    plus Firefox and WebKit (through `./tools/browser-test.sh` under Docker if the host can't
-    run them);
+    in headless Chromium (desktop and mobile profiles). Firefox and WebKit run in CI's
+    other-browsers job: on this WSLg desktop even `xvfb-run` headed browsers open windows, so
+    the owner asked for headless runs only while they work;
   - `npm run hub:check` and `npm run hub:harness` whenever `post.ts`, `Stage`, `WorldView` or
     the options change;
   - `npm run sim` only if battle code changes.
-- Look at every screenshot you take. Check the page with `viewport-matrix` (phones, foldables,
-  tablets and desktop; WebKit for iPhones), one run at a time.
+- Look at every screenshot you take. Check the page with `viewport-matrix --engines chromium`
+  (phones, foldables, tablets and desktop), one run at a time.
 - Every new line a player reads goes through `t()`. Check `?lang=en-XA`, `?lang=zh-XC` and
   `?lang=ar-XB`.
 - Never:
@@ -440,3 +440,12 @@ change listeners, `?styleDebug=layer|id|albedo|overlay`). Decisions taken on the
 - The page docks left (right in right-to-left languages), or to the bottom half on a phone in
   portrait, over a shade that leaves the scene visible; `Game.requestFrame()` redraws the paused
   frame after each change.
+
+**2026-11-19 — Phase 3.** `LightRig` (`src/gfx/lights.ts`) serves the battle maps (sun and rim
+today) and the world map (the sun alone today): 1 dims the rim, 2 keeps or adds it, 3 adds a front
+fill that follows the camera, a mix of the sun's and the sky's colours at a quarter of the sun's
+strength and never below 0.5, so it also lifts units at night and indoors. The lamp count is read
+when a map is built (Auto is the quality's 2, 4 or 8, as before). With no style and Auto, every
+scene gets today's rig. Options → Art Style sits between Graphics quality and Renderer; the
+language sweep covers the page. The first time the front fill is added, the shaders rebuild on the
+next frame, without the loading indicator: a moment's pause on the page, once.

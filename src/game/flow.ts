@@ -35,6 +35,7 @@ export async function runTitle(game: Game) {
   await loading.begin(t('common.loading.chronicle'));
   setGameMenuVisible(false);
   const world = new WorldView();
+  (window as any).__world = world; // for the e2e checks, like __game
   await world.init();
   world.camDist = 60; world.camPitch = 0.75;
   world.focus('lesandre');
@@ -260,6 +261,7 @@ async function worldLoop(game: Game): Promise<'title' | 'continue'> {
   await loading.begin(t('flow.loading.world_map'));
   const s = game.state;
   const world = new WorldView();
+  (window as any).__world = world; // for the e2e checks, like __game
   await world.init();
   const hero = s.roster.find((r) => r.charId === 'rhen') ?? s.roster[0];
   const hjob = JOBS.get(hero.job)!;

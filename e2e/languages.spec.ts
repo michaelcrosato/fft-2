@@ -1,4 +1,4 @@
-// AI Hub Languages v1's test languages, swept over the title, a new game, Options and the Controller
+// AI Hub Languages v1's test languages, swept over the title, a new game, Options, the Controller and Art Style
 // page, a cutscene, a battle turn with the Game Menu, and the Chronicle:
 // - en-XA: every visible line is bracketed, so text outside […] did not come from the lines
 //   (player-typed and generated unit names, key names and numbers aside);
@@ -75,6 +75,12 @@ for (const lang of LANGS) {
       await rows.nth(n - 3).click(); // Controller, before How to Play and Back
       await expect.poll(async () => (await page.locator('#ui .menu .item').count()) !== n, { timeout: 30_000 }).toBe(true);
       await check(page, lang, 'Controller');
+      await page.keyboard.press('Escape');
+      // the Art Style page (after Graphics quality: fifth row from the end)
+      await expect.poll(async () => page.locator('#ui .menu .item').count(), { timeout: 30_000 }).toBe(n);
+      await rows.nth(n - 5).click();
+      await expect(page.locator('.art-style [role=listbox]')).toHaveCount(1, { timeout: 30_000 });
+      await check(page, lang, 'Art Style');
       await page.keyboard.press('Escape');
       await page.keyboard.press('Escape');
       // a new game: the naming screen
