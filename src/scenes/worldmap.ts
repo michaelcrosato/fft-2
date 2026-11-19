@@ -3,7 +3,8 @@
 // party token.
 import { THREE } from '../gfx/three';
 import { renderer, rinfo } from '../gfx/renderer';
-import { createPost, type PostFX } from '../gfx/post';
+import { createPost, restylePost, type PostFX } from '../gfx/post';
+import { currentStylePlan, onStyleChange, restyler } from '../gfx/styles/current';
 import { GeoBuilder, hexRgb, mat } from '../gfx/geo';
 import { propMaterial, waterMaterial } from '../gfx/materials';
 import { NODES, EDGES } from '../data/db';
@@ -71,9 +72,19 @@ export class WorldView {
     await this.buildLand();
     this.buildLights();
     await paintLoading();
-    this.post = await createPost(this.scene, this.cam);
+    this.post = await createPost(this.scene, this.cam, currentStylePlan());
     this.post.setGrade({ warmth: 0.25, saturation: 1.1, vignette: 0.45 });
+    this.offStyle = onStyleChange(this.restyle);
   }
+
+  private disposed = false;
+  private offStyle: (() => void) | null = null;
+  /** take the art style in force now (the Art Style page opened from the title restyles the map behind it) */
+  readonly restyle = restyler(async () => {
+    const next = await restylePost(this.post, this.scene, this.cam, currentStylePlan());
+    if (this.disposed) { if (next !== this.post) next.dispose(); return; }
+    this.post = next;
+  }, () => !this.disposed);
 
   /** map (0..100) → world */
   toWorld(p: [number, number]): Vector3 {
@@ -378,7 +389,7 @@ export class WorldView {
   render() { this.post.render(); }
   resize(w: number, h: number) { this.cam.aspect = w / Math.max(1, h); this.cam.fov = fovFor(this.cam.aspect, 32); this.cam.updateProjectionMatrix(); }
   private clouds: Object3D | null = null;
-  dispose() { this.post.dispose(); releaseTree(this.scene); }
+  dispose() { this.disposed = true; this.offStyle?.(); this.post.dispose(); releaseTree(this.scene); }
 }
 
 function avg(a: number[], b: number[], c: number[]): [number, number, number] {

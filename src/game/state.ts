@@ -9,8 +9,10 @@ import { displayStats } from '../battle/stats';
 import type { ErrandDef } from '../data/types';
 import { STORY, CHARACTERS, ERRANDS, JOBS, NODES } from '../data/db';
 import type { Quality } from '../gfx/renderer';
+import { DEFAULT_STYLE_SETTINGS, normalizeStyleSettings, type StyleSettings } from '../gfx/styles/types';
 
-export interface Options {
+/** Art style settings (Options → Art Style, docs/PLAN-ART-STYLES.md) are part of the options. */
+export interface Options extends StyleSettings {
   /** enemy strength relative to the party */
   difficulty: 'easy' | 'normal' | 'hard';
   gentle: boolean;         // fallen units never crystallize
@@ -46,6 +48,7 @@ export const DEFAULT_OPTIONS: Options = {
   gentle: false, battleSpeed: 1, textSpeed: 1, music: 0.7, sfx: 0.8, quality: 'auto', renderer: 'auto',
   confirmMoves: true, showGrid: true, camShake: true, encounters: true,
   buttonPrompts: 'auto', vibration: 1, dsLight: true, dsTriggers: true, motion: 'auto', motionSense: 1, touchpad: true,
+  ...DEFAULT_STYLE_SETTINGS,
 };
 
 export interface ErrandRun { id: string; units: string[]; start: number; due: number }
@@ -342,6 +345,7 @@ function normalizeOptions(value: unknown): Options {
     const v = raw[key];
     if (typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max) out[key] = v;
   }
+  Object.assign(out, normalizeStyleSettings(raw));
   return out;
 }
 
