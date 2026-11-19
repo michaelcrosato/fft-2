@@ -218,3 +218,36 @@ describe("the light rig", () => {
 		expect(lightsIn(world)).toBe(2);
 	});
 });
+
+describe("Bold Cel", () => {
+	it("bands, colours and outlines its layer; the outline and band settings override its own", () => {
+		const p = resolveStyle(S({ styleEnv: "boldCel", styleEnvStrength: 1 }), ctx);
+		expect(p.active).toBe(true);
+		expect(stepsOf(p.env)).toEqual(["band", "color", "edges"]);
+		expect(stepsOf(p.actors)).toEqual(["band", "color", "edges"]);
+		expect(p.env.band!.bands).toBe(2);
+		expect(p.env.edges!.width).toBeCloseTo(3.5);
+		expect(p.lights).toBe(1);
+		expect(p.frame.ao).toBe(false);
+		const weak = resolveStyle(S({ styleEnv: "boldCel", styleEnvStrength: 0.2 }), ctx);
+		expect(weak.env.edges!.width).toBeLessThan(p.env.edges!.width);
+		expect(weak.env.band!.softness).toBeGreaterThan(p.env.band!.softness);
+		const thin = resolveStyle(S({ styleEnv: "boldCel", styleOutline: "thin", styleBands: 4 }), ctx);
+		expect(thin.env.edges!.width).toBe(1);
+		expect(thin.env.band!.bands).toBe(4);
+		expect(resolveStyle(S({ styleEnv: "boldCel", styleOutline: "off" }), ctx).env.edges).toBeUndefined();
+		expect(resolveStyle(S({ styleEnv: "boldCel", lights: 3 }), ctx).lights).toBe(3);
+	});
+
+	it("on one layer leaves the other as it is, and keeps the frame-wide effects with the Environment", () => {
+		const actorsOnly = resolveStyle(S({ styleLinked: false, styleEnv: "none", styleActors: "boldCel" }), ctx);
+		expect(stepsOf(actorsOnly.env)).toEqual([]);
+		expect(stepsOf(actorsOnly.actors)).toEqual(["band", "color", "edges"]);
+		expect(actorsOnly.frame.ao).toBe(true);
+		expect(actorsOnly.lights).toBe("today");
+		const envOnly = resolveStyle(S({ styleLinked: false, styleEnv: "boldCel", styleActors: "none" }), ctx);
+		expect(envOnly.key).not.toBe(actorsOnly.key);
+		// a change of strength keeps the graph: uniforms only
+		expect(resolveStyle(S({ styleLinked: false, styleEnv: "boldCel", styleActors: "none", styleEnvStrength: 0.3 }), ctx).key).toBe(envOnly.key);
+	});
+});

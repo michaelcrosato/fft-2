@@ -9,7 +9,7 @@ export type Quality = 'ultra' | 'high' | 'medium' | 'low';
 export type Backend = 'webgpu' | 'webgl2' | 'webgl1';
 
 /** banded light (nodes/band.ts) */
-export interface BandPlan { bands: number; softness: number; floor: number; tint: Rgb; highlight: -1 | 0 | 1 }
+export interface BandPlan { bands: number; softness: number; floor: number; tint: Rgb; litTint?: Rgb; highlight: -1 | 0 | 1 }
 /** outlines (nodes/edges.ts): `fill` darkens the surface's own colour instead of drawing `color` */
 export interface EdgePlan { width: number; color: Rgb; fill: number; opacity: number; creases: number; wobble: number }
 /** display-space colour: saturation and contrast multipliers, desaturation toward a tint */
@@ -67,7 +67,10 @@ function layerPlan(style: StyleId, strength: number, s: StyleSettings, ctx: Reso
   const preset = PRESETS[style];
   if (!preset) return NONE;
   const pc: PresetContext = { strength, bands: s.styleBands, outline: s.styleOutline, quality: ctx.quality, mobile: !!ctx.mobile };
-  return { style, strength, ...preset.layer(pc) };
+  const l: LayerPlan = { style, strength, ...preset.layer(pc) };
+  // no outlines (Outlines: None, or a style without them): no outline passes in the graph
+  if (l.edges && l.edges.width <= 0) delete l.edges;
+  return l;
 }
 
 /** the steps a layer needs, in a stable order (part of the graph key) */

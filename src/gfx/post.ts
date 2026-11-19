@@ -273,6 +273,8 @@ async function nodePost(scene: Scene, camera: Camera, style: StylePlan | null): 
   } else if (graph) {
     out = graph.display(out);
   }
+  // Pixel Art samples the frame before anti-aliasing at its cells' centres: one texture for both
+  if (graph?.needsPreAA) { out = (TSL as any).convertToTexture(out); owned.push(out); }
   const preAA = out;
 
   // ---- anti-aliasing ----

@@ -125,3 +125,21 @@ test('in a battle: Menu → Options → Art Style shows the paused scene, and th
   w.assertClean();
 });
 
+test('a style on one layer builds that layer\'s steps only, and the page shows it', async ({ page }, info) => {
+  const w = watchErrors(page);
+  const key = () => page.evaluate(() => (window as any).__game?.stage?.post?.styleKey as string);
+  await page.goto(gameUrl(info, { quality: 'low', test: 'battle', id: 'b_galwyn', lv: 8, styleEnv: 'boldCel', styleActors: 'none' }));
+  await waitForUiText(page, 'Begin Battle');
+  expect(await key()).toContain('env:band,color,edges|actors:|');
+  await page.goto(gameUrl(info, { quality: 'low', test: 'artstyle', styleEnv: 'none', styleActors: 'boldCel' }));
+  await waitForUiText(page, 'Begin Battle');
+  expect(await key()).toContain('env:|actors:band,color,edges|');
+  await page.evaluate(() => { (window as any).__artStyle = (window as any).__openArtStyle(); });
+  await expect(value(page, 'Characters & objects')).toHaveText('Bold Cel');
+  await expect(value(page, 'Environment')).toHaveText('None');
+  // linking the layers takes the environment's style for both
+  await press(page, '.art-style [role=option]:has-text("Same style everywhere")', info);
+  await expect.poll(key).toBe('off');
+  w.assertClean();
+});
+

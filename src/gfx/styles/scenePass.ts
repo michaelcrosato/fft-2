@@ -20,6 +20,9 @@ export interface StyledPass {
   /** view depth (negative in front of the camera) */
   viewZ: any;
   depth: any;
+  /** the scene camera's near and far planes (the pass keeps them current) */
+  near: any;
+  far: any;
 }
 
 /** Turn `scenePass` into the tagged pass. TSL is the three/tsl module. */
@@ -55,6 +58,8 @@ export function tagScenePass(TSL: any, scenePass: any): StyledPass {
     data: scenePass.getTextureNode('data'),
     viewZ: scenePass.getViewZNode(),
     depth: scenePass.getTextureNode('depth'),
+    near: scenePass._cameraNear,
+    far: scenePass._cameraFar,
   };
 }
 

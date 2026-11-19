@@ -18,11 +18,11 @@ export function currentStyleSettings(): StyleSettings {
 /** the player changed the settings on the page: from now on the stored ones count, not the URL's */
 export function dropUrlOverrides() { urlOverrides = false; }
 
-/** ?styleDebug=layer|id|albedo|overlay: a developer's view of the tagged scene pass */
+/** ?styleDebug=layer|id|albedo|overlay|edges: a developer's view of the tagged scene pass */
 export function styleDebugView(): string | null {
   if (typeof location === 'undefined') return null;
   const v = new URLSearchParams(location.search).get('styleDebug');
-  return v && ['layer', 'id', 'albedo', 'overlay'].includes(v) ? v : null;
+  return v && ['layer', 'id', 'albedo', 'overlay', 'edges'].includes(v) ? v : null;
 }
 
 export function currentStylePlan(): StylePlan {
