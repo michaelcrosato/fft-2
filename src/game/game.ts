@@ -109,6 +109,9 @@ export class Game {
     (window as any).__frames = ((window as any).__frames ?? 0) + 1;
   }
 
+  /** draw one new frame even while the Game Menu has the clock paused (the Art Style page's preview) */
+  requestFrame() { this.pausedSize = ''; }
+
   private onResize() {
     const el = renderer.domElement.parentElement!;
     renderer.setSize(el.clientWidth, el.clientHeight);

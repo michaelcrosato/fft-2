@@ -18,6 +18,7 @@ import { Animator, CLIPS, type ClipName } from './gfx/models/anim';
 import type { UnitModel } from './gfx/models/rig';
 import type { Backend } from './gfx/three';
 import type { Object3D } from 'three/webgpu';
+import { currentStylePlan } from './gfx/styles/current';
 import type { JobDef, MonsterShape, Palette } from './data/types';
 
 const q = new URLSearchParams(location.search);
@@ -43,7 +44,7 @@ function triCount(m: UnitModel): number {
   const env = new Environment(scene, terrain, def, (q.get('time') as any) ?? undefined);
   const cam = new TacticsCamera(app.clientWidth / app.clientHeight);
   cam.snap(terrain.center, Math.max(grid.w, grid.d) * 2.4);
-  const post = await createPost(scene, cam.cam);
+  const post = await createPost(scene, cam.cam, currentStylePlan());
   post.setGrade({ warmth: env.mood.warmth, saturation: env.mood.saturation, exposure: env.mood.exposure });
   const anims: Animator[] = [];
   const info = document.getElementById('info')!;

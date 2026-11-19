@@ -6,7 +6,8 @@ import { renderer } from '../gfx/renderer';
 import { TerrainView, HS } from '../gfx/terrain';
 import { Environment } from '../gfx/env';
 import { TacticsCamera } from '../gfx/camera';
-import { createPost, type PostFX } from '../gfx/post';
+import { createPost, restylePost, type PostFX } from '../gfx/post';
+import { currentStylePlan, onStyleChange, restyler } from '../gfx/styles/current';
 import { Vfx } from '../gfx/vfx';
 import { tileMaterial } from '../gfx/materials';
 import { MapGrid, type Cell } from '../battle/grid';
@@ -73,7 +74,9 @@ export class Stage {
   }
 
   async init() {
-    this.post = await createPost(this.scene, this.cam.cam);
+    this.post = await createPost(this.scene, this.cam.cam, currentStylePlan());
+    // the Art Style page changed something: restyle this live scene (docs/PLAN-ART-STYLES.md)
+    this.unbind.push(onStyleChange(this.restyle));
     this.post.setGrade({ warmth: this.env.mood.warmth, saturation: this.env.mood.saturation, exposure: this.env.mood.exposure });
     if (this.def.tint) { const c = new THREE.Color(this.def.tint); this.post.setGrade({ tint: [0.75 + c.r * 0.25, 0.75 + c.g * 0.25, 0.75 + c.b * 0.25] }); }
     this.vfx.onFlash = (c, a) => this.post.flash(c, a);
@@ -81,6 +84,13 @@ export class Stage {
   }
 
   private unbind: Array<() => void> = [];
+
+  /** take the art style in force now: the same pipeline when only uniforms change, else a rebuilt one */
+  readonly restyle = restyler(async () => {
+    const next = await restylePost(this.post, this.scene, this.cam.cam, currentStylePlan());
+    if (this.disposed) { if (next !== this.post) next.dispose(); return; }
+    this.post = next;
+  }, () => !this.disposed);
   /** player camera control (drag, wheel, pinch, gamepad sticks/triggers); off for cinematic-only stages */
   userCamera = true;
   private stickOrbit = false;

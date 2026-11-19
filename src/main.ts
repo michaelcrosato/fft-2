@@ -145,6 +145,15 @@ async function runDebugHooks(game: Game): Promise<boolean> {
     if (which === 'fur') await town.openFurShop(game, node);
     return true;
   }
+  if (test === 'artstyle') {
+    // Options → Art Style over a battle's deployment (the page's e2e checks; docs/PLAN-ART-STYLES.md)
+    game.state = newGame('Rhen', [4, 12]);
+    game.state.roster.forEach((u) => setLevel(u, 8));
+    const { openArtStyle } = await import('./ui/menus/artStyle');
+    (window as any).__openArtStyle = () => openArtStyle(game);
+    await game.runBattle(q.get('id') ?? 'b_galwyn');
+    return true;
+  }
   if (test === 'scene') {
     game.state = newGame('Rhen', [4, 12]);
     await game.playScene(q.get('id') ?? '');

@@ -71,6 +71,13 @@ html.game-mode, .game-mode body, .game-mode #ui, .game-mode #ui * { overscroll-b
   font-family: var(--font-body); font-size: calc(17px * var(--ui-scale));
 }
 .game-menu-shell::backdrop { background: rgba(7, 6, 10, .4); }
+/* Options → Art Style previews on the live scene: the backdrops step aside, a shade stays behind the panel */
+.art-style-preview .game-menu-shell, .art-style-preview .game-menu-shell::backdrop { background: transparent; }
+.screen.art-style .screen-bg { background: linear-gradient(90deg, rgba(0, 0, 0, .72) 0, rgba(0, 0, 0, .5) min(440px, 70vw), rgba(0, 0, 0, 0) min(620px, 92vw)); }
+[dir="rtl"] .screen.art-style .screen-bg { background: linear-gradient(270deg, rgba(0, 0, 0, .72) 0, rgba(0, 0, 0, .5) min(440px, 70vw), rgba(0, 0, 0, 0) min(620px, 92vw)); }
+@media (max-width: 640px) and (orientation: portrait) {
+  .screen.art-style .screen-bg, [dir="rtl"] .screen.art-style .screen-bg { background: linear-gradient(0deg, rgba(0, 0, 0, .75) 0, rgba(0, 0, 0, .55) 46%, rgba(0, 0, 0, 0) 60%); }
+}
 .game-menu-home {
   left: 50%; top: calc(50% + 28px); transform: translate(-50%, -50%);
   width: min(360px, calc(100vw - 48px)); max-height: calc(var(--vh) * 100 - 88px);

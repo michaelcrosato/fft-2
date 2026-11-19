@@ -4,8 +4,10 @@
 import { THREE, NODES } from './three';
 import { renderer, rinfo } from './renderer';
 import type { Scene, Camera } from 'three/webgpu';
-import { tagScenePass, layerOf, idOf, albedoOf, compositeOverlay } from './styles/scenePass';
-import { bandNode, bandScene, bandUniforms, fillBandScene } from './styles/nodes/band';
+import { tagScenePass } from './styles/scenePass';
+import { buildStyleGraph } from './styles/graph';
+import { styleDebugView } from './styles/current';
+import { NO_FRAME, type FramePlan, type StylePlan } from './styles/resolve';
 
 export interface PostFX {
   render(): void;
@@ -15,6 +17,12 @@ export interface PostFX {
   flash(color: string, amount: number): void;
   setSize(): void;
   dispose(): void;
+  /** the art style's graph key this pipeline was built for ('off' without a style) */
+  readonly styleKey: string;
+  /** take a new art style plan; false if it needs another pipeline (see restylePost) */
+  setStyle(plan: StylePlan): boolean;
+  /** the grade and focus in force, to carry over to a rebuilt pipeline */
+  snapshot(): { grade: GradeParams; focus: [number, number] };
 }
 
 export interface GradeParams {
@@ -58,10 +66,10 @@ export function preloadPostEffects() {
   if (NODES) loadEffects().catch(() => { /* the first scene retries and reports it */ });
 }
 
-export async function createPost(scene: Scene, camera: Camera): Promise<PostFX> {
+export async function createPost(scene: Scene, camera: Camera, style?: StylePlan): Promise<PostFX> {
   if (!NODES) return legacyPost(scene, camera);
   try {
-    return await nodePost(scene, camera);
+    return await nodePost(scene, camera, style?.active ? style : null);
   } catch (e) {
     console.warn('[post] node pipeline failed, falling back to direct render', e);
     return legacyPost(scene, camera);
@@ -92,14 +100,33 @@ function overlayFlash(color: string, amount: number) {
 }
 
 function legacyPost(scene: Scene, camera: Camera): PostFX {
+  const grade = { ...DEFAULT_GRADE };
   return {
     render: () => renderer.render(scene, camera),
     setFocus: () => {},
-    setGrade: (g) => { if (g.exposure !== undefined) renderer.toneMappingExposure = g.exposure; },
+    setGrade: (g) => { Object.assign(grade, g); if (g.exposure !== undefined) renderer.toneMappingExposure = g.exposure; },
     flash: overlayFlash,
     setSize: () => {},
     dispose: () => {},
+    // no node pipeline: no art styles (the Art Style page says so)
+    styleKey: 'off',
+    setStyle: () => true,
+    snapshot: () => ({ grade: { ...grade }, focus: [30, 14] }),
   };
+}
+
+/**
+ * Give a live scene a new art style: the same pipeline when only uniforms change, else a new one with
+ * the old grade and focus (the old one is disposed). The caller stores the result.
+ */
+export async function restylePost(old: PostFX, scene: Scene, camera: Camera, plan: StylePlan): Promise<PostFX> {
+  if (old.setStyle(plan)) return old;
+  const snap = old.snapshot();
+  const next = await createPost(scene, camera, plan);
+  next.setGrade(snap.grade);
+  next.setFocus(snap.focus[0], snap.focus[1]);
+  old.dispose();
+  return next;
 }
 
 /** walk a node graph and dispose every node that owns a render target (RTT and pass nodes) */
@@ -114,13 +141,16 @@ function disposeRenderTargetNodes(root: unknown) {
   visit(root);
 }
 
-async function nodePost(scene: Scene, camera: Camera): Promise<PostFX> {
+async function nodePost(scene: Scene, camera: Camera, style: StylePlan | null): Promise<PostFX> {
   const TSL = await import('three/tsl');
   const {
     pass, mrt, output, normalView, uniform, vec3, vec4, float, Fn, mix, dot, smoothstep, screenUV, time, hash,
     renderOutput, sample, builtinAOContext, packNormalToRGB, unpackRGBToNormal, clamp, max,
   } = TSL as any;
   const s = rinfo.settings;
+  // an art style's frame-wide overrides (Decision 5): no SSAO, less depth of field, grain, vignette or bloom
+  const frame: FramePlan = style?.frame ?? NO_FRAME;
+  const useAO = s.ao && frame.ao, useDof = s.dof && frame.dof > 0;
   // fetch the effects together rather than one round trip after another
   const [ssaoMod, bloomMod, dofMod, aaMod] = await loadEffects();
   const pipeline = new THREE.RenderPipeline(renderer as any);
@@ -140,17 +170,20 @@ async function nodePost(scene: Scene, camera: Camera): Promise<PostFX> {
     focalLength: uniform(14),
     bokeh: uniform(1.2),
   };
+  // multipliers from the art style's frame plan (only in a styled graph, so None draws today's shader)
+  const fm = style ? { grain: uniform(frame.grain), vignette: uniform(frame.vignette), dof: uniform(frame.dof) } : null;
+  const grade = { ...DEFAULT_GRADE };
+  const focus: [number, number] = [30, 14];
 
   // ---- scene pass (+ optional AO pre-pass) ----
   const scenePass = pass(scene, camera);
   // every node that owns render targets; RenderPipeline.dispose() frees only its own quad
   const owned: any[] = [scenePass];
-  // SPIKE (docs/PLAN-ART-STYLES.md, Phase 1): ?styleSpike=band|layer|id|normal|albedo|overlay
-  const spike = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('styleSpike') : null;
-  const styled = spike ? tagScenePass(TSL, scenePass) : null;
-  if (styled) (window as any).__styleSpike = { scenePass, renderer };
+  // an art style: the tagged scene pass (styles/scenePass.ts) and the style's own graph (styles/graph.ts)
+  const styled = style ? tagScenePass(TSL, scenePass) : null;
+  const graph = style && styled ? buildStyleGraph(TSL, style, { styled, scene, camera, debug: styleDebugView() }) : null;
   let aoNode: any = null;
-  if (s.ao) {
+  if (useAO) {
     const prePass = pass(scene, camera);
     owned.push(prePass);
     prePass.name = 'prepass';
@@ -168,48 +201,26 @@ async function nodePost(scene: Scene, camera: Camera): Promise<PostFX> {
     scenePass.contextNode = builtinAOContext(aoNode.getTextureNode().sample(screenUV).r);
   }
   let color: any = scenePass.getTextureNode('output');
-  let debugOut: any = null;
-  if (styled) {
-    const data = styled.data.sample(screenUV), ov = styled.overlay.sample(screenUV), glow = styled.glow.sample(screenUV);
-    const albedo = albedoOf(data);
-    const layer = layerOf(TSL, data);
-    if (spike === 'band') {
-      const sc = bandScene(TSL);
-      fillBandScene(sc, scene);
-      const env = bandUniforms(TSL), actors = bandUniforms(TSL);
-      env.strength.value = 1; actors.strength.value = 1;
-      env.tint.value.set(0.62, 0.66, 0.95); actors.tint.value.set(0.62, 0.66, 0.95);
-      actors.highlight.value = 1;
-      color = bandNode(TSL, { color: styled.color.sample(screenUV), albedo, viewZ: styled.viewZ, layer, scene: sc, env, actors });
-    }
-    color = compositeOverlay(TSL, color, ov, glow);
-    const { vec3, vec4: v4, select: sel, float: f1, fract, sin } = TSL as any;
-    if (spike === 'layer') {
-      const pal = sel(layer.equal(1), vec3(0.2, 0.75, 0.25), sel(layer.equal(2), vec3(0.9, 0.2, 0.2), sel(layer.equal(0), vec3(0.15), sel(layer.equal(3), vec3(0.2, 0.3, 1), vec3(1, 0, 1)))));
-      debugOut = v4(pal.mul(f1(0.75)).add(vec3(albedo.mul(0.25))), 1);
-    }
-    if (spike === 'id') { const id = idOf(TSL, data); debugOut = v4(fract(sin(id.mul(12.9898)).mul(43758.5453)), fract(sin(id.mul(78.233)).mul(12543.1)), fract(id.mul(0.37)), 1); }
-    if (spike === 'albedo') debugOut = v4(vec3(albedo), 1);
-    if (spike === 'overlay') debugOut = v4(ov.rgb.add(glow.rgb).add(vec3(ov.a.mul(0.25))), 1);
-  }
+  // banded light and the overlays laid over, in linear light before bloom
+  if (graph) color = graph.linear(color);
 
   // ---- bloom (HDR threshold) ----
   let bloomNode: any = null;
   if (s.bloom) {
-    bloomNode = bloomMod.bloom(color, DEFAULT_GRADE.bloom, 0.45, 0.82);
+    bloomNode = bloomMod.bloom(color, DEFAULT_GRADE.bloom * frame.bloom, 0.45, 0.82);
     owned.push(bloomNode);
     color = color.add(bloomNode);
   }
 
   // ---- depth of field (miniature / diorama feel) ----
-  if (s.dof) {
-    color = dofMod.dof(color, scenePass.getViewZNode(), u.focus, u.focalLength, u.bokeh);
+  if (useDof) {
+    color = dofMod.dof(color, scenePass.getViewZNode(), u.focus, u.focalLength, fm ? u.bokeh.mul(fm.dof) : u.bokeh);
     owned.push(color);
   }
 
   // ---- tone map, then grade in display space ----
   let out: any = renderOutput(color.mul(u.exposure));
-  if (s.grading) {
+  if (s.grading && !graph) {
     const grade = Fn(([c]: any[]) => {
       let col = c.rgb.toVar();
       // warmth: push reds up, blues down
@@ -236,6 +247,34 @@ async function nodePost(scene: Scene, camera: Camera): Promise<PostFX> {
     out = grade(out);
   }
 
+  else if (s.grading && graph && fm) {
+    // a styled frame: the colour grade, the style's display steps, then vignette, grain and flash on top
+    const gradeColor = Fn(([c]: any[]) => {
+      let col = c.rgb.toVar();
+      col = col.mul(vec3(float(1).add(u.warmth.mul(0.08)), float(1).add(u.warmth.mul(0.02)), float(1).sub(u.warmth.mul(0.09))));
+      col = col.mul(u.tint);
+      col = col.sub(0.5).mul(u.contrast).add(0.5);
+      const l = dot(col, vec3(0.2126, 0.7152, 0.0722));
+      col = mix(vec3(l), col, u.saturation);
+      col = mix(col.mul(vec3(0.96, 0.99, 1.05)), col, smoothstep(0.0, 0.5, l));
+      return vec4(col, c.a);
+    });
+    const gradeFinish = Fn(([c]: any[]) => {
+      let col = c.rgb.toVar();
+      const d = screenUV.sub(0.5).mul(vec3(1.0, 0.85, 0).xy).length();
+      col = col.mul(float(1).sub(smoothstep(0.35, 0.95, d).mul(u.vignette.mul(fm.vignette))));
+      const px = screenUV.mul(vec3(1920, 1080, 0).xy).floor();
+      const g = hash(px.x.add(px.y.mul(4096)).add(hash(time.mul(60).floor()).mul(1e6))).sub(0.5).mul(u.grain.mul(fm.grain));
+      col = col.add(g);
+      col = mix(col, u.flashColor, u.flashAmt);
+      return vec4(clamp(col, 0, 1), c.a);
+    });
+    out = gradeFinish(graph.display(gradeColor(out)));
+  } else if (graph) {
+    out = graph.display(out);
+  }
+  const preAA = out;
+
   // ---- anti-aliasing ----
   if (s.aa === 'smaa') {
     out = aaMod.smaa(out);
@@ -244,12 +283,17 @@ async function nodePost(scene: Scene, camera: Camera): Promise<PostFX> {
     out = aaMod.fxaa(out);
     owned.push(out);
   }
-  if (debugOut) out = debugOut;
+  // Pixel Art cells come after anti-aliasing, sampled from before it, so they stay crisp
+  if (graph) out = graph.final(preAA, out);
+  if (graph?.debug) out = graph.debug;
   pipeline.outputNode = out;
 
   let flashT = 0;
   let last = performance.now();
+  let bloomMul = frame.bloom;
+  let disposed = false;
   return {
+    styleKey: style?.key ?? 'off',
     render() {
       const now = performance.now();
       const dt = Math.min(0.1, (now - last) / 1000);
@@ -258,10 +302,12 @@ async function nodePost(scene: Scene, camera: Camera): Promise<PostFX> {
       pipeline.render();
     },
     setFocus(distance: number, range = 14) {
+      focus[0] = distance; focus[1] = range;
       u.focus.value = distance;
       u.focalLength.value = range;
     },
     setGrade(g) {
+      Object.assign(grade, g);
       if (g.exposure !== undefined) u.exposure.value = g.exposure;
       if (g.saturation !== undefined) u.saturation.value = g.saturation;
       if (g.contrast !== undefined) u.contrast.value = g.contrast;
@@ -269,7 +315,7 @@ async function nodePost(scene: Scene, camera: Camera): Promise<PostFX> {
       if (g.vignette !== undefined) u.vignette.value = g.vignette;
       if (g.grain !== undefined) u.grain.value = g.grain;
       if (g.tint) u.tint.value.set(g.tint[0], g.tint[1], g.tint[2]);
-      if (g.bloom !== undefined && bloomNode) bloomNode.strength.value = g.bloom;
+      if (g.bloom !== undefined && bloomNode) bloomNode.strength.value = g.bloom * bloomMul;
       if (g.dofScale !== undefined) u.bokeh.value = 1.2 * g.dofScale;
     },
     flash(colorHex: string, amount: number) {
@@ -280,7 +326,21 @@ async function nodePost(scene: Scene, camera: Camera): Promise<PostFX> {
       u.flashAmt.value = flashT;
     },
     setSize() { /* pipeline tracks renderer size */ },
+    setStyle(plan: StylePlan) {
+      const key = plan.active ? plan.key : 'off';
+      if (key !== (style?.key ?? 'off')) return false;
+      if (!plan.active || !graph || !fm) return true;
+      graph.update(plan);
+      fm.grain.value = plan.frame.grain; fm.vignette.value = plan.frame.vignette; fm.dof.value = plan.frame.dof;
+      bloomMul = plan.frame.bloom;
+      if (bloomNode) bloomNode.strength.value = grade.bloom * bloomMul;
+      return true;
+    },
+    snapshot() { return { grade: { ...grade, tint: [...grade.tint] as [number, number, number] }, focus: [focus[0], focus[1]] }; },
     dispose() {
+      // a restyle that loses a race with a scene change may dispose twice
+      if (disposed) return;
+      disposed = true;
       // effects like FXAA/SMAA/DOF wrap their input in hidden render-to-texture nodes with full-screen targets
       disposeRenderTargetNodes(pipeline.outputNode);
       pipeline.dispose?.();

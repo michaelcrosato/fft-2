@@ -11,7 +11,7 @@ Update the Status table as phases land, and record what the spike and later phas
 |---|---|
 | 0 — Baseline | done: `tools/style-shots.mjs`, reference set in `tools/out/styles/baseline/` |
 | 1 — Spike: the tagged scene pass | done: proven on WebGL 2 (Chromium, Firefox) and WebGPU; see the Decision log |
-| 2 — Framework, settings and the Art Style page | not started |
+| 2 — Framework, settings and the Art Style page | done: `src/gfx/styles/`, the settings, the page (reached by `?test=artstyle` until Phase 3) |
 | 3 — Light sources and lamps | not started |
 | 4 — Bold Cel | not started |
 | 5 — Bright Toon | not started |
@@ -123,7 +123,7 @@ assets or interface.
 8. **Everything is made in code.** Paper, canvas, hatching, dither matrices and palettes come
    from TSL noise or code, never from downloaded or committed image files (52in1's rules).
 9. **Defaults change nothing.** Both layers start at None, so current players, 52in1 sessions and
-   the catalogue covers look as they do today. A style, once chosen, starts at 75% strength.
+   the catalogue covers look as they do today. A style, once chosen, starts at 80% strength (strength moves in tenths).
 10. **Portraits stay as they are** in this pass (cached images of their own scene).
 
 ## Layers
@@ -149,7 +149,7 @@ values fall back to the defaults, so old saves load:
 |---|---|---|
 | `styleLinked` | `true` (one style for the whole view) or `false` (a style per layer) | `true` |
 | `styleEnv`, `styleActors` | `none`, `boldCel`, `brightToon`, `inkWash`, `pixel`, `flatPaint` | `none` |
-| `styleEnvStrength`, `styleActorsStrength` | 0–1 in steps of 0.1 | 0.75 |
+| `styleEnvStrength`, `styleActorsStrength` | 0–1 in steps of 0.1 | 0.8 |
 | `styleBands` | `auto` (the style's own), 2, 3, 4, 5 | `auto` |
 | `styleOutline` | `auto`, `off`, `thin`, `medium`, `thick` | `auto` |
 | `lights` | `auto` (the style's own; with None, today's rig: sun and rim on battle maps, the sun alone on the world map), 1 (sun), 2 (sun and rim), 3 (sun, rim and a front fill that follows the camera) | `auto` |
@@ -420,3 +420,23 @@ None reference set is in `tools/out/styles/baseline/`.
   `./tools/browser-test.sh` (Docker) and CI's Playwright image.
 - *Flat Paint*: the owner named *Sable* when setting the goal, so its thin dark line art is on by
   default.
+
+**2026-11-19 — Phase 2.** The framework is in `src/gfx/styles/`: `types.ts` (ids, settings, URL
+overrides), `resolve.ts` (settings → a style plan, pure), `presets.ts` (one entry per style, filled
+in by Phases 4–8), `graph.ts` (the post graph's three stages), `current.ts` (the plan in force, the
+change listeners, `?styleDebug=layer|id|albedo|overlay`). Decisions taken on the way:
+
+- A plan's *key* names its steps per layer and the frame-wide switches (SSAO, depth of field, Pixel
+  Art overlays). `PostFX.setStyle()` takes a plan with the same key as uniforms; another key goes
+  through `restylePost()`, which builds a new pipeline with the old grade and focus and disposes the
+  old one. Restyles of a scene are serialized, and one that loses a race with a scene change
+  disposes its result.
+- With no style, `createPost()` gets no plan and builds today's graph: no MRT, no extra uniforms
+  (the e2e check reads `stage.post.styleKey === 'off'`).
+- URL overrides apply until the player changes something on the page; from then the stored
+  settings count. The page shows what the view shows, overrides included.
+- Strength is stored in tenths, so the default is 80%, not 75%.
+- Line ids are lowercase: a style id maps to its line id with `styleLineId()` (`boldCel` → `bold_cel`).
+- The page docks left (right in right-to-left languages), or to the bottom half on a phone in
+  portrait, over a shade that leaves the scene visible; `Game.requestFrame()` redraws the paused
+  frame after each change.
