@@ -6,7 +6,7 @@
 // Each step exists if a layer needs it (the plan's key); its parameters are uniforms per layer, so a
 // change of strength or of a style with the same steps never rebuilds the pipeline.
 import { THREE } from '../three';
-import { renderer } from '../renderer';
+import { renderer, rinfo } from '../renderer';
 import type { LayerPlan, StylePlan } from './resolve';
 import { albedoOf, compositeOverlay, idOf, layerOf, overlayMask, type StyledPass } from './scenePass';
 import { bandNode, bandScene, bandUniforms, fillBandScene, type BandUniforms } from './nodes/band';
@@ -171,7 +171,9 @@ export function buildStyleGraph(TSL: any, plan: StylePlan, inp: StyleInputs): St
       if (hatch && world) col = hatchNode(TSL, { color: col, data, world: world.world, worldN: world.worldN, env: hatch.env, actors: hatch.actors, envStrength: strength.env, actorsStrength: strength.actors, cover });
       // brush wobble: a slow noise over the world, so a line's width swells and thins along it
       const wobbleNoise = world ? TSL.mx_noise_float(world.world.mul(1.7)).mul(0.6).add(0.85) : undefined;
-      if (edges && edgeMask) col = edgeLinesNode(TSL, { color: col, mask: edgeMask, ratio, env: edges.env, actors: edges.actors, envStrength: strength.env, actorsStrength: strength.actors, cover, wobbleNoise });
+      // the outline's sample rings: one on Low (9 samples), two above (17)
+      const rings = rinfo?.quality === 'low' || plan.economy ? [1] : [0.5, 1];
+      if (edges && edgeMask) col = edgeLinesNode(TSL, { color: col, mask: edgeMask, ratio, env: edges.env, actors: edges.actors, envStrength: strength.env, actorsStrength: strength.actors, cover, wobbleNoise, rings });
       return col;
     },
     final: (preAA, aa) => (pixel

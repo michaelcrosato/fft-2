@@ -251,3 +251,18 @@ describe("Bold Cel", () => {
 		expect(resolveStyle(S({ styleLinked: false, styleEnv: "boldCel", styleActors: "none", styleEnvStrength: 0.3 }), ctx).key).toBe(envOnly.key);
 	});
 });
+
+describe("Bright Toon", () => {
+	it("bands softly with cool shadows and warm light, and draws no outlines unless asked (then coloured)", () => {
+		const p = resolveStyle(S({ styleEnv: "brightToon", styleEnvStrength: 1 }), ctx);
+		expect(stepsOf(p.env)).toEqual(["band", "color"]);
+		expect(p.env.band!.softness).toBeGreaterThan(0.02);
+		expect(p.env.band!.tint[2]).toBeGreaterThan(p.env.band!.tint[0]);
+		expect(p.env.band!.litTint![0]).toBeGreaterThan(p.env.band!.litTint![2]);
+		expect(p.lights).toBe(3);
+		expect(p.frame.bloom).toBeGreaterThan(1);
+		const lined = resolveStyle(S({ styleEnv: "brightToon", styleOutline: "thin" }), ctx);
+		expect(stepsOf(lined.env)).toEqual(["band", "color", "edges"]);
+		expect(lined.env.edges!.fill).toBeGreaterThan(0.5);
+	});
+});

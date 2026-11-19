@@ -11,6 +11,8 @@ export interface PresetContext {
   outline: OutlineChoice;
   quality: Quality;
   mobile: boolean;
+  /** 1: automatic quality asked for a cheaper style */
+  economy: number;
 }
 
 export interface StylePreset {
@@ -107,7 +109,7 @@ export const PRESETS: Partial<Record<StyleId, StylePreset>> = {
     lights: 2,
     layer: (c) => {
       const s = c.strength;
-      const brush = c.quality === 'low' ? 2.5 : c.quality === 'medium' ? 3.5 : 4.5;
+      const brush = (c.quality === 'low' ? 2.5 : c.quality === 'medium' ? 3.5 : 4.5) * (c.economy ? 0.6 : 1);
       return {
         band: { bands: bandCount(c.bands, 2), softness: 0.03, floor: at(s, 0.85, 0.66), tint: [0.84, 0.82, 1.0], litTint: [1.04, 1.0, 0.95], highlight: -1 },
         color: { saturation: at(s, 1, 0.94), contrast: at(s, 1, 0.94), wash: 0, washTint: [1, 1, 1] },

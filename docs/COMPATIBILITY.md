@@ -110,3 +110,19 @@ test reparses the unchanged viewport meta declaration, then asserts both widths
 before checking layout. This is an emulator workaround, not a product CSS change
 or a claim about physical Safari rotation. See Playwright's
 [viewport/screen API](https://playwright.dev/docs/api/class-page#page-set-viewport-size).
+
+## Art styles (November 2026)
+
+Options → Art Style (`docs/PLAN-ART-STYLES.md`) needs the node pipeline: WebGPU, or WebGL 2 through
+`WebGPURenderer`. On WebGL 1 (`three-legacy`) the page shows the styles as unavailable and the frame
+stays as it is; Light sources and Lamps still work there. The tagged scene pass uses four outputs (the
+minimum WebGL 2 guarantees) and the material's own blending on each, so it needs no
+`OES_draw_buffers_indexed`.
+
+| Engine | Checked by |
+| --- | --- |
+| Chromium, WebGL 2 | `e2e/art-style.spec.ts` (desktop and phone profiles), `tools/style-shots.mjs` |
+| Chromium, WebGPU | the data buffer read back and the frame-time bench (headless screenshots miss WebGPU canvases here) |
+| Firefox, WebGL 2 | the data buffer read back; `e2e/art-style.spec.ts` in CI |
+| WebKit | `e2e/art-style.spec.ts` in CI and through `./tools/browser-test.sh` |
+
