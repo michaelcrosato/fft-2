@@ -57,10 +57,17 @@ jobs:
       - run: npx playwright install --with-deps chromium
       # software rendering on the runner: low quality, and headed under Xvfb with software GL, which
       # draws several times faster than headless Chromium's SwiftShader
-      - run: xvfb-run -a npx playwright test --headed --project=chromium e2e/boot.spec.ts e2e/languages.spec.ts e2e/a11y.spec.ts e2e/art-style.spec.ts
+      - run: xvfb-run -a npx playwright test --headed --project=chromium e2e/boot.spec.ts e2e/languages.spec.ts e2e/a11y.spec.ts
         env:
           E2E_QUALITY: low
           E2E_WORKERS: 2
+          LIBGL_ALWAYS_SOFTWARE: '1'
+      # the Art Style page and the styles (docs/PLAN-ART-STYLES.md): battles loaded one at a time, so they
+      # don't crowd the sweeps above on the runner
+      - run: xvfb-run -a npx playwright test --headed --project=chromium e2e/art-style.spec.ts
+        env:
+          E2E_QUALITY: low
+          E2E_WORKERS: 1
           LIBGL_ALWAYS_SOFTWARE: '1'
       # 52in1's own harness (dist/ is the e2e build): a parallel round for one, and online versus
       - run: npm run hub:harness -- dist --only parallel --players 1
