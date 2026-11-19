@@ -16,6 +16,7 @@ import type { UnitModel } from '../gfx/models/rig';
 import { markShared, releaseTree } from '../gfx/dispose';
 import { fovFor } from '../gfx/camera';
 import { paintLoading } from '../ui/loading';
+import { setStyleLayer } from '../gfx/styles/layers';
 
 const S = 0.6;            // world units per map unit
 const SIZE = 110;         // map extent in map units (0..100 + margin)
@@ -147,7 +148,7 @@ export class WorldView {
     this.heights = landCache.heights;
     const land = new THREE.Mesh(landCache.geometry, propMaterial({ flat: true, roughness: 0.95 }));
     land.receiveShadow = true; land.castShadow = true;
-    this.scene.add(land);
+    this.scene.add(setStyleLayer(land, 'env'));
     await paintLoading();
     // sea
     const sea = new THREE.Mesh(new THREE.PlaneGeometry(SIZE * S * 3, SIZE * S * 3, 1, 1), waterMaterial('water'));
@@ -156,7 +157,7 @@ export class WorldView {
     sg.setAttribute('shore', new THREE.Float32BufferAttribute(new Array(cnt).fill(0), 1));
     sea.rotation.x = -Math.PI / 2; sea.position.y = 0.02;
     sea.receiveShadow = true;
-    this.scene.add(sea);
+    this.scene.add(setStyleLayer(sea, 'env'));
     // forests & rocks
     const f = new GeoBuilder();
     for (let i = 0; i < 2600; i++) {
@@ -175,7 +176,7 @@ export class WorldView {
     }
     const fm = new THREE.Mesh(f.build(), propMaterial({ flat: true, sway: 0.05 }));
     fm.castShadow = true; fm.receiveShadow = true;
-    this.scene.add(fm);
+    this.scene.add(setStyleLayer(fm, 'env'));
     await paintLoading();
     // roads (flat ribbons following the terrain)
     const rb = new GeoBuilder();
@@ -200,13 +201,13 @@ export class WorldView {
     const roads = new THREE.Mesh(rb.build(), propMaterial({ flat: true, roughness: 1, side: 'double' }));
     roads.receiveShadow = true;
     this.roads.add(roads);
-    this.scene.add(this.roads);
+    this.scene.add(setStyleLayer(this.roads, 'env'));
     // settlements & markers
     for (const n of nodes) this.addNode(n);
   }
 
   private addNode(n: WorldNode) {
-    const g = new THREE.Group();
+    const g = setStyleLayer(new THREE.Group(), 'env');
     const p = this.toWorld(n.pos);
     g.position.copy(p);
     const b = new GeoBuilder();
@@ -247,7 +248,7 @@ export class WorldView {
     ring.rotation.x = -Math.PI / 2;
     ring.position.y = 0.08;
     ring.renderOrder = 3;
-    g.add(ring);
+    g.add(setStyleLayer(ring, 'interface'));
     this.scene.add(g);
     this.markers.set(n.id, { node: n, obj: g, ring, pos: p.clone() });
   }
@@ -266,7 +267,7 @@ export class WorldView {
     this.scene.fog = new THREE.Fog('#9fb8cc', 60, 140);
     // sky dome
     const sky = new THREE.Mesh(new THREE.SphereGeometry(200, 24, 12), new THREE.MeshBasicMaterial({ color: '#8fb0d0', side: THREE.BackSide, fog: false }));
-    this.scene.add(sky);
+    this.scene.add(setStyleLayer(sky, 'env'));
     // soft clouds drifting
     const cl = new GeoBuilder();
     for (let i = 0; i < 22; i++) {
@@ -276,11 +277,11 @@ export class WorldView {
     const clouds = new THREE.Mesh(cl.build(), propMaterial({ flat: true, roughness: 1, transparent: true, opacity: 0.6 }));
     clouds.castShadow = true;
     clouds.name = 'clouds';
-    this.scene.add(clouds);
+    this.scene.add(setStyleLayer(clouds, 'env'));
   }
 
   setParty(model: UnitModel) {
-    const root = new THREE.Group();
+    const root = setStyleLayer(new THREE.Group(), 'actors');
     root.add(model.root);
     model.root.scale.setScalar(1.2);
     this.scene.add(root);

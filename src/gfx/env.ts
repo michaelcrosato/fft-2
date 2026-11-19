@@ -8,6 +8,7 @@ import { HS } from './terrain';
 import { rinfo } from './renderer';
 import type { Scene, DirectionalLight, HemisphereLight, Mesh, Group, PointLight, Color, Object3D } from 'three/webgpu';
 import { hash2 } from '../core/rng';
+import { setStyleLayer } from './styles/layers';
 
 interface Mood {
   sun: string; sunI: number; elev: number; azim: number;
@@ -91,13 +92,13 @@ export class Environment {
     }
     skyGeo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
     const skyMat = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, depthWrite: false, fog: false });
-    this.sky = new THREE.Mesh(skyGeo, skyMat);
+    this.sky = setStyleLayer(new THREE.Mesh(skyGeo, skyMat), 'env');
     this.sky.renderOrder = -10;
     scene.add(this.sky);
     scene.background = new THREE.Color(m.skyHorizon);
     scene.fog = new THREE.Fog(m.fog, m.fogNear + span, m.fogFar + span);
     if (m.stars) this.addStars();
-    this.backdrop = new THREE.Group();
+    this.backdrop = setStyleLayer(new THREE.Group(), 'env');
     this.buildBackdrop(def.backdrop ?? defaultBackdrop(def.theme), terrain, def.theme);
     scene.add(this.backdrop);
     // point lights from props (limit for performance)
@@ -126,11 +127,11 @@ export class Environment {
     g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
     const pts = new THREE.Points(g, new THREE.PointsMaterial({ color: '#dfe8ff', size: 0.6, sizeAttenuation: true, fog: false, transparent: true, opacity: 0.9 }));
     pts.renderOrder = -9;
-    this.scene.add(pts);
+    this.scene.add(setStyleLayer(pts, 'env'));
     // moon
     const moon = new THREE.Mesh(new THREE.SphereGeometry(4, 16, 12), new THREE.MeshBasicMaterial({ color: '#f4f0e0', fog: false }));
     moon.position.set(-60, 70, -90);
-    this.scene.add(moon);
+    this.scene.add(setStyleLayer(moon, 'env'));
   }
 
   private buildBackdrop(kind: string, terrain: TerrainView, theme: MapTheme) {

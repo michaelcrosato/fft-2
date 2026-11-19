@@ -9,8 +9,8 @@ Update the Status table as phases land, and record what the spike and later phas
 
 | Phase | State |
 |---|---|
-| 0 — Baseline | not started |
-| 1 — Spike: the tagged scene pass | not started |
+| 0 — Baseline | done: `tools/style-shots.mjs`, reference set in `tools/out/styles/baseline/` |
+| 1 — Spike: the tagged scene pass | done: proven on WebGL 2 (Chromium, Firefox) and WebGPU; see the Decision log |
 | 2 — Framework, settings and the Art Style page | not started |
 | 3 — Light sources and lamps | not started |
 | 4 — Bold Cel | not started |
@@ -33,13 +33,12 @@ over the number of light sources and similar knobs:
 | **Bright Toon** (`brightToon`) | cel-shaded like *The Legend of Zelda: The Wind Waker* | two tones with a soft terminator; cool blue-violet shadows and warm light; a bright, saturated palette; no black outlines; a little more bloom |
 | **Ink Wash** (`inkWash`) | stylized ink shading | brush outlines that wobble and taper; hatching in the shadows that stays on the surfaces; paper grain; muted ink-and-wash colour |
 | **Pixel Art** (`pixel`) | pixel art | the view drawn in cells of 2–8 screen pixels; a limited palette with ordered dithering; a one-cell dark outline; crisp edges |
-| **Flat Paint** (`flatPaint`) | flat paint shading, "like that indie game a couple of years ago" | flat colour fields with one or two soft value steps; brush-smoothed surfaces (a Kuwahara filter); canvas grain; distance haze in layers; optional coloured outlines |
+| **Flat Paint** (`flatPaint`) | flat paint shading like *Sable* (the owner named it when setting the goal) | flat colour fields with one or two value steps; thin dark line art; brush-smoothed surfaces (a Kuwahara filter); canvas grain; distance haze in layers |
 
 The reference titles appear in this plan only. The game, its ids, code, lines and commit messages
 use the names in the first column. The styles are general techniques (cel and toon shading, ink,
 pixel art, flat paint) applied to this game's own art; they never copy another game's characters,
-assets or interface. The Flat Paint reference was not named, so the look is defined by what it
-does, and *Open questions* asks which game it was.
+assets or interface.
 
 ## What we found
 
@@ -91,21 +90,25 @@ does, and *Open questions* asks which game it was.
 ## Decisions
 
 1. **Styles are drawn in screen space over a tagged scene pass.** While a style is on, the scene
-   pass writes extra MRT outputs: `tag` (the layer and an 8-bit object id), the view-space
-   `normal` and `albedo` (`diffuseColor`). Each style is a set of nodes in `post.ts`'s graph
-   that read them. This covers every material as it is (terrain, water, swaying props,
+   pass writes four MRT outputs (`src/gfx/styles/scenePass.ts`): `output` (the colour without
+   overlays), `overlay` (interface and effects), `glow` (additive glows) and `data` (√ of the
+   albedo's luminance, the layer and a 5-bit object id, a write flag). Every output blends as the
+   drawing material does. Normals for outlines come from depth (`getNormalFromDepth`). Each
+   style is a set of nodes in `post.ts`'s graph that read them. This covers every material as it is (terrain, water, swaying props,
    monsters), keeps the material cache, needs no material variants or recompiles when a style
    changes, and makes mix and match a per-pixel mask. Toon material variants keyed by layer are
    the fallback, used only if Phase 1 shows that screen-space banding can't look right.
-2. **Banded light comes from a ratio.** Lighting = scene colour ÷ albedo, per channel. Its
-   luminance is quantized into N bands with a softness, shadows take the style's tint, and the
-   result is multiplied back onto the albedo. The pass undoes the linear fog before banding and
+2. **Banded light comes from a ratio.** Light = the colour's luminance ÷ the albedo's, relative
+   to the scene's fully lit level (sun plus sky, through Lambert's 1/π). It is quantized into N
+   bands with a softness, shadows take the style's tint, and the colour is scaled so its light
+   lands on its band (hue and albedo kept). The pass undoes the linear fog before banding and
    reapplies it after (its colour, near and far are known), so distant terrain bands correctly.
    Styles that want no highlights clip the specular part.
 3. **Each object carries its layer**: `userData.styleLayer` on a builder's root, inherited by
    its children and read through a per-object uniform. Anything untagged is drawn unstyled, and
    a unit test fails if a scene builder adds an untagged mesh. See *Layers*.
-4. **Order in the frame**: scene pass → banding (linear light) → bloom → depth of field → tone
+4. **Order in the frame**: scene pass → banding (linear light) → overlays and glows laid over →
+   bloom → depth of field → tone
    mapping → colour grade (warmth, tint, contrast, saturation, split toning) → outlines,
    hatching, paint, paper and palette → vignette, grain and flash → anti-aliasing → Pixel Art
    cells (sampled from before anti-aliasing, so they stay crisp). On Low there is no grade
@@ -129,13 +132,13 @@ does, and *Open questions* asks which game it was.
 |---|---|---|
 | **Environment** | terrain, water, grass, map props and decor, backdrop scenery, sky, stars and moon; the world map's land, sea, forests, roads, towns and clouds | `TerrainView.group`, `Environment` (sky, backdrop, stars), `WorldView` |
 | **Characters & objects** | units (humanoids and monsters) with their weapons and shields, crystals and chests, cutscene actors, the world map's party token | `UnitView.root` (including `becomeCrystal`), `WorldView.party.root` |
-| **Effects** | spells, hit sparks, weather | `Vfx`; never banded, outlined or painted, but pixelated with their layer when it is Pixel Art (spells with Characters & objects, weather with Environment) |
-| **Interface** (unstyled) | tile highlights, cursor, goal and charge markers, team rings, blob shadows, status badges, the world map's node rings | `Stage` tile meshes; `UnitView` marker, blob and badges; `WorldView` rings |
+| **Effects** | spells, hit sparks, weather (they share particle pools) | `Vfx` pools and transients |
+| **Interface** | tile highlights, cursor, goal and charge markers, team rings, blob shadows, status badges, the world map's node rings; anything untagged | `Stage` tile meshes; `UnitView` marker, blob and badges; `WorldView` rings |
 
-Transparent overlays must not overwrite the tag of what lies beneath them: a move highlight on
-Pixel Art terrain should still show Pixel Art terrain. Phase 1 picks the mechanism: an MRT blend
-mode that keeps the destination for transparent draws, or an opaque-only data prepass (shared
-with SSAO's prepass when both run).
+Effects, interface and every additive glow are *overlays*: they are drawn into the `overlay` and
+`glow` outputs, never banded, outlined or painted, and laid over the styled frame. They take only
+Pixel Art's cells, when the Environment is Pixel Art. They leave the data of the surface beneath
+them alone, so a move highlight on Pixel Art terrain still shows Pixel Art terrain under it.
 
 ## The settings
 
@@ -198,9 +201,9 @@ What each style does at 100%, and what its Strength scales from 0% (no change) t
 
 | | Bold Cel | Bright Toon | Ink Wash | Pixel Art | Flat Paint |
 |---|---|---|---|---|---|
-| Light bands | 2 with a hard edge, plus a highlight band from the specular | 2 with a soft edge | 3, which drive the hatching | 3, then the palette | 2, soft, highlights clipped |
+| Light bands | 2 with a hard edge, plus a highlight band from the specular | 2 with a soft edge | 3, which drive the hatching | 3, then the palette | 2, nearly flat, highlights clipped |
 | Shadows | darker, shifted toward blue-violet | cool blue-violet, lifted | ink grey on paper | from the palette | lifted, with a warm/cool shift |
-| Outlines | black, 2–5 px, silhouettes and creases | none (thin and coloured if the player sets them) | brush lines of 1–4 px that wobble and taper, anchored to the world | one dark cell on silhouettes | a darker shade of the fill, off by default |
+| Outlines | black, 2–5 px, silhouettes and creases | none (thin and coloured if the player sets them) | brush lines of 1–4 px that wobble and taper, anchored to the world | one dark cell on silhouettes | thin, dark line art: a near-black shade of the fill, 1–2 px |
 | Surface | saturation +30% | saturation +20%, warm light | cross-hatching in the dark bands (world-space, so it doesn't swim), paper grain, desaturated | cells of 2–8 px, 64 down to 16 colours, 4×4 Bayer dither | Kuwahara brush, canvas grain, distance haze |
 | Strength scales | edge hardness, outline width, saturation | terminator softness, shadow tint, saturation | line weight, hatching density, desaturation | cell size, palette size | brush radius, flattening, grain |
 | Frame-wide, when on the Environment | no SSAO, no grain | bloom +20%, no SSAO | no SSAO, no depth of field, no grain, light vignette | no SSAO, no depth of field, no grain | grain becomes canvas, light depth of field |
@@ -374,9 +377,8 @@ canvas, haze). For each:
 
 The plan's defaults stand until the owner answers.
 
-1. Which game is the Flat Paint reference? Default: soft painterly fields without outlines. If
-   it was a flat-colour game with line art (such as *Sable* or *Chants of Sennaar*), coloured
-   outlines go on by default.
+1. ~~Which game is the Flat Paint reference?~~ Answered: *Sable*. Flat Paint keeps thin dark
+   line art on by default.
 2. Should spells and weather take more of the styles than pixelation? Default: no.
 3. Should portraits follow the Characters & objects style? Default: not in this pass.
 4. Pixel Art's palette: per-channel steps (the default), or a fixed retro palette as an extra
@@ -384,4 +386,37 @@ The plan's defaults stand until the owner answers.
 
 ## Decision log
 
-*(Phase 1 and later phases record their decisions here, with dates.)*
+**2026-11-19 — Phase 0.** `tools/style-shots.mjs` drives the production build into a battle's
+first move choice (units, team rings, the move range, the cursor), the title over the world map
+and a cutscene, with the style URL overrides. Battles open with dialogue, so it advances it. The
+None reference set is in `tools/out/styles/baseline/`.
+
+**2026-11-19 — Phase 1, the spike.** Decision 1 holds, with these changes from the first draft:
+
+- *One tag per object, on shared materials*: a `uniform(vec4).onObjectUpdate()` reads the
+  nearest tagged ancestor before each draw. Counting the `data` buffer of `b_galwyn` through
+  `readRenderTargetPixelsAsync`: WebGL 2 in Chromium 913,939 environment and 7,661 character
+  pixels, WebGPU 914,017 and 7,583, Firefox (WebGL 2, Xvfb) 914,033 and 7,567, the same six unit
+  ids in all three, and no interface pixels: the rings, highlights and cursor left the surface
+  data beneath them alone. Shared `propMaterial()` instances split correctly by object.
+- *Transparent overlays*: per-output blend modes need `OES_draw_buffers_indexed` on WebGL, and a
+  premultiplied blend can't clear an overlay behind an opaque wall (alpha 1 turns it black: the
+  first try blacked out the canals). So every output now blends as the material does: opaque
+  draws overwrite all outputs in both backends (which also hides overlays behind walls), overlays
+  write zero into `output` and flag 0 into `data`. Additive glows go to their own `glow` output,
+  so they add over the styled frame instead of darkening it.
+- *Four outputs*, the WebGL 2 minimum: albedo is only its luminance (the banded colour is the lit
+  colour times a factor, so per-channel albedo isn't needed), and normals come from depth.
+- *Ratio banding* reads right on the town by day (water, highlights), the storm (fog, rain), the
+  void (additive vortex, torches) and the interior. Fog is undone and redone; light above fully
+  lit becomes a highlight band, or is kept, or clipped, per style.
+- *Cost* (`tools/style-bench.mjs`, `b_galwyn` deployment, Medium, software rendering): None
+  113 ms a frame, the tagged pass with banding 148 ms (+31%) on WebGL 2; 123 and 164 ms (+33%)
+  on WebGPU. Software rendering is bound by pixels written, which is what the extra outputs add;
+  Phase 9 sets the budget against these numbers.
+- *Testing limits found*: headless screenshots can't capture a WebGPU canvas here (the tool
+  writes blank frames), so WebGPU is checked by buffer read-back and frame time; WebKit on this
+  host doesn't reach a battle's deployment in 150 s even at None, so WebKit runs through
+  `./tools/browser-test.sh` (Docker) and CI's Playwright image.
+- *Flat Paint*: the owner named *Sable* when setting the goal, so its thin dark line art is on by
+  default.

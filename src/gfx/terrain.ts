@@ -11,6 +11,7 @@ import { buildProp, PropBuckets } from './props';
 import type { Group, Mesh, Vector3 } from 'three/webgpu';
 import { rinfo } from './renderer';
 import { releaseTree } from './dispose';
+import { setStyleLayer } from './styles/layers';
 
 export const HS = 0.4;        // world units per height step (h)
 export const LIP = 0.09;       // grass lip thickness
@@ -85,7 +86,7 @@ export class TerrainView {
   constructor(grid: MapGrid) {
     this.grid = grid;
     this.theme = grid.def.theme;
-    this.group = new THREE.Group();
+    this.group = setStyleLayer(new THREE.Group(), 'env');
     this.group.name = 'terrain';
     let minH = Infinity;
     for (const c of grid.cells) if (!c.hole) minH = Math.min(minH, c.h);
