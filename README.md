@@ -118,9 +118,9 @@ one kind: **Options → Controller → Button prompts**).
 **Options → Art Style** (from the title or the in-game Menu) changes how the 3D view is drawn, and shows
 each change at once on the scene beside the panel:
 
-- **Styles**: *None* (the usual look), **Bold Cel** (thick black outlines, two flat tones, strong colour)
-  and **Bright Toon** (soft two-tone shading, cool shadows, sunny colour). Pixel Art, Ink Wash and Flat
-  Paint follow (*docs/PLAN-ART-STYLES.md*).
+- **Styles**: *None* (the usual look), **Bold Cel** (thick black outlines, two flat tones, strong colour),
+  **Bright Toon** (soft two-tone shading, cool shadows, sunny colour) and **Pixel Art** (square pixels, a
+  small palette, dithering). Ink Wash and Flat Paint follow (*docs/PLAN-ART-STYLES.md*).
 - **Layers**: *Same style everywhere*, or one style for the **Environment** (ground, buildings, water,
   sky) and another for **Characters & objects** (units, their weapons, crystals, chests). Each layer has
   its own **Strength** (0–100%, in steps of ten; left and right step it).

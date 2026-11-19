@@ -266,3 +266,20 @@ describe("Bright Toon", () => {
 		expect(lined.env.edges!.fill).toBeGreaterThan(0.5);
 	});
 });
+
+describe("Pixel Art", () => {
+	it("draws cells that grow with strength, a palette, an outline the setting controls, and spares the frame's blur", () => {
+		const p = resolveStyle(S({ styleEnv: "pixel", styleEnvStrength: 1 }), ctx);
+		expect(stepsOf(p.env)).toEqual(["band", "pixel"]);
+		expect(p.env.pixel!.cell).toBe(4);
+		expect(p.env.pixel!.levels).toBe(6);
+		expect(resolveStyle(S({ styleEnv: "pixel", styleEnvStrength: 0.1 }), ctx).env.pixel!.cell).toBeLessThan(2.5);
+		expect(resolveStyle(S({ styleEnv: "pixel", styleOutline: "off" }), ctx).env.pixel!.outline).toBe(0);
+		expect(p.frame).toMatchObject({ ao: false, dof: 0, grain: 0 });
+		expect(p.overlayPixel).toBe(true);
+		// on the characters alone: the overlays keep their smooth edges, the frame keeps its blur
+		const actors = resolveStyle(S({ styleLinked: false, styleEnv: "none", styleActors: "pixel" }), ctx);
+		expect(actors.overlayPixel).toBe(false);
+		expect(actors.frame.dof).toBe(1);
+	});
+});
