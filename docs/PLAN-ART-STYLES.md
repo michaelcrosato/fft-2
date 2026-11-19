@@ -18,7 +18,7 @@ Update the Status table as phases land, and record what the spike and later phas
 | 6 — Pixel Art | done: cells, palette and dither after anti-aliasing (`nodes/pixel.ts`); matrix, mixes and orbit in `tools/out/styles/pixel*/` |
 | 7 — Ink Wash | done: world-anchored hatching, paper, wobbling brush lines; matrix, mixes and orbit in `tools/out/styles/ink*/` |
 | 8 — Flat Paint | done: layer-aware Kuwahara brush, canvas, haze, thin dark line art; matrix, mixes and orbit in `tools/out/styles/flat*/` |
-| 9 — Performance and automatic quality | not started |
+| 9 — Performance and automatic quality | done: the table is in `docs/REPO_AUDIT.md` (*Pass 5*, Performance) |
 | 10 — Docs, CI and hand-off | not started |
 
 ## The brief
@@ -303,9 +303,10 @@ canvas, haze). For each:
 - `tools/style-bench.mjs`: frame time per style and quality on `b_galwyn` with the camera
   orbiting, in Chromium (software GL, as a relative measure) and on WebGPU where a GPU is
   present.
-- Budget: a style adds at most 25% to None's frame time at the same quality, Flat Paint at most
-  50%. Scaling by quality: the Kuwahara filter at half resolution on Medium and Low, 4-tap
-  edges and a single hatching layer on Low.
+- Budget (revised in Phase 9, see the Decision log): on a GPU a style adds at most 25% to None's
+  frame time at the same quality, Flat Paint at most 50%; software rendering's costs are recorded as
+  the worst case. Scaling by quality: the Kuwahara filter at half resolution on Medium and Low, one
+  ring of outline samples on Low.
 - Automatic quality lowers a style's own costs before it lowers the preset.
 - Record the table in `docs/REPO_AUDIT.md`.
 
@@ -371,7 +372,8 @@ canvas, haze). For each:
 - Taste: whether each style reads as intended, above all Flat Paint against the owner's
   reference (thin timber lines on plaster blot under its brush; a smaller radius keeps them).
 - Real hardware: WebGPU on a desktop GPU, a real iPhone in Safari and an Android phone, for the
-  look and the cost.
+  look and the cost (software rendering, the worst case, costs +45% to +214%; a desktop GPU shows no
+  cost within noise).
 - Whether to shoot new 52in1 covers in a style and send a new package.
 
 ## Open questions
@@ -505,3 +507,16 @@ middle of a shot (the Phase 5–7 matrices may show the lighter, one-ring outlin
 and `style-bench.mjs` now store the chosen quality before the page loads. And this machine's GPU (an
 RTX 3060 Ti through WSL's `/dev/dxg`) is reachable from headless Chromium: ANGLE over GL on Mesa's
 D3D12 driver (`GALLIUM_DRIVER=d3d12`, `style-bench.mjs --gpu`), so Phase 9 measures on real hardware.
+
+**2026-11-19 — Phase 9, performance.** The plan's budget was framed on software rendering "as a
+relative measure", and that measure turned out to be the wrong proxy: SwiftShader pays CPU time for
+every sample of every full-screen pass, while a GPU runs them in parallel. On the RTX 3060 Ti every
+style's median frame time at 4K High is within the noise of None's (13.9–15.9 ms against 16.8 ms),
+so the budget holds on the hardware it is for; software costs +45% to +214% and is recorded as the
+worst case (the table is in `docs/REPO_AUDIT.md`). Single bench passes drifted too much to judge
+(None itself moved 50% within one run: the GPU also drives the Windows desktop, and another project's
+tests shared the CPU), so `style-bench.mjs --repeat N` rotates the order and takes medians. Done for
+slow devices: automatic quality first makes the style lighter, then lowers the preset (Phase 5);
+outlines take one sample ring on Low; Flat Paint's brush runs at half resolution on Medium and Low,
+and when lightened, with its radius halved there so the look holds. A weak phone's own numbers need
+a person with one (*Needs a person*).

@@ -5,7 +5,9 @@
 //
 //   node tools/style-bench.mjs [--configs "none;style=boldCel;styleEnv=pixel&styleActors=none"]
 //        [--quality medium] [--renderer webgl2] [--seconds 6] [--battle b_galwyn] [--webgpu] [--json FILE]
-//        [--gpu] [--size 1920x1080] [--dpr 2]
+//        [--gpu] [--size 1920x1080] [--dpr 2] [--repeat 3]
+// --repeat N: run the list N times, rotating its order each round, and report each configuration's median
+// (the machine's load and the GPU's clocks drift; a single pass can't tell a style from the drift).
 // --gpu: headless Chromium on the machine's GPU (on WSL: ANGLE over GL on Mesa's D3D12 driver), with vsync
 // and the frame-rate limit off so frame times aren't capped at 60 Hz.
 import { spawn } from 'node:child_process';
@@ -27,6 +29,7 @@ const webgpu = args.includes('--webgpu');
 const gpu = args.includes('--gpu');
 const [W, H] = opt('size', '1280x720').split('x').map(Number);
 const dpr = Number(opt('dpr', '1'));
+const repeat = Math.max(1, Number(opt('repeat', '1')));
 
 if (!existsSync(join(ROOT, 'dist/index.html'))) { console.error('build first: npm run build'); process.exit(1); }
 const port = await new Promise((res) => { const s = createServer(); s.listen(0, '127.0.0.1', () => { const p = s.address().port; s.close(() => res(p)); }); });
@@ -41,7 +44,9 @@ const browser = await chromium.launch(gpu
 const results = [];
 try {
   for (let i = 0; i < 60; i++) { try { await fetch(base); break; } catch { await new Promise((r) => setTimeout(r, 250)); } }
-  for (const cfg of configs) {
+  const order = [];
+  for (let r = 0; r < repeat; r++) for (let i = 0; i < configs.length; i++) order.push(configs[(i + r) % configs.length]);
+  for (const cfg of order) {
     const q = new URLSearchParams({ renderer, quality, test: 'battle', id: battle, lv: '8' });
     if (cfg !== 'none') for (const [k, v] of new URLSearchParams(cfg)) q.set(k, v);
     const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: dpr });
@@ -76,8 +81,17 @@ try {
   await browser.close();
   try { process.kill(-server.pid); } catch { server.kill(); }
 }
+// one row per configuration: the median of its runs
+const median = (xs) => { const a = [...xs].sort((x, y) => x - y); return a.length % 2 ? a[(a.length - 1) / 2] : (a[a.length / 2 - 1] + a[a.length / 2]) / 2; };
+const rows = configs.map((config) => {
+  const runs = results.filter((r) => r.config === config);
+  const ms = median(runs.map((r) => r.msPerFrame));
+  return { config, msPerFrame: +ms.toFixed(1), fps: +(1000 / ms).toFixed(1), runs: runs.map((r) => r.msPerFrame), errors: runs.flatMap((r) => r.errors), backend: runs[0]?.backend ?? '?' };
+});
+results.length = 0;
+results.push(...rows);
 const ref = results[0]?.msPerFrame ?? 1;
 console.log(`quality ${quality}, renderer ${renderer}${webgpu ? ' (webgpu flags)' : ''}${gpu ? ' on the GPU' : ' in software'}, ${W}x${H}@${dpr}x, ${battle}, ${seconds}s each`);
-for (const r of results) console.log(`${r.config.padEnd(40)} ${r.backend.padEnd(7)} ${String(r.msPerFrame).padStart(7)} ms  ${String(r.fps).padStart(5)} fps  ${r === results[0] ? 'baseline' : `${r.msPerFrame >= ref ? '+' : ''}${(((r.msPerFrame - ref) / ref) * 100).toFixed(0)}%`}${r.errors.length ? '  ERRORS ' + r.errors.join(' | ') : ''}`);
+for (const r of results) console.log(`${r.config.padEnd(32)} ${r.backend.padEnd(7)} ${repeat > 1 ? ('[' + r.runs.join(' ') + ']').padEnd(22) : ''}${String(r.msPerFrame).padStart(7)} ms  ${String(r.fps).padStart(5)} fps  ${r === results[0] ? 'baseline' : `${r.msPerFrame >= ref ? '+' : ''}${(((r.msPerFrame - ref) / ref) * 100).toFixed(0)}%`}${r.errors.length ? '  ERRORS ' + r.errors.join(' | ') : ''}`);
 const json = opt('json', '');
 if (json) writeFileSync(json, JSON.stringify({ quality, renderer, battle, seconds, results }, null, 2));
