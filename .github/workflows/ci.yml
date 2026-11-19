@@ -82,6 +82,14 @@ jobs:
     needs: check
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # Playwright's own image carries Firefox, WebKit, their system libraries and Xvfb. Installing them
+    # with --with-deps went through the runner's Ubuntu mirror, which twice crawled until the job timed
+    # out. Keep the tag at the installed @playwright/test version (package-lock.json).
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      options: --ipc=host
+    env:
+      HOME: /root # Firefox runs as root in the container
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -89,7 +97,6 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps firefox webkit
       # headed under Xvfb with software GL, as tools/browser-test.sh runs them: headless Firefox on the
       # runner has no WebGL
       - run: xvfb-run -a npx playwright test --headed --project=firefox --project=webkit e2e/boot.spec.ts e2e/a11y.spec.ts
