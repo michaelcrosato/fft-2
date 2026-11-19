@@ -13,7 +13,7 @@ Update the Status table as phases land, and record what the spike and later phas
 | 1 — Spike: the tagged scene pass | done: proven on WebGL 2 (Chromium, Firefox) and WebGPU; see the Decision log |
 | 2 — Framework, settings and the Art Style page | done: `src/gfx/styles/`, the settings, the page (reached by `?test=artstyle` until Phase 3) |
 | 3 — Light sources and lamps | done: `src/gfx/lights.ts`; Options → Art Style is open to players |
-| 4 — Bold Cel | not started |
+| 4 — Bold Cel | done: banding, colour, outlines (`nodes/edges.ts`); matrix in `tools/out/styles/boldcel/` |
 | 5 — Bright Toon | not started |
 | 6 — Pixel Art | not started |
 | 7 — Ink Wash | not started |
@@ -449,3 +449,12 @@ when a map is built (Auto is the quality's 2, 4 or 8, as before). With no style 
 scene gets today's rig. Options → Art Style sits between Graphics quality and Renderer; the
 language sweep covers the page. The first time the front fill is added, the shaders rebuild on the
 next frame, without the loading indicator: a moment's pause on the page, once.
+
+**2026-11-19 — Phase 4, Bold Cel.** Outlines are two passes (`nodes/edges.ts`): a one-pixel mask
+from the Laplacian of 1/depth (zero on any plane, so silhouettes and creases but no slopes) and a
+change of layer or object id, each edge owned by the nearer surface's layer; then a ring of 25
+samples draws each owner's width, so the two layers can have different lines. The display stage
+gained a colour step (saturation, contrast, a wash toward a tint). A layer whose outline width is
+0 (Outlines: None) has no outline passes at all. Grass blades made speckles at the first crease
+threshold, so it was raised. By night Bold Cel's black lines barely show against the dark ground,
+and units stand out by their team rings, as they do without a style.

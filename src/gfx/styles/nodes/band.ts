@@ -16,6 +16,8 @@ export interface BandUniforms {
   floor: any;
   /** colour the shadow bands are multiplied by (linear) */
   tint: any;
+  /** colour the fully lit band is multiplied by (warm light) */
+  litTint: any;
   /** 1: light above fully lit (specular, emissive) becomes a single highlight band; 0: kept; -1: clipped */
   highlight: any;
 }
@@ -24,7 +26,7 @@ export function bandUniforms(TSL: any): BandUniforms {
   const { uniform } = TSL;
   return {
     strength: uniform(0), bands: uniform(2), softness: uniform(0.02), floor: uniform(0.45),
-    tint: uniform(new THREE.Vector3(1, 1, 1)), highlight: uniform(0),
+    tint: uniform(new THREE.Vector3(1, 1, 1)), litTint: uniform(new THREE.Vector3(1, 1, 1)), highlight: uniform(0),
   };
 }
 
@@ -68,7 +70,7 @@ export function bandNode(TSL: any, a: { color: any; albedo: any; viewZ: any; lay
     const isAct = a.layer.equal(2);
     const pick = (k: keyof BandUniforms) => select(isEnv, a.env[k], a.actors[k]);
     const strength = select(isEnv.or(isAct), pick('strength'), float(0));
-    const bands = pick('bands'), soft = pick('softness'), floorL = pick('floor'), tint = select(isEnv, a.env.tint, a.actors.tint), hl = pick('highlight');
+    const bands = pick('bands'), soft = pick('softness'), floorL = pick('floor'), tint = select(isEnv, a.env.tint, a.actors.tint), litTint = select(isEnv, a.env.litTint, a.actors.litTint), hl = pick('highlight');
     // undo the fog
     const f = select(a.scene.fogOn.greaterThan(0.5), min(smoothstep(a.scene.fogNear, a.scene.fogFar, a.viewZ.negate()), 0.92), float(0));
     const lit = max(c.sub(a.scene.fogColor.mul(f)).div(float(1).sub(f)), vec3(0));
@@ -84,7 +86,7 @@ export function bandNode(TSL: any, a: { color: any; albedo: any; viewZ: any; lay
     target = select(over.and(hl.greaterThan(0.5)), float(1.35), select(over.and(hl.greaterThan(-0.5)), t, target));
     // scale the colour so its light lands on the band (hue and albedo kept), shadows tinted
     const k = target.mul(a.scene.lit).div(max(L, 1e-4));
-    const banded = lit.mul(k).mul(mix(tint, vec3(1), clamp(level, 0, 1)));
+    const banded = lit.mul(k).mul(mix(tint, litTint, clamp(level, 0, 1)));
     const fogged = mix(banded, a.scene.fogColor, f);
     return vec4(mix(c, fogged, strength), a.color.a);
   })();
