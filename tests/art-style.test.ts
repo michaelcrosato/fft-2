@@ -283,3 +283,17 @@ describe("Pixel Art", () => {
 		expect(actors.frame.dof).toBe(1);
 	});
 });
+
+describe("Ink Wash", () => {
+	it("hatches its dark bands, washes its colour toward sepia, and draws wobbling brush lines", () => {
+		const p = resolveStyle(S({ styleEnv: "inkWash", styleEnvStrength: 1 }), ctx);
+		expect(stepsOf(p.env)).toEqual(["band", "color", "hatch", "edges"]);
+		expect(p.env.band!.bands).toBe(3);
+		expect(p.env.band!.highlight).toBe(-1);
+		expect(p.env.hatch!.darkness).toBeGreaterThan(0.5);
+		expect(p.env.edges!.wobble).toBeGreaterThan(0.5);
+		expect(p.env.color!.saturation).toBeLessThan(1);
+		expect(p.frame).toMatchObject({ ao: false, dof: 0, grain: 0 });
+		expect(p.lights).toBe(1);
+	});
+});

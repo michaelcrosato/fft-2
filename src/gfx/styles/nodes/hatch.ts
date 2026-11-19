@@ -20,14 +20,17 @@ export function hatchUniforms(TSL: any, THREE: any): HatchUniforms {
   return { density: uniform(7), darkness: uniform(0), paper: uniform(0), paperTint: uniform(new THREE.Vector3(0.96, 0.92, 0.84)) };
 }
 
-/** world position and normal at this pixel, rebuilt from the depth buffer */
+/**
+ * World position and normal at this pixel, rebuilt from the depth buffer. The normal comes from the
+ * position's screen-space derivatives (face normals of the low-poly scene; three's getNormalFromDepth
+ * gave a constant here).
+ */
 export function worldFromDepth(TSL: any, a: { depth: any; projInv: any; camWorld: any }) {
-  const { screenUV, getViewPosition, getNormalFromDepth, vec4 } = TSL;
+  const { screenUV, getViewPosition, vec4, dFdx, dFdy, cross, normalize } = TSL;
   const d = a.depth.sample(screenUV).x;
   const viewPos = getViewPosition(screenUV, d, a.projInv);
-  const world = a.camWorld.mul(vec4(viewPos, 1)).xyz;
-  const viewN = getNormalFromDepth(screenUV, a.depth.value, a.projInv);
-  const worldN = a.camWorld.mul(vec4(viewN, 0)).xyz.normalize();
+  const world = a.camWorld.mul(vec4(viewPos, 1)).xyz.toVar();
+  const worldN = normalize(cross(dFdx(world), dFdy(world)));
   return { world, worldN };
 }
 
@@ -49,8 +52,9 @@ export function hatchNode(TSL: any, a: { color: any; data: any; world: any; worl
       return float(1).sub(smoothstep(w, w.add(fwidth(coord.mul(density)).add(0.02)), f));
     };
     const l = luminance(a.color.rgb);
-    const one = line(uv.x.add(uv.y)).mul(smoothstep(0.62, 0.42, l));
-    const cross = line(uv.x.sub(uv.y)).mul(smoothstep(0.36, 0.18, l));
+    // (smoothstep's edges must rise: GLSL leaves a falling pair undefined)
+    const one = line(uv.x.add(uv.y)).mul(float(1).sub(smoothstep(0.5, 0.7, l)));
+    const cross = line(uv.x.sub(uv.y)).mul(float(1).sub(smoothstep(0.25, 0.42, l)));
     const ink = max(one, cross).mul(darkness);
     // paper: fixed to the screen, a fine grain and soft fibres
     const p = screenUV.mul(screenSize);
