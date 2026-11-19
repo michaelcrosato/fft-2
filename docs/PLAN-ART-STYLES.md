@@ -534,4 +534,8 @@ the URL overrides, the debug views and the tools), AGENTS.md points here, `docs/
 (since Phase 3). A last e2e check found that on WebGL 1 the reason the styles were unavailable sat
 only in disabled rows' descriptions, which focus skips; a greyed line at the top says it now. The
 final page passed `viewport-matrix` on 14 Chromium devices and a WebKit iPhone SE (headless). The
-52in1 package is not rebuilt: nothing in it changes until a player picks a style.
+52in1 package is not rebuilt: nothing in it changes until a player picks a style. The first CI run
+on `main` after this phase failed in browser-smoke: the Art Style keyboard test (two battle loads)
+passed three minutes on the runner, and the boot spec's new-game test lost its browser session while
+two battles loaded at once. The spec now runs in its own step with one worker and twice the time
+budget.

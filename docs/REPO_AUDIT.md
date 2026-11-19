@@ -386,6 +386,11 @@ their rings, as without a style.
 
 - On WebGL 1 the Art Style page said why the styles were unavailable only in the descriptions of
   disabled rows, which focus skips: a greyed line at the top says it now (e2e check).
+- CI: the Art Style spec runs in its own browser-smoke step with one worker, and its battle-loading
+  tests have twice the time budget. Sharing a step with the boot and language sweeps, it pushed one
+  test past three minutes on the runner's software rendering, and two battles loading at once
+  coincided with the boot spec's new-game test crashing its browser session (a flake seen once
+  before the spec joined CI).
 - `tools/ship.sh` asks GitHub which merge methods the repository allows: it now allows only
   squash merges, which `gh pr merge --merge` refused.
 - Strength is stored in tenths, so its default is 80%.

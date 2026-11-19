@@ -3,6 +3,10 @@
 import { test, expect, type Page, type TestInfo } from '@playwright/test';
 import { gameUrl, watchErrors, waitForUiText, expectNoHorizontalOverflow, press } from './helpers';
 
+// Most of these load a battle (some twice): on CI's software rendering that takes minutes, so they get
+// twice the default budget, as the long Game Mode test does.
+test.describe.configure({ timeout: 360_000 });
+
 /** a battle's deployment with the Art Style page open over it (the ?test=artstyle route) */
 async function openPage(page: Page, info: TestInfo, params: Record<string, string> = {}) {
   await page.goto(gameUrl(info, { quality: 'low', test: 'artstyle', ...params }));
