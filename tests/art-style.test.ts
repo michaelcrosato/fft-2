@@ -297,3 +297,27 @@ describe("Ink Wash", () => {
 		expect(p.lights).toBe(1);
 	});
 });
+
+describe("Flat Paint", () => {
+	it("flattens light, brushes textures into fields within quality's budget, and draws thin dark line art", () => {
+		const p = resolveStyle(S({ styleEnv: "flatPaint", styleEnvStrength: 1 }), ctx);
+		expect(stepsOf(p.env)).toEqual(["band", "color", "paint", "edges"]);
+		expect(p.env.band!.highlight).toBe(-1);
+		expect(p.env.edges!.width).toBeLessThanOrEqual(1.5);
+		expect(p.env.edges!.fill).toBeGreaterThan(0.5);
+		expect(resolveStyle(S({ styleEnv: "flatPaint" }), { ...ctx, quality: "low" }).env.paint!.radius)
+			.toBeLessThan(resolveStyle(S({ styleEnv: "flatPaint" }), { ...ctx, quality: "ultra" }).env.paint!.radius);
+		expect(p.lights).toBe(2);
+		expect(p.frame.ao).toBe(false);
+	});
+});
+
+describe("automatic quality", () => {
+	it("asks a style to cost less before the preset steps down: a new graph, a smaller brush", () => {
+		const full = resolveStyle(S({ styleEnv: "flatPaint" }), ctx);
+		const lean = resolveStyle(S({ styleEnv: "flatPaint" }), { ...ctx, economy: 1 });
+		expect(lean.key).not.toBe(full.key);
+		expect(lean.env.paint!.radius).toBeLessThan(full.env.paint!.radius);
+		expect(resolveStyle(S(), { ...ctx, economy: 1 }).active).toBe(false);
+	});
+});

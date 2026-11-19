@@ -5,6 +5,9 @@
 //
 //   node tools/style-bench.mjs [--configs "none;style=boldCel;styleEnv=pixel&styleActors=none"]
 //        [--quality medium] [--renderer webgl2] [--seconds 6] [--battle b_galwyn] [--webgpu] [--json FILE]
+//        [--gpu] [--size 1920x1080] [--dpr 2]
+// --gpu: headless Chromium on the machine's GPU (on WSL: ANGLE over GL on Mesa's D3D12 driver), with vsync
+// and the frame-rate limit off so frame times aren't capped at 60 Hz.
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:net';
 import { existsSync, writeFileSync } from 'node:fs';
@@ -21,19 +24,29 @@ const renderer = opt('renderer', 'webgl2');
 const seconds = Number(opt('seconds', '6'));
 const battle = opt('battle', 'b_galwyn');
 const webgpu = args.includes('--webgpu');
+const gpu = args.includes('--gpu');
+const [W, H] = opt('size', '1280x720').split('x').map(Number);
+const dpr = Number(opt('dpr', '1'));
 
 if (!existsSync(join(ROOT, 'dist/index.html'))) { console.error('build first: npm run build'); process.exit(1); }
 const port = await new Promise((res) => { const s = createServer(); s.listen(0, '127.0.0.1', () => { const p = s.address().port; s.close(() => res(p)); }); });
 const server = spawn('npx', ['vite', 'preview', '--port', String(port), '--strictPort', '--host', '127.0.0.1'], { cwd: ROOT, stdio: 'ignore', detached: true });
 const base = `http://127.0.0.1:${port}/`;
-const browser = await chromium.launch({ args: webgpu ? ['--enable-unsafe-webgpu', '--enable-features=Vulkan', '--use-angle=swiftshader'] : [] });
+const browser = await chromium.launch(gpu
+  ? {
+    args: ['--use-angle=gl', '--ignore-gpu-blocklist', '--enable-gpu', '--disable-gpu-vsync', '--disable-frame-rate-limit'],
+    env: { ...process.env, GALLIUM_DRIVER: 'd3d12', LD_LIBRARY_PATH: ['/usr/lib/wsl/lib', process.env.LD_LIBRARY_PATH].filter(Boolean).join(':') },
+  }
+  : { args: webgpu ? ['--enable-unsafe-webgpu', '--enable-features=Vulkan', '--use-angle=swiftshader'] : [] });
 const results = [];
 try {
   for (let i = 0; i < 60; i++) { try { await fetch(base); break; } catch { await new Promise((r) => setTimeout(r, 250)); } }
   for (const cfg of configs) {
     const q = new URLSearchParams({ renderer, quality, test: 'battle', id: battle, lv: '8' });
     if (cfg !== 'none') for (const [k, v] of new URLSearchParams(cfg)) q.set(k, v);
-    const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+    const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: dpr });
+      // the stored quality, not Auto: automatic quality would lighten the style or lower the preset mid-run
+      await page.addInitScript((q) => { try { localStorage.setItem('fft-fealty-options', JSON.stringify({ quality: q })); } catch { /* none */ } }, quality);
     const errors = [];
     let backend = '?';
     page.on('pageerror', (e) => errors.push(e.message));
@@ -64,7 +77,7 @@ try {
   try { process.kill(-server.pid); } catch { server.kill(); }
 }
 const ref = results[0]?.msPerFrame ?? 1;
-console.log(`quality ${quality}, renderer ${renderer}${webgpu ? ' (webgpu flags)' : ''}, ${battle}, ${seconds}s each`);
+console.log(`quality ${quality}, renderer ${renderer}${webgpu ? ' (webgpu flags)' : ''}${gpu ? ' on the GPU' : ' in software'}, ${W}x${H}@${dpr}x, ${battle}, ${seconds}s each`);
 for (const r of results) console.log(`${r.config.padEnd(40)} ${r.backend.padEnd(7)} ${String(r.msPerFrame).padStart(7)} ms  ${String(r.fps).padStart(5)} fps  ${r === results[0] ? 'baseline' : `${r.msPerFrame >= ref ? '+' : ''}${(((r.msPerFrame - ref) / ref) * 100).toFixed(0)}%`}${r.errors.length ? '  ERRORS ' + r.errors.join(' | ') : ''}`);
 const json = opt('json', '');
 if (json) writeFileSync(json, JSON.stringify({ quality, renderer, battle, seconds, results }, null, 2));

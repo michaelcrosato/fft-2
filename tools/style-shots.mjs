@@ -84,6 +84,8 @@ async function main() {
       for (const [k, v] of new URLSearchParams(extra)) q.set(k, v);
       const name = `${style}-${mode.replace(/[:/]/g, '_')}-${sc}`;
       const page = await browser.newPage({ viewport: { width: W, height: H } });
+      // the stored quality, not Auto: automatic quality would lighten the style or lower the preset mid-run
+      await page.addInitScript((q) => { try { localStorage.setItem('fft-fealty-options', JSON.stringify({ quality: q })); } catch { /* none */ } }, quality);
       const errors = [];
       page.on('pageerror', (e) => errors.push(e.message));
       page.on('console', (m) => { if (m.type() === 'error' && !/GL Driver|ReadPixels|preload/i.test(m.text())) errors.push(m.text().slice(0, 200)); });
