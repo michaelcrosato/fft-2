@@ -263,6 +263,7 @@ DC offset, loop seams and render cost; the audition page measures any single cue
 
 | Change | Checked by |
 | --- | --- |
+| The title screen's small print still said "internal test build · placeholder FFT audio" after every cue had become original; found while checking the 52in1 import's translations, where all nine languages repeated it. It now reads "original music and sound". | `tests/i18n.test.ts` (no line calls the audio a placeholder or the game a test build) |
 | Gentle mode reaches the battle through `setupBattle({ gentle })` instead of a write past the battle's read-only field (and an unused `(state as any).__gentle` read). | `tests/gentle.test.ts` |
 | `game.ts`: the dead `r === heroU ? false : false`, the `void THREE; void rinfo; …` line and its unused imports are gone; `runBattle`'s comment no longer promises `'retreat'`. | `npx tsc` |
 | The action preview could overlap the target's unit card when the card ran taller than the fixed offset (seen at 960×720). It now moves up above the card. | Cover frame at 960×720. |

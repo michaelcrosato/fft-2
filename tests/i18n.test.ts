@@ -111,6 +111,15 @@ describe('the game\'s lines', () => {
     expect(block.brief.length).toBeGreaterThan(500);
   });
 
+  it('no line a player reads calls the audio a placeholder or the game a test build', () => {
+    // the title's small print said "internal test build · placeholder FFT audio" after the audio was all original
+    const { block } = buildLines();
+    const text = (v: unknown) => (typeof v === 'string' ? v : Object.values(v as Record<string, string>).join(' '));
+    const stale = Object.entries(block.lines).filter(([, v]) => /placeholder|test build|FFT audio/i.test(text(v))).map(([id]) => id);
+    expect(stale).toEqual([]);
+    expect(block.lines['flow.title.footer']).toContain('original music and sound');
+  });
+
   it('every content field can be swapped and restored in place', () => {
     const fields = contentFields();
     expect(fields.length).toBeGreaterThan(6000);
