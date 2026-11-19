@@ -15,7 +15,7 @@ Update the Status table as phases land, and record what the spike and later phas
 | 3 — Light sources and lamps | done: `src/gfx/lights.ts`; Options → Art Style is open to players |
 | 4 — Bold Cel | done: banding, colour, outlines (`nodes/edges.ts`); matrix in `tools/out/styles/boldcel/` |
 | 5 — Bright Toon | done: soft bands, warm light and cool shadows; matrix with Bold Cel mixes in `tools/out/styles/brighttoon/` |
-| 6 — Pixel Art | not started |
+| 6 — Pixel Art | done: cells, palette and dither after anti-aliasing (`nodes/pixel.ts`); matrix, mixes and orbit in `tools/out/styles/pixel*/` |
 | 7 — Ink Wash | not started |
 | 8 — Flat Paint | not started |
 | 9 — Performance and automatic quality | not started |
@@ -468,3 +468,15 @@ active style to cost less (`economy`: one outline sample ring, a smaller brush) 
 lowers the preset; and on Low the outlines use one ring of samples (9) instead of two (17). The
 README, `docs/REPO_AUDIT.md` (*Pass 5*) and `docs/COMPATIBILITY.md` describe the styles from this
 phase on, and grow with each style.
+
+**2026-11-19 — Phase 6, Pixel Art.** The cells are drawn after anti-aliasing from one texture of
+the frame before it (`needsPreAA`), so anti-aliasing and the cells don't each evaluate the display
+chain. A cell belongs to the layer at its centre; its colour is quantized per channel with a 4×4
+Bayer dither (a lookup table), and a cell whose neighbour lies behind it, or is another object,
+darkens into the one-cell outline. The first preset failed the readability gates: 2–6 px cells made
+units a handful of cells tall at the default zoom, and 7–4 colour steps with a full-step dither
+turned flat areas (the sky) into a checkerboard. It now uses 1.5–4 px cells (a fifth smaller on
+phones), 14–6 steps per channel and a half-step dither. On the Environment it also puts the
+overlays on its cells (they keep their colours). The dither fades out in the darkest tones, where
+it speckled interiors' shadows. Orbiting re-samples the cells, so edges step as the camera turns (the
+known limit); the dither stays fixed to the screen and nothing swims.

@@ -143,3 +143,16 @@ test('a style on one layer builds that layer\'s steps only, and the page shows i
   w.assertClean();
 });
 
+
+test('Pixel Art on the environment puts the overlays on its cells; on the characters it leaves them smooth', async ({ page }, info) => {
+  const w = watchErrors(page);
+  const key = () => page.evaluate(() => (window as any).__game?.stage?.post?.styleKey as string);
+  await page.goto(gameUrl(info, { quality: 'low', test: 'battle', id: 'b_galwyn', lv: 8, style: 'pixel' }));
+  await waitForUiText(page, 'Begin Battle');
+  expect(await key()).toContain('env:band,pixel|actors:band,pixel|');
+  expect(await key()).toContain('ovpx:true');
+  await page.goto(gameUrl(info, { quality: 'low', test: 'battle', id: 'b_galwyn', lv: 8, styleEnv: 'none', styleActors: 'pixel' }));
+  await waitForUiText(page, 'Begin Battle');
+  expect(await key()).toContain('ovpx:false');
+  w.assertClean();
+});

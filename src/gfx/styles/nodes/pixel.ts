@@ -31,7 +31,7 @@ function BAYER(TSL: any) {
 }
 
 export function pixelNode(TSL: any, a: { pre: any; aa: any; data: any; depth: any; near: any; far: any; overlay: any; glow: any; ratio: any; env: PixelUniforms; actors: PixelUniforms; overlayCells: any }) {
-  const { Fn, vec2, vec3, vec4, float, int, floor, max, select, mix, screenUV, screenSize, clamp, perspectiveDepthToViewZ, mod } = TSL;
+  const { Fn, vec2, vec3, vec4, float, int, floor, max, select, mix, screenUV, screenSize, clamp, perspectiveDepthToViewZ, mod, smoothstep, luminance } = TSL;
   return Fn(() => {
     const frag = screenUV.mul(screenSize);
     // the cell size is the larger of the two layers' (each layer keeps its own if only one is Pixel Art)
@@ -52,7 +52,9 @@ export function pixelNode(TSL: any, a: { pre: any; aa: any; data: any; depth: an
     // the 4×4 Bayer matrix, centred on zero
     const bayer = BAYER(TSL).element(int(bx.add(by.mul(4)))).div(16).sub(0.47);
     const steps = max(levels.sub(1), 1);
-    const quant = floor(clamp(col.add(vec3(bayer.mul(dither).div(steps))), 0, 1).mul(steps).add(0.5)).div(steps);
+    // no dither in the darkest tones: it would speckle the night and the shadows of interiors
+    const ditherHere = dither.mul(smoothstep(0.06, 0.22, luminance(col)));
+    const quant = floor(clamp(col.add(vec3(bayer.mul(ditherHere).div(steps))), 0, 1).mul(steps).add(0.5)).div(steps);
     const paletted = mix(quant, col, ovC);
     // one-cell outline: a neighbour cell that is farther or another object
     const zC = perspectiveDepthToViewZ(a.depth.sample(centre).x, a.near, a.far);

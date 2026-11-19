@@ -70,7 +70,7 @@ export const PRESETS: Partial<Record<StyleId, StylePreset>> = {
     frame: (s) => ({ ao: false, bloom: 1 + s * 0.2 }),
   },
 
-  // Pixel Art: the view in square cells (2–6 CSS px), a small palette (7 down to 4 steps per channel)
+  // Pixel Art: the view in square cells (1.5–4 CSS px), a small palette (14 down to 6 steps per channel)
   // with a 4×4 Bayer dither, a one-cell dark outline, three hard light bands under it. No depth of
   // field or grain on a pixel environment: they would blur or speckle the cells.
   pixel: {
@@ -80,7 +80,7 @@ export const PRESETS: Partial<Record<StyleId, StylePreset>> = {
       const outline = c.outline === 'off' ? 0 : c.outline === 'thin' ? 0.4 : c.outline === 'medium' ? 0.6 : c.outline === 'thick' ? 0.85 : at(s, 0.3, 0.7);
       return {
         band: { bands: bandCount(c.bands, 3), softness: 0.01, floor: 0.5, tint: [0.72, 0.72, 0.96], highlight: 1 },
-        pixel: { cell: Math.round(at(s, 2, 6) * (c.mobile ? 0.8 : 1) * 2) / 2, levels: Math.round(at(s, 7, 4)), dither: 0.8, outline },
+        pixel: { cell: Math.round(at(s, 1.5, 4) * (c.mobile ? 0.8 : 1) * 2) / 2, levels: Math.round(at(s, 14, 6)), dither: 0.5, outline },
       };
     },
     frame: () => ({ ao: false, dof: 0, grain: 0 }),
