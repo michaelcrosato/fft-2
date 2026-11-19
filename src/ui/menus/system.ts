@@ -66,6 +66,7 @@ export async function openOptions(game: Game, parent?: HTMLElement) {
         { label: t('system.options.encounters'), value: 'encounters', right: onOff(o.encounters !== false), desc: t('system.options.encounters_desc') },
         { label: t('system.options.camera_shake'), value: 'shake', right: onOff(!!o.camShake) },
         { label: t('system.options.quality'), value: 'quality', right: inUse(o.quality, rinfo?.quality) },
+        { label: t('artstyle.title'), value: 'artStyle', desc: t('artstyle.options_desc') },
         { label: t('system.options.renderer'), value: 'renderer', right: inUse(o.renderer, rinfo?.backend), desc: t('system.options.renderer_desc') },
         { label: t('controller.title'), value: 'controller', desc: t('system.options.controller_desc') },
         { label: t('system.options.how_to_play'), value: 'help' },
@@ -87,6 +88,14 @@ export async function openOptions(game: Game, parent?: HTMLElement) {
         ov.root.style.visibility = 'hidden';
         try { await openController(parent); } finally { ov.root.style.visibility = ''; }
         // the Controller page saves its own settings: take them up so the next save here keeps them
+        Object.assign(o, loadOptions());
+        continue;
+      }
+      if (pick === 'artStyle') {
+        const { openArtStyle } = await import('./artStyle');
+        ov.root.style.visibility = 'hidden';
+        try { await openArtStyle(game, parent); } finally { ov.root.style.visibility = ''; }
+        // the Art Style page saves its own settings: take them up so the next save here keeps them
         Object.assign(o, loadOptions());
         continue;
       }

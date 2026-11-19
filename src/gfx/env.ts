@@ -9,6 +9,7 @@ import { rinfo } from './renderer';
 import type { Scene, DirectionalLight, HemisphereLight, Mesh, Group, PointLight, Color, Object3D } from 'three/webgpu';
 import { hash2 } from '../core/rng';
 import { setStyleLayer } from './styles/layers';
+import { LightRig, type LightSetting } from './lights';
 
 interface Mood {
   sun: string; sunI: number; elev: number; azim: number;
@@ -44,14 +45,17 @@ export class Environment {
   /** lightning light: always in the scene (intensity 0 at rest) — adding/removing lights recompiles every lit shader */
   private flashLight: import('three/webgpu').DirectionalLight | null = null;
   private flashT = 0;
+  /** the Light sources setting's rig: sun, rim, front fill (lights.ts) */
+  rig!: LightRig;
 
-  constructor(scene: Scene, terrain: TerrainView, def: MapDef, time?: EnvTime) {
+  /** `lights`: the art style plan's light sources and lamp count (Options → Art Style); today's rig without one */
+  constructor(scene: Scene, terrain: TerrainView, def: MapDef, time?: EnvTime, lights?: { lights: LightSetting; lamps: number }) {
     this.scene = scene;
     this.time = time ?? def.time;
-    this.build(terrain, def);
+    this.build(terrain, def, lights);
   }
 
-  private build(terrain: TerrainView, def: MapDef) {
+  private build(terrain: TerrainView, def: MapDef, rigSetting?: { lights: LightSetting; lamps: number }) {
     const m = (this.mood = MOODS[this.time] ?? MOODS.day);
     const scene = this.scene;
     const span = Math.max(terrain.grid.w, terrain.grid.d);
@@ -80,6 +84,10 @@ export class Environment {
     const rim = new THREE.DirectionalLight(m.hemiSky, 0.35);
     rim.position.set(-sun.position.x, sun.position.y * 0.6, -sun.position.z);
     scene.add(rim);
+    // a front fill, when chosen, is a softer sun from the viewer's side
+    const front = new THREE.Color(m.sun).lerp(new THREE.Color(m.hemiSky), 0.5);
+    this.rig = new LightRig(scene, sun, { rim, rimColor: m.hemiSky, rimIntensity: 0.35, frontColor: '#' + front.getHexString(), frontIntensity: Math.max(0.5, m.sunI * 0.25) });
+    if (rigSetting) this.rig.apply(rigSetting.lights);
     // sky dome with vertex-colour gradient
     const skyGeo = new THREE.SphereGeometry(160, 32, 16);
     const cols: number[] = [];
@@ -102,7 +110,8 @@ export class Environment {
     this.buildBackdrop(def.backdrop ?? defaultBackdrop(def.theme), terrain, def.theme);
     scene.add(this.backdrop);
     // point lights from props (limit for performance)
-    const maxLights = rinfo?.quality === 'low' ? 2 : rinfo?.quality === 'medium' ? 4 : 8;
+    // the Lamps setting (Auto: by quality, as before); a change shows on the next map
+    const maxLights = rigSetting?.lamps ?? (rinfo?.quality === 'low' ? 2 : rinfo?.quality === 'medium' ? 4 : 8);
     const lights = [...terrain.lights].slice(0, maxLights);
     const dim = this.time === 'day' || this.time === 'overcast' ? 0.35 : 1;
     for (const l of lights) {

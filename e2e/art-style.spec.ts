@@ -80,3 +80,48 @@ test('with no style the frame is drawn by today\'s pipeline', async ({ page }, i
   expect(await page.evaluate(() => (window as any).__game?.stage?.post?.styleKey)).toBe('off');
   w.assertClean();
 });
+
+test('from the title: Options → Art Style previews over the world map, and Light sources change the rig', async ({ page }, info) => {
+  const w = watchErrors(page);
+  await page.goto(gameUrl(info, { quality: 'low' }));
+  await waitForUiText(page, 'New Game');
+  await press(page, '.title-menu .item:has-text("Options")', info);
+  await press(page, '#ui .menu .item:has-text("Art Style")', info);
+  await expect(page.locator('.art-style [role=listbox]')).toHaveCount(1);
+  await expect(page.locator('html')).toHaveClass(/art-style-preview/);
+  const rigCount = () => page.evaluate(() => (window as any).__world?.rig?.count);
+  expect(await rigCount()).toBe(1); // the world map: the sun alone today
+  await press(page, '.art-style [role=option]:has-text("Light sources")', info);
+  await expect(value(page, 'Light sources')).toHaveText('1: sun');
+  await press(page, '.art-style [role=option]:has-text("Light sources")', info);
+  await expect(value(page, 'Light sources')).toHaveText('2: sun and rim');
+  await expect.poll(rigCount).toBe(2);
+  await expectNoHorizontalOverflow(page);
+  w.assertClean();
+});
+
+test('in a battle: Menu → Options → Art Style shows the paused scene, and the rig follows the setting', async ({ page }, info) => {
+  const w = watchErrors(page);
+  await page.goto(gameUrl(info, { quality: 'low', test: 'battle', id: 'b_galwyn', lv: 8 }));
+  await waitForUiText(page, 'Begin Battle');
+  await press(page, '.game-menu-button', info);
+  await expect(page.locator('html')).toHaveClass(/game-paused/);
+  await press(page, '.game-menu-home .btn:has-text("Options")', info);
+  await press(page, '.game-menu-shell .menu .item:has-text("Art Style")', info);
+  await expect(page.locator('.game-menu-shell .art-style [role=listbox]')).toHaveCount(1);
+  // the shell steps aside so the scene shows beside the panel
+  expect(await page.evaluate(() => getComputedStyle(document.querySelector('.game-menu-shell')!).backgroundColor)).toMatch(/rgba\(0, 0, 0, 0\)|transparent/);
+  const rig = () => page.evaluate(() => (window as any).__game?.stage?.env?.rig?.count);
+  expect(await rig()).toBe(2);
+  const lights = '.game-menu-shell .art-style [role=option]:has-text("Light sources")';
+  await press(page, lights, info);
+  await expect.poll(rig).toBe(1);
+  await press(page, lights, info);
+  await press(page, lights, info);
+  await expect.poll(rig).toBe(3);
+  // leaving the page restores the menu's backdrop
+  await press(page, '.game-menu-button', info);
+  await expect(page.locator('html')).not.toHaveClass(/art-style-preview/);
+  w.assertClean();
+});
+

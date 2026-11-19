@@ -178,3 +178,43 @@ describe("scene builders", () => {
 		expect(all.every((d) => d.layer === "effects")).toBe(true);
 	});
 });
+
+describe("the light rig", () => {
+	beforeEach(async () => {
+		vi.resetModules();
+		(await import("../src/gfx/three")).setThree(THREE, "webgl2");
+	});
+
+	it("gives 1, 2 or 3 sources, keeps each scene's own, and never removes a light", async () => {
+		const { LightRig } = await import("../src/gfx/lights");
+		const lightsIn = (s: THREE.Scene) => s.children.filter((o: any) => o.isLight).length;
+		// a battle map: sun and rim today
+		const scene = new THREE.Scene();
+		const sun = new THREE.DirectionalLight("#fff", 3);
+		sun.position.set(10, 20, 5);
+		const rim = new THREE.DirectionalLight("#ccd", 0.35);
+		scene.add(sun, rim);
+		const rig = new LightRig(scene as any, sun as any, { rim: rim as any, rimColor: "#ccd", rimIntensity: 0.35, frontColor: "#fed", frontIntensity: 0.7 });
+		rig.apply("today");
+		expect(rig.count).toBe(2);
+		rig.apply(1);
+		expect(rig.count).toBe(1);
+		expect(rim.intensity).toBe(0);
+		rig.apply(3);
+		expect(rig.count).toBe(3);
+		expect(lightsIn(scene)).toBe(3);
+		rig.apply(2);
+		expect(rig.count).toBe(2);
+		expect(lightsIn(scene)).toBe(3); // the front fill is dimmed, not removed
+		// the world map: the sun alone today, a rim when asked
+		const world = new THREE.Scene();
+		const wsun = new THREE.DirectionalLight("#fff", 3);
+		world.add(wsun);
+		const wrig = new LightRig(world as any, wsun as any, { rim: null, rimColor: "#ccd", rimIntensity: 0.35, frontColor: "#fed", frontIntensity: 0.7 });
+		wrig.apply("today");
+		expect(wrig.count).toBe(1);
+		wrig.apply(2);
+		expect(wrig.count).toBe(2);
+		expect(lightsIn(world)).toBe(2);
+	});
+});

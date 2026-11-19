@@ -53,7 +53,7 @@ export class Stage {
     this.scene = new THREE.Scene();
     this.terrain = new TerrainView(this.grid);
     this.scene.add(this.terrain.group);
-    this.env = new Environment(this.scene, this.terrain, this.def, opts.time);
+    this.env = new Environment(this.scene, this.terrain, this.def, opts.time, currentStylePlan());
     const el = renderer.domElement;
     this.cam = new TacticsCamera(el.clientWidth / Math.max(1, el.clientHeight));
     const span = Math.max(this.grid.w, this.grid.d);
@@ -87,7 +87,9 @@ export class Stage {
 
   /** take the art style in force now: the same pipeline when only uniforms change, else a rebuilt one */
   readonly restyle = restyler(async () => {
-    const next = await restylePost(this.post, this.scene, this.cam.cam, currentStylePlan());
+    const plan = currentStylePlan();
+    this.env.rig.apply(plan.lights);
+    const next = await restylePost(this.post, this.scene, this.cam.cam, plan);
     if (this.disposed) { if (next !== this.post) next.dispose(); return; }
     this.post = next;
   }, () => !this.disposed);
@@ -373,6 +375,7 @@ export class Stage {
     const sdt = dt * this.timeScale;
     for (const v of this.views.values()) v.update(sdt);
     this.env.update(sdt);
+    this.env.rig.follow(this.cam.cam);
     // set every frame: when stages swap, the old one's dispose() runs after the new one's init()
     input.analogCamera = this.userCamera;
     this.analogCamera(dt);

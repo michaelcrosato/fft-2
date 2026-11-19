@@ -5,6 +5,7 @@ import { THREE } from '../gfx/three';
 import { renderer, rinfo } from '../gfx/renderer';
 import { createPost, restylePost, type PostFX } from '../gfx/post';
 import { currentStylePlan, onStyleChange, restyler } from '../gfx/styles/current';
+import { LightRig } from '../gfx/lights';
 import { GeoBuilder, hexRgb, mat } from '../gfx/geo';
 import { propMaterial, waterMaterial } from '../gfx/materials';
 import { NODES, EDGES } from '../data/db';
@@ -79,9 +80,12 @@ export class WorldView {
 
   private disposed = false;
   private offStyle: (() => void) | null = null;
+  rig!: LightRig;
   /** take the art style in force now (the Art Style page opened from the title restyles the map behind it) */
   readonly restyle = restyler(async () => {
-    const next = await restylePost(this.post, this.scene, this.cam, currentStylePlan());
+    const plan = currentStylePlan();
+    this.rig.apply(plan.lights);
+    const next = await restylePost(this.post, this.scene, this.cam, plan);
     if (this.disposed) { if (next !== this.post) next.dispose(); return; }
     this.post = next;
   }, () => !this.disposed);
@@ -274,6 +278,9 @@ export class WorldView {
     c.left = -40; c.right = 40; c.top = 40; c.bottom = -40; c.near = 1; c.far = 150;
     sun.shadow.bias = -0.0005;
     this.scene.add(sun, new THREE.HemisphereLight('#c8dcf0', '#6a5a40', 1.2));
+    // the Light sources setting: no rim today; one, and a front fill, when chosen (lights.ts)
+    this.rig = new LightRig(this.scene, sun, { rim: null, rimColor: '#c8dcf0', rimIntensity: 0.35, frontColor: '#f4e6d4', frontIntensity: 0.66 });
+    this.rig.apply(currentStylePlan().lights);
     this.scene.background = new THREE.Color('#9fb8cc');
     this.scene.fog = new THREE.Fog('#9fb8cc', 60, 140);
     // sky dome
@@ -385,6 +392,7 @@ export class WorldView {
     if (this.clouds) { this.clouds.position.x = ((this.t * 0.6) % 60) - 30; }
     if (this.party) this.party.anim.update(dt);
     this.post.setFocus(this.camDist, this.camDist * 0.7);
+    this.rig.follow(this.cam);
   }
   render() { this.post.render(); }
   resize(w: number, h: number) { this.cam.aspect = w / Math.max(1, h); this.cam.fov = fovFor(this.cam.aspect, 32); this.cam.updateProjectionMatrix(); }

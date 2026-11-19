@@ -151,6 +151,8 @@ async function runDebugHooks(game: Game): Promise<boolean> {
     game.state.roster.forEach((u) => setLevel(u, 8));
     const { openArtStyle } = await import('./ui/menus/artStyle');
     (window as any).__openArtStyle = () => openArtStyle(game);
+    // &open=1: open the page as soon as the deployment shows (screenshot sweeps)
+    if (q.get('open')) void (async () => { while (document.getElementById('loading')) await new Promise((r) => setTimeout(r, 200)); await new Promise((r) => setTimeout(r, 800)); void openArtStyle(game); })();
     await game.runBattle(q.get('id') ?? 'b_galwyn');
     return true;
   }

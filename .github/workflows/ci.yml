@@ -57,7 +57,7 @@ jobs:
       - run: npx playwright install --with-deps chromium
       # software rendering on the runner: low quality, and headed under Xvfb with software GL, which
       # draws several times faster than headless Chromium's SwiftShader
-      - run: xvfb-run -a npx playwright test --headed --project=chromium e2e/boot.spec.ts e2e/languages.spec.ts e2e/a11y.spec.ts
+      - run: xvfb-run -a npx playwright test --headed --project=chromium e2e/boot.spec.ts e2e/languages.spec.ts e2e/a11y.spec.ts e2e/art-style.spec.ts
         env:
           E2E_QUALITY: low
           E2E_WORKERS: 2
@@ -99,7 +99,7 @@ jobs:
       - run: npm ci
       # headed under Xvfb with software GL, as tools/browser-test.sh runs them: headless Firefox on the
       # runner has no WebGL
-      - run: xvfb-run -a npx playwright test --headed --project=firefox --project=webkit e2e/boot.spec.ts e2e/a11y.spec.ts
+      - run: xvfb-run -a npx playwright test --headed --project=firefox --project=webkit e2e/boot.spec.ts e2e/a11y.spec.ts e2e/art-style.spec.ts
         env:
           E2E_QUALITY: low
           E2E_WORKERS: 2
