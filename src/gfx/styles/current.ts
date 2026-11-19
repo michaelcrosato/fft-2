@@ -32,7 +32,7 @@ export function dropUrlOverrides() { urlOverrides = false; }
 export function styleDebugView(): string | null {
   if (typeof location === 'undefined') return null;
   const v = new URLSearchParams(location.search).get('styleDebug');
-  return v && ['layer', 'id', 'albedo', 'overlay', 'edges'].includes(v) ? v : null;
+  return v && ['layer', 'id', 'albedo', 'overlay', 'edges', 'world', 'normal'].includes(v) ? v : null;
 }
 
 export function currentStylePlan(): StylePlan {

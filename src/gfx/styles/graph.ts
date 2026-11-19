@@ -142,6 +142,10 @@ export function buildStyleGraph(TSL: any, plan: StylePlan, inp: StyleInputs): St
     debug = vec4(vec3(albedoOf(data)), 1);
   } else if (inp.debug === 'overlay') {
     debug = vec4(ov.rgb.add(glow.rgb).add(vec3(ov.a.mul(0.25))), 1);
+  } else if (inp.debug === 'world' && world) {
+    debug = vec4(fract(world.world.mul(0.5)), 1);
+  } else if (inp.debug === 'normal' && world) {
+    debug = vec4(world.worldN.mul(0.5).add(0.5), 1);
   } else if (inp.debug === 'edges' && edgeMask) {
     const m = edgeMask.sample(screenUV);
     debug = vec4(vec3(m.r), 1);

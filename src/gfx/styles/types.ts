@@ -5,7 +5,7 @@ export const STYLE_IDS = ['none', 'boldCel', 'brightToon', 'inkWash', 'pixel', '
 export type StyleId = (typeof STYLE_IDS)[number];
 
 /** the styles the game offers so far (each phase of the plan adds one) */
-export const IMPLEMENTED_STYLES: ReadonlySet<StyleId> = new Set<StyleId>(['none', 'boldCel', 'brightToon', 'pixel']);
+export const IMPLEMENTED_STYLES: ReadonlySet<StyleId> = new Set<StyleId>(['none', 'boldCel', 'brightToon', 'pixel', 'inkWash']);
 
 export const BAND_CHOICES = ['auto', 2, 3, 4, 5] as const;
 export type BandChoice = (typeof BAND_CHOICES)[number];

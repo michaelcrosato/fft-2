@@ -95,7 +95,7 @@ export const PRESETS: Partial<Record<StyleId, StylePreset>> = {
       return {
         band: { bands: bandCount(c.bands, 3), softness: 0.02, floor: at(s, 0.7, 0.55), tint: [0.95, 0.92, 0.9], highlight: -1 },
         color: { saturation: at(s, 1, 0.55), contrast: at(s, 1, 1.1), wash: at(s, 0, 0.45), washTint: [1.04, 0.97, 0.86] },
-        hatch: { density: c.quality === 'low' ? 5 : 7, darkness: at(s, 0, 0.85), paper: at(s, 0, 1), paperTint: [0.98, 0.93, 0.83] },
+        hatch: { density: c.quality === 'low' ? 5 : 7, darkness: at(s, 0.3, 1), paper: at(s, 0, 1), paperTint: [0.98, 0.93, 0.83] },
         edges: { width: outlineWidth(c.outline, at(s, 1, 3)), color: [0.06, 0.05, 0.07], fill: 0, opacity: 0.95, creases: 0.8, wobble: at(s, 0, 0.9) },
       };
     },

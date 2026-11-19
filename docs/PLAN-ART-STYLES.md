@@ -16,7 +16,7 @@ Update the Status table as phases land, and record what the spike and later phas
 | 4 — Bold Cel | done: banding, colour, outlines (`nodes/edges.ts`); matrix in `tools/out/styles/boldcel/` |
 | 5 — Bright Toon | done: soft bands, warm light and cool shadows; matrix with Bold Cel mixes in `tools/out/styles/brighttoon/` |
 | 6 — Pixel Art | done: cells, palette and dither after anti-aliasing (`nodes/pixel.ts`); matrix, mixes and orbit in `tools/out/styles/pixel*/` |
-| 7 — Ink Wash | not started |
+| 7 — Ink Wash | done: world-anchored hatching, paper, wobbling brush lines; matrix, mixes and orbit in `tools/out/styles/ink*/` |
 | 8 — Flat Paint | not started |
 | 9 — Performance and automatic quality | not started |
 | 10 — Docs, CI and hand-off | not started |
@@ -480,3 +480,13 @@ phones), 14–6 steps per channel and a half-step dither. On the Environment it 
 overlays on its cells (they keep their colours). The dither fades out in the darkest tones, where
 it speckled interiors' shadows. Orbiting re-samples the cells, so edges step as the camera turns (the
 known limit); the dither stays fixed to the screen and nothing swims.
+
+**2026-11-19 — Phase 7, Ink Wash.** Hatching (`nodes/hatch.ts`) rebuilds the world position from
+depth (`getViewPosition`) and draws triplanar lines on the face's plane, so they stay on the
+surfaces. Two faults found with `?styleDebug=world|normal`: three's `getNormalFromDepth` returned a
+constant normal here, so the normal now comes from the world position's screen-space derivatives
+(`dFdx × dFdy`, exact for the low-poly faces); and the hatch's tone ramps were written as falling
+`smoothstep`s, which GLSL leaves undefined (no hatching at all), now `1 − smoothstep` (no other style
+step has one). The first hatch reached only the darkest tones; it now starts below 70% luminance
+(cross-hatching below 42%). The brush lines' width wobbles with a slow noise over the world position,
+so the wobble stays with the surfaces too.
