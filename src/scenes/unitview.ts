@@ -11,6 +11,7 @@ import type { Group, Mesh, Object3D, Vector3 } from 'three/webgpu';
 import { audio } from '../audio/audio';
 import { releaseTree } from '../gfx/dispose';
 import { gameClock } from '../core/gameClock';
+import { setStyleLayer } from '../gfx/styles/layers';
 
 let buildMonsterFn: ((look: any, opts?: any) => UnitModel) | null = null;
 // optional module (glob returns {} when the file doesn't exist)
@@ -72,7 +73,8 @@ export class UnitView {
     this.spec = spec;
     this.team = spec.team;
     this.terrain = terrain;
-    this.root = new THREE.Group();
+    // the unit is a character; its ring, blob shadow and badges are interface (styles/layers.ts)
+    this.root = setStyleLayer(new THREE.Group(), 'actors');
     if (spec.job.monster && buildMonsterFn) {
       this.model = buildMonsterFn(spec.job.monster, { team: spec.team });
     } else if (spec.job.monster) {
@@ -90,7 +92,7 @@ export class UnitView {
     // team marker: soft glowing ring under the feet
     const ringGeo = new THREE.RingGeometry(0.3, 0.4, 28);
     const ringMat = new THREE.MeshBasicMaterial({ color: TEAM_COLORS[spec.guest ? 2 : spec.team] ?? '#fff', transparent: true, opacity: 0.55, depthWrite: false, toneMapped: false, side: THREE.DoubleSide });
-    this.marker = new THREE.Mesh(ringGeo, ringMat);
+    this.marker = setStyleLayer(new THREE.Mesh(ringGeo, ringMat), 'interface');
     this.marker.rotation.x = -Math.PI / 2;
     this.marker.position.y = 0.03;
     this.marker.renderOrder = 3;
@@ -98,6 +100,7 @@ export class UnitView {
     // blob shadow for grounding
     const blob = new THREE.Mesh(new THREE.CircleGeometry(0.3, 20), new THREE.MeshBasicMaterial({ color: '#000', transparent: true, opacity: 0.22, depthWrite: false }));
     blob.rotation.x = -Math.PI / 2; blob.position.y = 0.02; blob.renderOrder = 2;
+    setStyleLayer(blob, 'interface');
     this.root.add(blob);
   }
 
@@ -145,6 +148,7 @@ export class UnitView {
     const tex = new THREE.CanvasTexture(c);
     tex.colorSpace = THREE.SRGBColorSpace;
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, toneMapped: false }));
+    setStyleLayer(sp, 'interface');
     sp.scale.set(1.0, 0.25, 1);
     sp.position.y = 1.35 * this.model.height;
     sp.renderOrder = 6;

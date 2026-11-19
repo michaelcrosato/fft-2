@@ -20,6 +20,7 @@ import { input, type Action } from '../ui/input';
 import { releaseTree } from '../gfx/dispose';
 import { audio } from '../audio/audio';
 import { gameClock } from '../core/gameClock';
+import { setStyleLayer } from '../gfx/styles/layers';
 
 export type HighlightKind = 'move' | 'target' | 'aoe' | 'deploy' | 'cursor' | 'enemyMove' | 'path' | 'charge';
 const HL_COLORS: Record<HighlightKind, string> = {
@@ -281,7 +282,8 @@ export class Stage {
     return b.build();
   }
   private makeTileMesh(cells: Array<[number, number]>, mat: Material, lift = 0.03): Mesh {
-    const m = new THREE.Mesh(this.tileGeo(cells, lift), mat);
+    // tile highlights, the cursor and markers are interface: never styled (styles/layers.ts)
+    const m = setStyleLayer(new THREE.Mesh(this.tileGeo(cells, lift), mat), 'interface');
     m.renderOrder = 4;
     return m;
   }

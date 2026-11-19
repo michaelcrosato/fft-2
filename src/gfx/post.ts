@@ -4,6 +4,8 @@
 import { THREE, NODES } from './three';
 import { renderer, rinfo } from './renderer';
 import type { Scene, Camera } from 'three/webgpu';
+import { tagScenePass, layerOf, idOf, albedoOf, compositeOverlay } from './styles/scenePass';
+import { bandNode, bandScene, bandUniforms, fillBandScene } from './styles/nodes/band';
 
 export interface PostFX {
   render(): void;
@@ -143,6 +145,10 @@ async function nodePost(scene: Scene, camera: Camera): Promise<PostFX> {
   const scenePass = pass(scene, camera);
   // every node that owns render targets; RenderPipeline.dispose() frees only its own quad
   const owned: any[] = [scenePass];
+  // SPIKE (docs/PLAN-ART-STYLES.md, Phase 1): ?styleSpike=band|layer|id|normal|albedo|overlay
+  const spike = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('styleSpike') : null;
+  const styled = spike ? tagScenePass(TSL, scenePass) : null;
+  if (styled) (window as any).__styleSpike = { scenePass, renderer };
   let aoNode: any = null;
   if (s.ao) {
     const prePass = pass(scene, camera);
@@ -162,6 +168,30 @@ async function nodePost(scene: Scene, camera: Camera): Promise<PostFX> {
     scenePass.contextNode = builtinAOContext(aoNode.getTextureNode().sample(screenUV).r);
   }
   let color: any = scenePass.getTextureNode('output');
+  let debugOut: any = null;
+  if (styled) {
+    const data = styled.data.sample(screenUV), ov = styled.overlay.sample(screenUV), glow = styled.glow.sample(screenUV);
+    const albedo = albedoOf(data);
+    const layer = layerOf(TSL, data);
+    if (spike === 'band') {
+      const sc = bandScene(TSL);
+      fillBandScene(sc, scene);
+      const env = bandUniforms(TSL), actors = bandUniforms(TSL);
+      env.strength.value = 1; actors.strength.value = 1;
+      env.tint.value.set(0.62, 0.66, 0.95); actors.tint.value.set(0.62, 0.66, 0.95);
+      actors.highlight.value = 1;
+      color = bandNode(TSL, { color: styled.color.sample(screenUV), albedo, viewZ: styled.viewZ, layer, scene: sc, env, actors });
+    }
+    color = compositeOverlay(TSL, color, ov, glow);
+    const { vec3, vec4: v4, select: sel, float: f1, fract, sin } = TSL as any;
+    if (spike === 'layer') {
+      const pal = sel(layer.equal(1), vec3(0.2, 0.75, 0.25), sel(layer.equal(2), vec3(0.9, 0.2, 0.2), sel(layer.equal(0), vec3(0.15), sel(layer.equal(3), vec3(0.2, 0.3, 1), vec3(1, 0, 1)))));
+      debugOut = v4(pal.mul(f1(0.75)).add(vec3(albedo.mul(0.25))), 1);
+    }
+    if (spike === 'id') { const id = idOf(TSL, data); debugOut = v4(fract(sin(id.mul(12.9898)).mul(43758.5453)), fract(sin(id.mul(78.233)).mul(12543.1)), fract(id.mul(0.37)), 1); }
+    if (spike === 'albedo') debugOut = v4(vec3(albedo), 1);
+    if (spike === 'overlay') debugOut = v4(ov.rgb.add(glow.rgb).add(vec3(ov.a.mul(0.25))), 1);
+  }
 
   // ---- bloom (HDR threshold) ----
   let bloomNode: any = null;
@@ -214,6 +244,7 @@ async function nodePost(scene: Scene, camera: Camera): Promise<PostFX> {
     out = aaMod.fxaa(out);
     owned.push(out);
   }
+  if (debugOut) out = debugOut;
   pipeline.outputNode = out;
 
   let flashT = 0;

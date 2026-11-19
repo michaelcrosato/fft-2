@@ -7,6 +7,7 @@ import { rinfo } from './renderer';
 import type { Scene, Camera, InstancedMesh, Vector3, Object3D, Material, Texture } from 'three/webgpu';
 import { markShared, releaseTree } from './dispose';
 import { gameClock } from '../core/gameClock';
+import { setStyleLayer } from './styles/layers';
 
 interface P {
   x: number; y: number; z: number; vx: number; vy: number; vz: number;
@@ -80,6 +81,7 @@ class Pool {
     this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.mesh.frustumCulled = false;
     this.mesh.renderOrder = 5;
+    setStyleLayer(this.mesh, 'effects');
     for (let i = 0; i < cap; i++) this.mesh.setColorAt(i, new THREE.Color(0, 0, 0));
     this.mesh.count = 0;
     scene.add(this.mesh);
@@ -218,6 +220,7 @@ export class Vfx {
   }
 
   private addTransient(obj: Object3D, max: number, tick: Transient['tick']) {
+    setStyleLayer(obj, 'effects');
     this.scene.add(obj);
     this.transients.push({ obj, life: 0, max, tick });
   }
