@@ -50,6 +50,8 @@ export interface StylePlan {
   lights: 'today' | 1 | 2 | 3;
   /** lamp lights at most (point lights from map props) */
   lamps: number;
+  /** 1: automatic quality asked the style to cost less (fewer outline samples, a smaller brush) */
+  economy: number;
   /** what the post graph is built from: a change of key rebuilds the pipeline, anything else is uniforms */
   key: string;
 }
@@ -60,13 +62,13 @@ const NONE: LayerPlan = { style: 'none', strength: 0 };
 /** the lamps each quality allows when the setting is Auto (env.ts) */
 export const LAMP_CAP: Record<Quality, number> = { low: 2, medium: 4, high: 8, ultra: 8 };
 
-export interface ResolveContext { quality: Quality; backend: Backend; mobile?: boolean }
+export interface ResolveContext { quality: Quality; backend: Backend; mobile?: boolean; economy?: number }
 
 function layerPlan(style: StyleId, strength: number, s: StyleSettings, ctx: ResolveContext): LayerPlan {
   if (style === 'none' || strength <= 0 || !IMPLEMENTED_STYLES.has(style)) return NONE;
   const preset = PRESETS[style];
   if (!preset) return NONE;
-  const pc: PresetContext = { strength, bands: s.styleBands, outline: s.styleOutline, quality: ctx.quality, mobile: !!ctx.mobile };
+  const pc: PresetContext = { strength, bands: s.styleBands, outline: s.styleOutline, quality: ctx.quality, mobile: !!ctx.mobile, economy: ctx.economy ?? 0 };
   const l: LayerPlan = { style, strength, ...preset.layer(pc) };
   // no outlines (Outlines: None, or a style without them): no outline passes in the graph
   if (l.edges && l.edges.width <= 0) delete l.edges;
@@ -84,7 +86,8 @@ export function resolveStyle(s: StyleSettings, ctx: ResolveContext): StylePlan {
   const envStyle = IMPLEMENTED_STYLES.has(ls.env.style) ? ls.env.style : 'none';
   const ownLights = PRESETS[envStyle]?.lights ?? 'today';
   const lights = s.lights === 'auto' ? ownLights : s.lights;
-  const base = { frame: NO_FRAME, overlayPixel: false, lights, lamps: lampSetting };
+  const economy = ctx.economy ?? 0;
+  const base = { frame: NO_FRAME, overlayPixel: false, lights, lamps: lampSetting, economy };
   if (ctx.backend === 'webgl1') return { active: false, unavailable: 'webgl1', env: NONE, actors: NONE, ...base, key: 'off' };
   const env = layerPlan(ls.env.style, ls.env.strength, s, ctx);
   const actors = layerPlan(ls.actors.style, ls.actors.strength, s, ctx);
@@ -92,6 +95,6 @@ export function resolveStyle(s: StyleSettings, ctx: ResolveContext): StylePlan {
   if (!active) return { active: false, env, actors, ...base, key: 'off' };
   const frame = env.style !== 'none' ? { ...NO_FRAME, ...PRESETS[env.style]?.frame?.(env.strength) } : NO_FRAME;
   const overlayPixel = env.pixel !== undefined;
-  const key = [`env:${stepsOf(env).join(',')}`, `actors:${stepsOf(actors).join(',')}`, `ao:${frame.ao}`, `dof:${frame.dof > 0}`, `ovpx:${overlayPixel}`].join('|');
-  return { active, env, actors, frame, overlayPixel, lights, lamps: lampSetting, key };
+  const key = [`env:${stepsOf(env).join(',')}`, `actors:${stepsOf(actors).join(',')}`, `ao:${frame.ao}`, `dof:${frame.dof > 0}`, `ovpx:${overlayPixel}`, `eco:${economy}`].join('|');
+  return { active, env, actors, frame, overlayPixel, lights, lamps: lampSetting, economy, key };
 }

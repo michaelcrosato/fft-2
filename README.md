@@ -113,6 +113,31 @@ one kind: **Options → Controller → Button prompts**).
 - **52in1's buttons**: the PS button, and Create and Options held together, open 52in1's own bar, so the
   game leaves them alone (Options alone opens the Menu; Create alone shows the turn order when let go).
 
+## Art styles
+
+**Options → Art Style** (from the title or the in-game Menu) changes how the 3D view is drawn, and shows
+each change at once on the scene beside the panel:
+
+- **Styles**: *None* (the usual look), **Bold Cel** (thick black outlines, two flat tones, strong colour)
+  and **Bright Toon** (soft two-tone shading, cool shadows, sunny colour). Pixel Art, Ink Wash and Flat
+  Paint follow (*docs/PLAN-ART-STYLES.md*).
+- **Layers**: *Same style everywhere*, or one style for the **Environment** (ground, buildings, water,
+  sky) and another for **Characters & objects** (units, their weapons, crystals, chests). Each layer has
+  its own **Strength** (0–100%, in steps of ten; left and right step it).
+- **Shade bands** (2–5) and **Outlines** (none to thick) fine-tune the styles; **Light sources** (1: the
+  sun, 2: sun and rim, 3: sun, rim and a front fill) and **Lamps** (torches and windows; the change shows
+  on the next map) work with any style, *None* included.
+- Interface marks (tile highlights, the cursor, team rings) and spell effects are never styled, so the
+  battlefield stays readable. The HUD and menus are not part of the 3D view.
+- Styles need WebGPU or WebGL 2; on WebGL 1 the page says so and the game keeps its usual look. With
+  *Auto* quality, slow frames first make the style lighter, then lower the preset.
+
+The URL can set them for one visit, as `?quality=` does: `?style=boldCel` (both layers),
+`?styleEnv=brightToon&styleActors=boldCel`, `?styleStrength=60`, `?styleBands=3`, `?styleOutline=thick`,
+`?lights=1`, `?lamps=0`. `?styleDebug=layer|id|albedo|overlay|edges` shows the tagged scene pass the
+styles read (`src/gfx/styles/`). `node tools/style-shots.mjs` shoots a style's screenshot matrix into
+`tools/out/styles/`, and `node tools/style-bench.mjs` compares frame times.
+
 ## Hosting
 
 The game's public home is **52in1**, which imports the package `npm run package` builds (see *52in1*

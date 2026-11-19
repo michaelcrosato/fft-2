@@ -71,16 +71,16 @@ export function edgeMaskNode(TSL: any, a: { depth: any; data: any; near: any; fa
  * The lines (pass 2) over a display-space colour. `mask` is the edge mask as a texture node, `world`
  * a world-anchored noise for the brush wobble (0–1), `cover` how much an overlay covers the pixel.
  */
-export function edgeLinesNode(TSL: any, a: { color: any; mask: any; ratio: any; env: EdgeUniforms; actors: EdgeUniforms; envStrength: any; actorsStrength: any; cover: any; wobbleNoise?: any }) {
+export function edgeLinesNode(TSL: any, a: { color: any; mask: any; ratio: any; env: EdgeUniforms; actors: EdgeUniforms; envStrength: any; actorsStrength: any; cover: any; wobbleNoise?: any; rings?: number[] }) {
   const { Fn, vec2, vec3, vec4, float, max, min, smoothstep, screenUV, screenSize, mix, cos, sin, clamp } = TSL;
   return Fn(() => {
     const px = vec2(1).div(screenSize);
     const maxW = max(a.env.width, a.actors.width).mul(a.ratio);
     let line: any = float(0);
     let ownerOfLine: any = float(0);
-    // a ring of 8 directions at three distances, plus the centre
+    // 8 directions at each ring's distance, plus the centre (fewer rings on lower quality)
     const taps: Array<[number, number]> = [[0, 0]];
-    for (let k = 0; k < 8; k++) for (const r of [0.34, 0.67, 1]) taps.push([Math.cos((k * Math.PI) / 4) * r, Math.sin((k * Math.PI) / 4) * r]);
+    for (let k = 0; k < 8; k++) for (const r of a.rings ?? [0.5, 1]) taps.push([Math.cos((k * Math.PI) / 4) * r, Math.sin((k * Math.PI) / 4) * r]);
     for (const [ox, oy] of taps) {
       const off = vec2(ox, oy).mul(maxW);
       const m = a.mask.sample(screenUV.add(off.mul(px)));

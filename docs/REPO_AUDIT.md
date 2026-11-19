@@ -324,3 +324,38 @@ outliers). A better bot for the player's side would make this a sharper tool.
   every layout. Hints for the letter keys now use the keyboard's own names where the browser gives
   its layout (Chrome and Edge: Q shows as A on AZERTY); elsewhere, and for the movement keys in
   the manual's prose (WASD, Z, X), they keep QWERTY's names.
+
+# Pass 5 — Art styles (November 2026)
+
+The plan and its decision log: `docs/PLAN-ART-STYLES.md`. Options → Art Style draws the 3D view in
+a style per layer (Environment; Characters & objects) or one for both, each layer with a Strength,
+plus shade bands, outlines, light sources and lamps.
+
+## How it works
+
+- Every scene builder tags its root with a style layer (`src/gfx/styles/layers.ts`); a per-object
+  uniform carries the tag into a tagged scene pass (`scenePass.ts`) that writes the colour without
+  overlays, the overlays, additive glows and a data buffer (albedo luminance, layer and object id),
+  all blending as the drawing material does. Interface marks and effects are overlays, laid over
+  the styled frame.
+- A pure resolver (`resolve.ts`, `presets.ts`) turns the settings into a plan; `graph.ts` adds its
+  steps to the post graph: banded light (`nodes/band.ts`), colour, outlines (`nodes/edges.ts`).
+  A plan with the same steps changes uniforms only; another rebuilds the pipeline (`restylePost`).
+- With no style the frame is today's: no extra outputs or nodes (`stage.post.styleKey === 'off'`).
+- `src/gfx/lights.ts`: Light sources 1–3 dim or add a rim and a camera-side front fill, never
+  removing a light (that would rebuild every shader).
+
+## Fixes and small improvements
+
+- `tools/ship.sh` asks GitHub which merge methods the repository allows: it now allows only
+  squash merges, which `gh pr merge --merge` refused.
+- Strength is stored in tenths, so its default is 80%.
+
+## Known, not changed (Pass 5)
+
+- Headless screenshots can't capture a WebGPU canvas on this host; WebGPU is checked by reading the
+  data buffer back and by frame times. Local Firefox and WebKit runs open windows on this WSLg
+  desktop even under `xvfb-run`, so they run in CI (the owner asked for headless runs only).
+- At night Bold Cel's black outlines barely show on the dark ground; units stand out by their team
+  rings, as they do without a style.
+

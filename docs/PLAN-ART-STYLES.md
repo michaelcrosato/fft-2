@@ -14,7 +14,7 @@ Update the Status table as phases land, and record what the spike and later phas
 | 2 — Framework, settings and the Art Style page | done: `src/gfx/styles/`, the settings, the page (reached by `?test=artstyle` until Phase 3) |
 | 3 — Light sources and lamps | done: `src/gfx/lights.ts`; Options → Art Style is open to players |
 | 4 — Bold Cel | done: banding, colour, outlines (`nodes/edges.ts`); matrix in `tools/out/styles/boldcel/` |
-| 5 — Bright Toon | not started |
+| 5 — Bright Toon | done: soft bands, warm light and cool shadows; matrix with Bold Cel mixes in `tools/out/styles/brighttoon/` |
 | 6 — Pixel Art | not started |
 | 7 — Ink Wash | not started |
 | 8 — Flat Paint | not started |
@@ -458,3 +458,13 @@ gained a colour step (saturation, contrast, a wash toward a tint). A layer whose
 0 (Outlines: None) has no outline passes at all. Grass blades made speckles at the first crease
 threshold, so it was raised. By night Bold Cel's black lines barely show against the dark ground,
 and units stand out by their team rings, as they do without a style.
+
+**2026-11-19 — Phase 5, Bright Toon.** Banding gained a lit-side tint (`litTint`): Bright Toon's
+lit band warms while its shadow bands cool, with soft edges and lifted shadows, no outlines unless
+the player sets them (then coloured, a darker shade of the fill), more bloom and three light
+sources. Its matrix includes both mixes with Bold Cel: an outlined Bold Cel company over a Bright
+Toon town reads clearly. Two things taken early from Phase 9: automatic quality first asks an
+active style to cost less (`economy`: one outline sample ring, a smaller brush) and only then
+lowers the preset; and on Low the outlines use one ring of samples (9) instead of two (17). The
+README, `docs/REPO_AUDIT.md` (*Pass 5*) and `docs/COMPATIBILITY.md` describe the styles from this
+phase on, and grow with each style.

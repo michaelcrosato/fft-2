@@ -28,6 +28,7 @@ import { installGameMenu } from '../ui/gameMenu';
 import { loading, paintLoading } from '../ui/loading';
 import { tapTracker } from '../ui/taps';
 import { fmtList, isTestLanguage, lang, t } from '../i18n';
+import { lightenStyles, styleChanged } from '../gfx/styles/current';
 
 export interface Screen {
   update(dt: number): void;
@@ -76,6 +77,13 @@ export class Game {
     p.t = 0; p.n = 0;
     p.slow = avg > 1 / 26 ? p.slow + 1 : 0;
     if (p.slow < 2) return; // ~8 s of sub-26 fps
+    // an art style first costs less (fewer outline samples, a smaller brush), then the preset steps down
+    if (lightenStyles()) {
+      p.slow = 0;
+      void styleChanged();
+      console.info(`[renderer] slow frames (${Math.round(1 / avg)} fps): lighter art style`);
+      return;
+    }
     const order: Quality[] = ['ultra', 'high', 'medium', 'low'];
     const i = order.indexOf(rinfo.quality);
     if (i < 0 || i >= order.length - 1) { p.steps = 2; return; }

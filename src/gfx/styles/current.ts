@@ -8,6 +8,16 @@ import { normalizeStyleSettings, withUrlOverrides, type StyleSettings } from './
 import { resolveStyle, type StylePlan } from './resolve';
 
 let urlOverrides = true;
+/** 1 once automatic quality has asked the style to cost less (Game.autoQuality) */
+let economy = 0;
+
+/** Make an active style cheaper, once; true if it did (the scenes then restyle). */
+export function lightenStyles(): boolean {
+  if (economy) return false;
+  if (!currentStylePlan().active) return false;
+  economy = 1;
+  return true;
+}
 
 /** the settings for this frame: stored options, then the URL's overrides until the player sets a style */
 export function currentStyleSettings(): StyleSettings {
@@ -26,7 +36,7 @@ export function styleDebugView(): string | null {
 }
 
 export function currentStylePlan(): StylePlan {
-  const plan = resolveStyle(currentStyleSettings(), { quality: rinfo?.quality ?? 'medium', backend: BACKEND, mobile: rinfo?.mobile });
+  const plan = resolveStyle(currentStyleSettings(), { quality: rinfo?.quality ?? 'medium', backend: BACKEND, mobile: rinfo?.mobile, economy });
   const debug = styleDebugView();
   if (debug && !plan.unavailable) return { ...plan, active: true, key: plan.key + '|debug:' + debug };
   return plan;
