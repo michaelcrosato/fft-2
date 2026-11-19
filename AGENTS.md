@@ -30,3 +30,7 @@ Repo rules for every coding agent (Claude Code reads this through `CLAUDE.md`).
 - Audit history and known follow-ups: `docs/REPO_AUDIT.md`; browser matrix: `docs/COMPATIBILITY.md`.
 - The 52in1 plan and what it delivered: `docs/PLAN-52IN1.md` (the package, original audio,
   sessions, languages, DualSense); its record is *Pass 4* in `docs/REPO_AUDIT.md`.
+- The art styles plan and what it delivered: `docs/PLAN-ART-STYLES.md` (Options → Art Style,
+  `src/gfx/styles/`); its record is *Pass 5* in `docs/REPO_AUDIT.md`. Look at the screenshots
+  `node tools/style-shots.mjs` takes after changing a style; `node tools/style-bench.mjs --gpu`
+  measures on this machine's GPU through WSL.

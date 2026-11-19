@@ -156,3 +156,17 @@ test('Pixel Art on the environment puts the overlays on its cells; on the charac
   expect(await key()).toContain('ovpx:false');
   w.assertClean();
 });
+
+test('on WebGL 1 the styles are unavailable, with the reason, and the lights still work', async ({ page }, info) => {
+  test.skip(info.project.use.browserName !== 'chromium' && info.project.use.defaultBrowserType !== 'chromium', 'one engine is enough');
+  const w = watchErrors(page);
+  await page.goto(gameUrl(info, { quality: 'low', test: 'artstyle', renderer: 'webgl1', style: 'boldCel' }));
+  await waitForUiText(page, 'Begin Battle');
+  expect(await page.evaluate(() => (window as any).__game?.stage?.post?.styleKey)).toBe('off');
+  await page.evaluate(() => { (window as any).__artStyle = (window as any).__openArtStyle(); });
+  await expect(row(page, 'Style')).toHaveAttribute('aria-disabled', 'true');
+  await expect(page.locator('.art-style')).toContainText('WebGL 1');
+  await press(page, '.art-style [role=option]:has-text("Light sources")', info);
+  await expect.poll(() => page.evaluate(() => (window as any).__game?.stage?.env?.rig?.count)).toBe(1);
+  w.assertClean();
+});
