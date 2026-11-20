@@ -446,8 +446,8 @@ change listeners, `?styleDebug=layer|id|albedo|overlay`). Decisions taken on the
   settings count. The page shows what the view shows, overrides included.
 - Strength is stored in tenths, so the default is 80%, not 75%.
 - Line ids are lowercase: a style id maps to its line id with `styleLineId()` (`boldCel` → `bold_cel`).
-- The page docks left (right in right-to-left languages), or to the bottom half on a phone in
-  portrait, over a shade that leaves the scene visible; `Game.requestFrame()` redraws the paused
+- The page docks left, as every menu panel in the game does whatever the language's direction,
+  or to the bottom half on a phone in portrait, over a shade that leaves the scene visible; `Game.requestFrame()` redraws the paused
   frame after each change.
 
 **2026-11-19 — Phase 3.** `LightRig` (`src/gfx/lights.ts`) serves the battle maps (sun and rim
@@ -539,3 +539,18 @@ on `main` after this phase failed in browser-smoke: the Art Style keyboard test 
 passed three minutes on the runner, and the boot spec's new-game test lost its browser session while
 two battles loaded at once. The spec now runs in its own step with one worker and twice the time
 budget.
+
+**2026-11-19 — The final review.** Every style's matrix was shot again from the final build and
+reviewed as contact sheets (`tools/out/styles/final-sheets/`), now on the GPU (`style-shots.mjs
+--gpu`: the same pictures as software rendering, about five times faster). It found two faults the
+earlier crops had hidden, both fixed and reshot: Pixel Art's per-channel palette shifted dark browns
+to olive (the interior's backdrop), so it now quantizes in YCoCg, brightness in the palette's steps
+and chroma in finer steps centred on zero; and the display steps spared an overlay only in
+proportion to its alpha, so Ink Wash's wash turned the move highlights' 30%-opaque centres pale, so
+an overlay's alpha now counts three times in that mask and highlights keep their colour in every
+style. The language sweep (`viewport-matrix`, 14 Chromium devices and a WebKit iPhone SE in each of
+en-XA, zh-XC and ar-XB) found three right-to-left faults: the list's mirrored room for the glove
+reached 24px past the panel's edge, because `.menu`'s own padding wasn't mirrored (a sideways scroll on
+360–375px phones; the shared menu CSS now mirrors it); the page's shade was drawn on the right while
+the panel stays on the left; and the shared page title, aligned right, ran under the Menu button. All
+three languages are clean on all fifteen devices now.

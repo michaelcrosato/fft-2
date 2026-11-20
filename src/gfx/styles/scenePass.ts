@@ -86,8 +86,12 @@ export function compositeOverlay(TSL: any, color: any, ov: any, glow: any) {
   return vec4(color.rgb.mul(float(1).sub(ov.a)).add(ov.rgb).add(glow.rgb), color.a);
 }
 
-/** how much a pixel is covered by an overlay or a glow (0–1), for steps that should spare it */
+/**
+ * How much a pixel belongs to an overlay or a glow (0–1), for the steps that should spare it. A move
+ * highlight's centre is only about 30% opaque, so its alpha counts three times: the display steps
+ * (wash, hatching, palette, outlines) leave the whole highlight its colour.
+ */
 export function overlayMask(TSL: any, ov: any, glow: any) {
   const { clamp, luminance } = TSL;
-  return clamp(ov.a.add(luminance(glow.rgb).mul(0.8)), 0, 1);
+  return clamp(ov.a.mul(3).add(luminance(glow.rgb).mul(0.8)), 0, 1);
 }

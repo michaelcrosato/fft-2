@@ -382,6 +382,16 @@ undefined falling `smoothstep`, too few tones hatched); Flat Paint's half-resolu
 radius). At night Bold Cel's and Ink Wash's dark lines sink into the dark ground, and units read by
 their rings, as without a style.
 
+A final review shot every style's matrix again from the final build, on the GPU, and read it as
+contact sheets (`tools/out/styles/final-sheets/`, one per style and layer mode, plus the mixes). It
+fixed two more things: Pixel Art's palette now quantizes in YCoCg (per-channel steps turned dark
+browns olive), and overlays count three times their alpha in the mask the display steps spare (Ink
+Wash's wash had paled the move highlights' centres). The Art Style page was swept with `viewport-matrix` on 14 Chromium devices and a WebKit iPhone SE in
+each test language. In ar-XB it found that every right-to-left menu let its list reach 24px past the
+panel's right edge (`.menu`'s padding wasn't mirrored with the list's: a sideways scroll wherever a
+panel spans a narrow phone), and that the shared page title ran under the Menu button; both are fixed
+for every page, and the Art Style page's shade now sits behind its panel in every direction.
+
 ## Fixes and small improvements
 
 - On WebGL 1 the Art Style page said why the styles were unavailable only in the descriptions of

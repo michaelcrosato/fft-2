@@ -54,7 +54,15 @@ export function pixelNode(TSL: any, a: { pre: any; aa: any; data: any; depth: an
     const steps = max(levels.sub(1), 1);
     // no dither in the darkest tones: it would speckle the night and the shadows of interiors
     const ditherHere = dither.mul(smoothstep(0.06, 0.22, luminance(col)));
-    const quant = floor(clamp(col.add(vec3(bayer.mul(ditherHere).div(steps))), 0, 1).mul(steps).add(0.5)).div(steps);
+    // quantize in YCoCg: brightness in the palette's steps, chroma in finer steps centred on zero, so a
+    // dark, nearly grey colour stays neutral (per-channel steps turned dark browns olive)
+    const Y = col.x.mul(0.25).add(col.y.mul(0.5)).add(col.z.mul(0.25));
+    const Co = col.x.mul(0.5).sub(col.z.mul(0.5));
+    const Cg = col.y.mul(0.5).sub(col.x.mul(0.25)).sub(col.z.mul(0.25));
+    const Yq = floor(clamp(Y.add(bayer.mul(ditherHere).div(steps)), 0, 1).mul(steps).add(0.5)).div(steps);
+    const cStep = float(0.5).div(steps);
+    const Coq = floor(Co.div(cStep).add(0.5)).mul(cStep), Cgq = floor(Cg.div(cStep).add(0.5)).mul(cStep);
+    const quant = clamp(vec3(Yq.add(Coq).sub(Cgq), Yq.add(Cgq), Yq.sub(Coq).sub(Cgq)), 0, 1);
     const paletted = mix(quant, col, ovC);
     // one-cell outline: a neighbour cell that is farther or another object
     const zC = perspectiveDepthToViewZ(a.depth.sample(centre).x, a.near, a.far);
