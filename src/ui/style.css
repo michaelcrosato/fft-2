@@ -74,9 +74,8 @@ html.game-mode, .game-mode body, .game-mode #ui, .game-mode #ui * { overscroll-b
 /* Options → Art Style previews on the live scene: the backdrops step aside, a shade stays behind the panel */
 .art-style-preview .game-menu-shell, .art-style-preview .game-menu-shell::backdrop { background: transparent; }
 .screen.art-style .screen-bg { background: linear-gradient(90deg, rgba(0, 0, 0, .72) 0, rgba(0, 0, 0, .5) min(440px, 70vw), rgba(0, 0, 0, 0) min(620px, 92vw)); }
-[dir="rtl"] .screen.art-style .screen-bg { background: linear-gradient(270deg, rgba(0, 0, 0, .72) 0, rgba(0, 0, 0, .5) min(440px, 70vw), rgba(0, 0, 0, 0) min(620px, 92vw)); }
 @media (max-width: 640px) and (orientation: portrait) {
-  .screen.art-style .screen-bg, [dir="rtl"] .screen.art-style .screen-bg { background: linear-gradient(0deg, rgba(0, 0, 0, .75) 0, rgba(0, 0, 0, .55) 46%, rgba(0, 0, 0, 0) 60%); }
+  .screen.art-style .screen-bg { background: linear-gradient(0deg, rgba(0, 0, 0, .75) 0, rgba(0, 0, 0, .55) 46%, rgba(0, 0, 0, 0) 60%); }
 }
 .game-menu-home {
   left: 50%; top: calc(50% + 28px); transform: translate(-50%, -50%);
@@ -160,6 +159,8 @@ dialog.game-mode-prompt {
 @keyframes glove-rtl { 0%, 100% { transform: translate(0, -50%) scaleX(-1); } 50% { transform: translate(-3px, -50%) scaleX(-1); } }
 [dir=rtl] .menu .item .r { margin-left: 0; margin-right: auto; padding-left: 0; padding-right: 14px; }
 [dir=rtl] .menu .scroll { padding: 2px 32px 2px 4px; margin-left: 0; margin-right: -32px; }
+/* the panel's padding mirrored too: the list's room for the glove reaches into it, not past the panel's edge */
+[dir=rtl] .menu { padding: 12px 30px 10px 8px; }
 [dir=rtl] .menu.title-menu { text-align: right; }
 /* never wider than the screen (the ✕ in the corner must stay reachable); long labels shorten */
 .menu { max-width: calc(100vw - 28px); }
@@ -270,6 +271,8 @@ dialog.game-mode-prompt {
 
 /* ---------------- screens ---------------- */
 .screen { position: absolute; inset: 0; display: flex; flex-direction: column; }
+/* right to left, a page's title sits in the top-right corner: keep it clear of the Menu button there */
+[dir="rtl"] .screen-title { padding-right: calc(150px + env(safe-area-inset-right, 0px)) !important; }
 .screen-bg { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 30%, rgba(40, 30, 20, 0.5), rgba(0, 0, 0, 0.85)); }
 .btn {
   display: inline-block; padding: 6px 16px; border-radius: 5px; font-family: var(--font-head); font-weight: 700; letter-spacing: 0.05em; cursor: pointer;

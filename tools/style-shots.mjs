@@ -5,7 +5,9 @@
 //
 //   node tools/style-shots.mjs [--build] [--label NAME] [--styles none,boldCel] [--modes both,env,actors]
 //        [--scenes galwyn,night,interior,storm,void,world,cutscene] [--extra "lights=1&lamps=0"]
-//        [--quality medium] [--renderer webgl2] [--webgpu] [--orbit N] [--size 1280x720]
+//        [--quality medium] [--renderer webgl2] [--webgpu] [--gpu] [--orbit N] [--size 1280x720]
+// --gpu: headless Chromium on the machine's GPU (on WSL: ANGLE over GL on Mesa's D3D12 driver): the same
+// pictures as software rendering, many times faster.
 //
 // Modes: both = ?style=ID; env = the environment only; actors = characters & objects only;
 // mix:A/B = environment A with characters B (e.g. --modes mix:pixel/boldCel).
@@ -73,7 +75,12 @@ async function main() {
   const server = spawn('npx', ['vite', 'preview', '--port', String(port), '--strictPort', '--host', '127.0.0.1'], { cwd: ROOT, stdio: 'ignore', detached: true });
   const base = `http://127.0.0.1:${port}/`;
   // --webgpu: headless Chromium's WebGPU through SwiftShader's Vulkan (use with --renderer webgpu)
-  const browser = await chromium.launch({ args: flag('webgpu') ? ['--enable-unsafe-webgpu', '--enable-features=Vulkan', '--use-angle=swiftshader'] : [] });
+  const browser = await chromium.launch(flag('gpu')
+    ? {
+      args: ['--use-angle=gl', '--ignore-gpu-blocklist', '--enable-gpu'],
+      env: { ...process.env, GALLIUM_DRIVER: 'd3d12', LD_LIBRARY_PATH: ['/usr/lib/wsl/lib', process.env.LD_LIBRARY_PATH].filter(Boolean).join(':') },
+    }
+    : { args: flag('webgpu') ? ['--enable-unsafe-webgpu', '--enable-features=Vulkan', '--use-angle=swiftshader'] : [] });
   const rows = [];
   try {
     for (let i = 0; i < 60; i++) { try { await fetch(base); break; } catch { await new Promise((r) => setTimeout(r, 250)); } }
